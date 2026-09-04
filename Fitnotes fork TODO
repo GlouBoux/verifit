@@ -1,0 +1,27 @@
+---
+description: Liste des chantiers en cours sur FitNotes_Fork (fork de verifit) — état au fil des sessions.
+---
+
+# TODO — FitNotes_Fork
+
+## En cours
+
+- [ ] **Debugger "Import Session" (JSON)** : ne fonctionne pas encore côté app (symptôme exact pas encore identifié — à préciser : erreur affichée ? rien ne se passe ? crash ?).
+- [ ] **Importer la base FitNotes originale** : CSV généré depuis le vrai backup SQLite (`verifit_import_from_fitnotes.csv`, 3784 séries / 369 exercices / 186 jours), à tester via Settings → Import CSV dans l'app. Attention : cet import remplace l'historique de séries existant dans l'app (les exercices connus, dont le doublon de test, sont conservés).
+
+## Fait / validé
+
+- [x] Choix du dépôt de base : `MakisChristou/verifit`.
+- [x] Feature "Dupliquer un exercice" — codée, testée sur l'app, fonctionne.
+- [x] Feature "Import Session" (JSON) — codée, compile et se lance, mais comportement pas encore validé (voir ci-dessus).
+- [x] App qui build et se lance sur émulateur (après correctifs `mavenCentral()` + drawable manquant).
+
+## En attente de décision
+
+- [ ] Pousser la branche `feature/duplicate-exercise-and-session-import` sur `GlouBoux/verifit`, et/ou ouvrir une PR vers `MakisChristou/verifit` en amont — ou rester en local ?
+- [ ] Garder, retirer ou ignorer le backend de compte en ligne `verifit_rs` (login, sync WebDAV) ?
+- [ ] Intégration avec le projet de génération de séances (`workout_engine.py`) : import manuel du JSON suffisant pour l'instant, ou pousser directement depuis le script vers l'app plus tard ?
+
+## Pas urgent
+
+- [ ] Upgrade AGP (actuellement 7.4.2, une mise à jour est proposée par Android Studio) — délibérément reporté, pas bloquant.

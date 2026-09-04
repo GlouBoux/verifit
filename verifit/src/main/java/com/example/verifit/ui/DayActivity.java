@@ -164,7 +164,20 @@ public class DayActivity extends AppCompatActivity {
                 return;
             }
 
-            SessionImporter.Result result = SessionImporter.importFromUri(uri, this, MainActivity.dataStorage, date_clicked);
+            SessionImporter.Result result;
+            try
+            {
+                result = SessionImporter.importFromUri(uri, this, MainActivity.dataStorage, date_clicked);
+            }
+            catch (Exception e)
+            {
+                // Belt-and-suspenders: SessionImporter already catches the JSON parsing
+                // failures we know about, but this is fed by an external file the user
+                // picked (typically from a workout-generator script), so an unexpected
+                // shape should show an error toast instead of crashing the app.
+                Toast.makeText(this, "Import failed: " + e.toString(), Toast.LENGTH_LONG).show();
+                return;
+            }
 
             if(result.success)
             {

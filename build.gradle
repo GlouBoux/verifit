@@ -2,11 +2,13 @@
 buildscript {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
         maven { url 'https://jitpack.io' }
+        // jcenter() intentionally removed: it shut down in 2022 and only
+        // returns empty results now, which was masking the real problem.
     }
     dependencies {
-        classpath "com.android.tools.build:gradle:4.0.1"
+        classpath 'com.android.tools.build:gradle:7.4.2'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -16,8 +18,10 @@ buildscript {
 allprojects {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
         maven { url 'https://jitpack.io' }
+        // jcenter() intentionally removed: it shut down in 2022 and only
+        // returns empty results now, which was masking the real problem.
     }
 }
 

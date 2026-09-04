@@ -53,6 +53,15 @@ public class SessionImporter {
             result.success = false;
             result.errorMessage = "Invalid JSON file: " + e.getMessage();
             return result;
+        } catch (IllegalStateException | NumberFormatException e) {
+            // Gson throws these directly (not wrapped in JsonSyntaxException) when a
+            // field's JSON type doesn't match the Java type it's bound to - e.g. a
+            // quoted "8" instead of a numeric 8 for weight/reps, or an object where a
+            // list was expected. Catching only JsonSyntaxException misses these and lets
+            // them crash the app, so treat them the same way as a syntax error.
+            result.success = false;
+            result.errorMessage = "Invalid JSON file (unexpected field type): " + e.getMessage();
+            return result;
         }
 
         if (session == null || session.getExercises().isEmpty()) {

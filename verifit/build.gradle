@@ -2,7 +2,6 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 31
-    buildToolsVersion "30.0.2"
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -37,12 +36,17 @@ dependencies {
     implementation 'androidx.navigation:navigation-fragment:2.3.0'
     implementation 'androidx.navigation:navigation-ui:2.3.0'
     implementation 'androidx.preference:preference:1.1.0'
-    implementation 'com.applandeo:material-calendar-view:1.7.0'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
     implementation 'com.github.thegrizzlylabs:sardine-android:0.8'
     implementation 'com.google.code.gson:gson:2.8.9'
-    implementation 'com.android.volley:volley:1.0.0'
+    // com.applandeo:material-calendar-view:1.7.0 and com.android.volley:volley:1.0.0
+    // removed: neither is imported anywhere in src/ (grep found zero usages), and
+    // both fail to resolve today because 1.7.0 of material-calendar-view was only
+    // ever published to JCenter (shut down in 2022) and never migrated to Maven
+    // Central - only 1.9.0-rc03+ is there. If either turns out to be needed later,
+    // re-add material-calendar-view at 1.9.2 (current Maven Central release) and
+    // volley at 1.1.1+ instead of these exact versions.
 }

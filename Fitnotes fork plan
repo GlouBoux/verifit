@@ -1,0 +1,163 @@
+# FitNotes_Fork — dépôt de base et premières fonctionnalités
+
+## Dépôt de base : MakisChristou/verifit (confirmé)
+
+verifit reste le bon choix. Comparé aux alternatives trouvées lors des recherches
+(opengym — application web auto-hébergée, pas un client Android natif ; Flexify et
+Lotti — Flutter, pas natif ; OpenScale — suivi du poids/mensurations uniquement, pas un
+journal de musculation ; Fast N Fitness — Java mais maintenance incertaine et bien moins
+de fonctionnalités) : aucune n'est plus proche de FitNotes qu'un journal de musculation
+Android natif.
+
+- Java, Android natif, GPL-3.0, minSdk 16 / target 31, Gradle.
+- UI explicitement inspirée de FitNotes ; a déjà le CRUD des exercices, les exercices
+  personnalisés, les commentaires par exercice, l'import/export CSV (local + WebDAV), le
+  suivi volume/1RM/records, les graphiques, le minuteur de repos.
+- Archivé sur GitHub (juin 2025, dernière release mars 2025) — plus d'activité en amont,
+  mais ce n'est pas un problème pour un fork qu'on compte maintenir soi-même ; ça évite
+  même d'avoir à rebaser sur des changements amont.
+- Point d'attention : le dépôt embarque aussi un backend de compte en ligne optionnel
+  ("verifit_rs", une API Rust) pour la synchronisation multi-appareils. Ce code (login,
+  `WorkoutSetsApi`, réglages WebDAV) est présent un peu partout dans la couche UI (par ex.
+  `SettingsActivity`, `ExerciseAdapter`) et ajoute une vraie complexité ; à trancher tôt
+  si on le garde, on le retire, ou on l'ignore, car ça affecte la propreté des futurs
+  changements.
+
+## Fait architectural clé qui conditionne les deux fonctionnalités
+
+`Exercise` n'a pas d'ID — seulement un `Name` (String) + `BodyPart` + `favorite`. Toutes
+les recherches dans `DataStorage` (`doesExerciseExist`, `editExercise`, `deleteExercise`,
+`getExerciseCategory`, ...) comparent les exercices par correspondance exacte de nom.
+C'est exactement le problème de convention de nommage décrit au départ : il n'y a rien à
+"cloner" au niveau du modèle à part un nom + une zone corporelle, et une collision n'est
+détectée que par égalité de chaînes, jamais empêchée par une contrainte de schéma.
+
+## Fonctionnalité 1 — Dupliquer un exercice (implémentée, testée sur l'app ✅)
+
+Appui long sur un exercice dans l'onglet Exercises → **Duplicate** (à côté d'Edit /
+Delete existants). Ouvre la même boîte de dialogue qu'Edit, pré-remplie avec
+`"<nom> (copy)"` et la même zone corporelle que l'original ; Save crée un **nouvel**
+exercice connu (sans historique, sans effet sur l'original ni ses séries déjà loguées)
+après vérification que le nouveau nom n'existe pas déjà.
+
+Code : `DataStorage.duplicateExercise()`, `ExerciseAdapter` (nouvelle branche
+`R.id.duplicate`), nouvel item de menu + icône `ic_content_copy_24px`.
+
+Confirmé par Romain : fonctionne bien.
+
+## Fonctionnalité 2 — Import Session (implémentée, build OK, comportement à déboguer ⚠️)
+
+Ouvrir un jour (`DayActivity`) → barre d'outils → **Import Session** → choisir un fichier
+`.json` → ses séries sont ajoutées à ce jour. Contrairement à l'import CSV déjà existant
+(Settings → Import CSV, qui est une restauration complète et **destructrice** — elle vide
+les données locales avant d'importer), celui-ci est additif : il ne fait qu'ajouter, donc
+sans risque pour une seule séance venant d'un autre outil, sans toucher à l'historique.
+
+C'est le point d'intégration prévu pour le projet parallèle de génération de séances
+([[workout-generator-engine]] / `workout_engine.py`) : ce script produirait ce JSON, à
+importer soit à la main, soit (plus tard) directement depuis l'app.
+
+Le schéma, le détail des champs, et les contraintes de conception (correspondance par
+nom, ré-import non idempotent) sont documentés dans `docs/session-import-format.md` dans
+le dépôt, avec un exemple fonctionnel dans `docs/sample_session.json`. En bref :
+
+```json
+{
+  "date": "2026-09-04",
+  "exercises": [
+    { "name": "Flat Barbell Bench Press", "bodyPart": "Chest",
+      "sets": [{ "weight": 60, "reps": 8 }, { "weight": 60, "reps": 8 }] }
+  ]
+}
+```
+
+`date` et `bodyPart` sont optionnels (repli sur le jour ouvert / sur la catégorie déjà
+connue de l'exercice). Un `name` inconnu crée automatiquement l'exercice, comme le fait
+déjà l'import CSV.
+
+**Statut au 04/09/2026 : ne fonctionne pas comme attendu côté app** (confirmé par Romain,
+symptôme exact pas encore précisé). Prochaine étape : identifier si c'est une erreur
+affichée, un plantage, ou une absence totale d'effet, puis corriger. Suivi dans
+`claude/fitnotes-fork-todo.md`.
+
+## L'app build et se lance (04/09/2026)
+
+Confirmé sur la machine de Romain : dépôt cloné vers `GlouBoux/verifit` (son fork),
+patches appliqués via `git am`, ouvert dans Android Studio, build et installation OK sur
+émulateur, l'app se lance avec les deux nouvelles fonctionnalités présentes dans l'UI.
+
+Au passage, deux bugs préexistants du dépôt de base ont été trouvés et corrigés (sans
+rapport avec les deux fonctionnalités, sur la même branche) :
+- **Dépendances mortes** (patch #2) : le `build.gradle` racine ne déclarait que
+  `jcenter()`, fermé depuis 2022. `com.android.volley:volley:1.0.0` et
+  `com.applandeo:material-calendar-view:1.7.0` ne pouvaient plus être résolus — ajout de
+  `mavenCentral()`, et suppression pure et simple des deux dépendances puisqu'aucune
+  n'est référencée nulle part dans `src/` (code mort, probablement un essai de réseau
+  avant `verifitrs` et un sélecteur de calendrier jamais branché).
+- **Drawable manquant** (patch #3) : `@drawable/background_transparent`, référencé par 3
+  `ImageButton` dans `diary_row.xml`/`item_view_pager.xml` pour retirer le fond gris par
+  défaut du bouton, n'avait jamais été committé en amont — présent aussi sur la branche
+  master de `MakisChristou/verifit`, donc un bug latent du dépôt d'origine, pas introduit
+  par les deux fonctionnalités. Ajout d'un simple shape transparent.
+
+La branche `feature/duplicate-exercise-and-session-import` a maintenant 3 commits : les
+deux fonctionnalités, puis les deux correctifs ci-dessus. Livrés sous forme de patches
+`0001`, `0002`, `0003` (applicables avec `git am`) plus une archive complète pour le
+premier ; les trois patches ont aussi été appliqués directement sur le dossier local de
+Romain via le pont avec son appareil, donc sa copie de travail et les patches restent
+synchronisés.
+
+## Import de la vraie base FitNotes (04/09/2026)
+
+Romain a fourni son backup FitNotes original (`FitNotes_Backup_2026_09_03_14_06_11.fitnotes`)
+pour visualiser des données réelles dans l'app plutôt que des données de test. Ce fichier
+s'est avéré être une **base SQLite** (le format de stockage interne réel de FitNotes), pas
+un CSV — ni l'import CSV existant de verifit, ni le nouvel Import Session (JSON) ne
+peuvent le lire tel quel.
+
+Un script de conversion a été écrit pour extraire les données utiles (tables
+`training_log`, `exercise`, `Category`, `Comment`) et générer un CSV dans le format
+attendu par l'import CSV existant de verifit (colonnes `Date,Exercise,Category,Reps,Weight,Comment`,
+dans l'ordre exact attendu par `DataStorage.csvToSets()` — à noter que ce n'est *pas* le
+même ordre que celui écrit par l'export CSV natif de verifit lui-même, qui a l'air
+d'avoir une incohérence Weight/Reps entre son en-tête et ses données ; sans impact ici
+puisque ce CSV est généré à la main pour coller à ce que le code de lecture attend).
+
+Résultat : **3784 séries** importées / 369 exercices / 186 jours (28/10/2024 →
+31/08/2026), 823 séries avec un commentaire attaché. Deux catégories de séries ont été
+délibérément exclues (verifit n'a pas de notion de temps/distance, uniquement
+poids×répétitions) :
+- 469 séries marquées incomplètes/planifiées dans FitNotes (`is_complete = 0`).
+- 177 séries basées sur la durée/distance plutôt que poids+répétitions (cardio, gainage
+  chronométré, etc. — `unit != 0`).
+
+Les noms d'exercices et commentaires contenant des virgules ou retours à la ligne ont été
+nettoyés (remplacés) avant export, car `CSVFile.java` dans verifit fait un simple
+`split(",")` sans gestion des guillemets — une virgule brute aurait décalé les colonnes.
+
+Fichier livré : `verifit_import_from_fitnotes.csv`, déposé directement à la racine du
+dossier `FitNotes_Fork` (à côté du dépôt `verifit`, volontairement hors du dépôt git —
+ce sont des données personnelles). **Attention avant import** : Settings → Import CSV
+dans verifit remplace l'historique de séries existant (mais conserve la liste des
+exercices connus, y compris l'exercice dupliqué de test).
+
+## Pas encore fait
+
+- Debug du comportement d'Import Session (JSON) — priorité actuelle, voir TODO.
+- Test réel de l'import de la base FitNotes complète dans l'app.
+- Décision sur le sort du backend en ligne verifit_rs / WebDAV.
+- AGP actuellement en 7.4.2 dans la copie de Romain (auto-détecté par son Android Studio,
+  différent du 4.0.1 d'origine du dépôt) avec une mise à jour proposée — délibérément
+  reporté, pas bloquant.
+
+## Questions ouvertes pour la prochaine session
+
+1. Pousser la branche vers `GlouBoux/verifit` et envisager une PR vers
+   `MakisChristou/verifit` en amont, ou continuer en local ?
+2. Retirer le backend de compte en ligne verifit_rs, ou le garder en option ?
+3. Pour l'intégration avec le générateur de séances : l'import manuel d'un fichier JSON
+   suffit-il pour l'instant, ou faut-il que le script pousse directement dans l'app (par
+   ex. via un content provider / intent de partage / appel HTTP local) — la v1 ne couvre
+   que la moitié "import de fichier".
+
+Voir aussi `claude/fitnotes-fork-todo.md` pour le suivi au jour le jour.
