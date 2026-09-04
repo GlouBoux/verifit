@@ -2,5 +2,12 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <item
+        android:id="@+id/import_session"
+        android:title="Import Session"
+        android:icon="@drawable/ic_cloud_upload_24px"
+        app:showAsAction="always"
+        app:iconTint="@color/cardview_light_background">
+    </item>
 
 </menu>

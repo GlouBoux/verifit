@@ -17,6 +17,9 @@ import android.util.Pair;
 import android.widget.Toast;
 
 import com.example.verifit.model.Exercise;
+import com.example.verifit.model.ImportedExercise;
+import com.example.verifit.model.ImportedSession;
+import com.example.verifit.model.ImportedSet;
 import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
@@ -868,6 +871,111 @@ public class DataStorage {
         }
     }
 
+    // Creates a new known exercise that copies the body part of an existing one under a
+    // new name. Exercises are only ever matched by name (see doesExerciseExist,
+    // deleteExercise, editExercise, ...) so this is the supported way to make a variant
+    // of an exercise (e.g. "Incline Dumbbell Press" from "Flat Dumbbell Press") without
+    // retyping it and without the copy silently colliding with the original.
+    // Caller is expected to have already checked !doesExerciseExist(new_exercise_name).
+    // Returns null if source_exercise_name isn't a known exercise.
+    public Exercise duplicateExercise(String source_exercise_name, String new_exercise_name)
+    {
+        Exercise source = null;
+        for(int i = 0; i < knownExercises.size(); i++)
+        {
+            if(knownExercises.get(i).getName().equals(source_exercise_name))
+            {
+                source = knownExercises.get(i);
+                break;
+            }
+        }
 
+        if(source == null)
+        {
+            return null;
+        }
+
+        Exercise duplicate = new Exercise(new_exercise_name, source.getBodyPart());
+        knownExercises.add(duplicate);
+        return duplicate;
+    }
+
+    // Summary of an importFromUri()/mergeImportedSession() call, used to tell the user
+    // what actually happened (e.g. "12 sets imported, 2 new exercises created").
+    public static class ImportSummary
+    {
+        public int setsImported = 0;
+        public int exercisesCreated = 0;
+        public int setsSkipped = 0;
+        public String date = "";
+    }
+
+    // Merges an externally generated session (see ImportedSession, and SessionImporter
+    // which reads the JSON file) into the existing workout history.
+    //
+    // Unlike readFile()/csvToSets() - which is a full backup restore and clears
+    // everything first - this is ADDITIVE: it only appends new sets, so it's safe to use
+    // for a single day/session coming from another tool (e.g. a workout-generator
+    // script) without touching any previously logged history. Any exercise name in the
+    // file that isn't already known is created automatically, same as a manual CSV
+    // import would do.
+    public ImportSummary mergeImportedSession(ImportedSession session, String fallbackDate)
+    {
+        ImportSummary summary = new ImportSummary();
+
+        String date = session.getDate();
+        if(date.isEmpty())
+        {
+            date = fallbackDate;
+        }
+        summary.date = date;
+
+        for(ImportedExercise importedExercise : session.getExercises())
+        {
+            String exerciseName = importedExercise.getName();
+
+            // Skip malformed entries rather than failing the whole import
+            if(exerciseName.isEmpty())
+            {
+                continue;
+            }
+
+            String bodyPart;
+            if(doesExerciseExist(exerciseName))
+            {
+                // Keep the app's existing category for this exercise so a re-import
+                // never silently changes it; a bodyPart in the file is only used to
+                // classify a brand new exercise.
+                bodyPart = getExerciseCategory(exerciseName);
+            }
+            else
+            {
+                bodyPart = importedExercise.getBodyPart();
+                knownExercises.add(new Exercise(exerciseName, bodyPart));
+                summary.exercisesCreated++;
+            }
+
+            for(ImportedSet importedSet : importedExercise.getSets())
+            {
+                if(importedSet.getWeight() == null || importedSet.getReps() == null)
+                {
+                    summary.setsSkipped++;
+                    continue;
+                }
+
+                WorkoutSet workoutSet = new WorkoutSet(date, exerciseName, bodyPart, importedSet.getReps(), importedSet.getWeight(), importedSet.getComment());
+                sets.add(workoutSet);
+                summary.setsImported++;
+            }
+        }
+
+        if(summary.setsImported > 0)
+        {
+            setsToEverything();
+            calculatePersonalRecords();
+        }
+
+        return summary;
+    }
 
 }

@@ -330,6 +330,116 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
                 return true;
             }
 
+            // Duplicate Exercise: creates a brand new known exercise (same body part,
+            // no history) under a new name, leaving the original and all its logged
+            // sets untouched. Handy for variants (e.g. "Incline Dumbbell Press" from
+            // "Flat Dumbbell Press") without retyping everything or fighting the
+            // name-based lookups used everywhere else in the app.
+            else if(item.getItemId() == R.id.duplicate)
+            {
+                int position = getAdapterPosition();
+                String source_exercise_name = Exercises.get(position).getName();
+                String source_exercise_bodypart = Exercises.get(position).getBodyPart();
+
+                // Reuse the edit dialog layout: same fields (name + category), different title/button and different save behaviour (add instead of rename).
+                LayoutInflater inflater = LayoutInflater.from(ct);
+                View view = inflater.inflate(R.layout.edit_exercise_dialog,null);
+                AlertDialog alertDialog = new AlertDialog.Builder(ct).setView(view).create();
+
+                // Find views
+                TextView tv_dialog_title = view.findViewById(R.id.tv_date);
+                Button bt_save = view.findViewById(R.id.bt_login_signup);
+                Button bt_cancel = view.findViewById(R.id.bt_cancel);
+                EditText et_exercise_name = view.findViewById(R.id.et_exercise_name);
+                Spinner spinner = view.findViewById(R.id.spinner);
+
+                tv_dialog_title.setText("Duplicate Exercise");
+                bt_save.setText("Duplicate");
+
+                // Setup Spinner Stuff
+                ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(ct,R.array.Categories, android.R.layout.simple_spinner_item);
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                spinner.setAdapter(adapter);
+                spinner.setOnItemSelectedListener(this);
+
+                // Get Array from xml
+                String[] listValue = ct.getResources().getStringArray(R.array.Categories);
+
+                // Find Current Category position
+                for(int i = 0; i < listValue.length; i++)
+                {
+                    if(listValue[i].equals(source_exercise_bodypart))
+                    {
+                        current_exercise_category_position = i;
+                    }
+                }
+
+                // Pre-fill with a "(copy)" suffix so it can't collide with the original,
+                // cursor placed at the end so the user can just start typing the real
+                // variant name (e.g. "Incline ...").
+                String suggested_name = source_exercise_name + " (copy)";
+                et_exercise_name.setText(suggested_name);
+                et_exercise_name.setSelection(suggested_name.length());
+                spinner.setSelection(current_exercise_category_position);
+                // Also set directly in case the spinner's selection listener doesn't
+                // fire before Duplicate is tapped (mirrors the Edit dialog above).
+                new_exercise_category = source_exercise_bodypart;
+
+                bt_cancel.setOnClickListener(new View.OnClickListener()
+                {
+                    @Override
+                    public void onClick(View view)
+                    {
+                        alertDialog.dismiss();
+                    }
+                });
+
+                bt_save.setOnClickListener(new View.OnClickListener()
+                {
+                    @Override
+                    public void onClick(View view)
+                    {
+                        String new_exercise_name = et_exercise_name.getText().toString().trim();
+
+                        if(new_exercise_name.isEmpty() || new_exercise_category == null || new_exercise_category.isEmpty())
+                        {
+                            Toast.makeText(ct,"Please choose an apropriate name", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        if(MainActivity.dataStorage.doesExerciseExist(new_exercise_name))
+                        {
+                            Toast.makeText(ct,"Exercise Already Exists", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        Exercise duplicated = MainActivity.dataStorage.duplicateExercise(source_exercise_name, new_exercise_name);
+
+                        if(duplicated != null)
+                        {
+                            // Honour a category change made in the dialog (duplicateExercise() copies the source's body part by default).
+                            if(!new_exercise_category.equals(duplicated.getBodyPart()))
+                            {
+                                duplicated.setBodyPart(new_exercise_category);
+                            }
+
+                            MainActivity.dataStorage.saveKnownExerciseData(ct);
+
+                            Exercises.add(duplicated);
+                            Exercises_Full.add(duplicated);
+                            notifyDataSetChanged();
+
+                            Toast.makeText(ct,"Exercise Duplicated", Toast.LENGTH_SHORT).show();
+                        }
+
+                        alertDialog.dismiss();
+                    }
+                });
+
+                alertDialog.show();
+                return true;
+            }
+
             // Delete Exercise
             else if(item.getItemId() == R.id.delete)
             {

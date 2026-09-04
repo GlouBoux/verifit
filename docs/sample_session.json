@@ -1,0 +1,24 @@
+{
+  "date": "2026-09-04",
+  "comment": "Sample session for testing Import Session",
+  "exercises": [
+    {
+      "name": "Flat Barbell Bench Press",
+      "bodyPart": "Chest",
+      "comment": "Pause 90s between sets",
+      "sets": [
+        { "weight": 60, "reps": 8 },
+        { "weight": 60, "reps": 8, "comment": "RPE 8" },
+        { "weight": 60, "reps": 6 }
+      ]
+    },
+    {
+      "name": "Squat",
+      "sets": [
+        { "weight": 100, "reps": 5 },
+        { "weight": 100, "reps": 5 },
+        { "weight": 100, "reps": 5 }
+      ]
+    }
+  ]
+}
