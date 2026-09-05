@@ -10,4 +10,17 @@
         app:iconTint="@color/cardview_light_background">
     </item>
 
+    <!-- Retour Romain 05/09/2026 : sélectionner plusieurs exercices pour les supprimer
+         d'un coup - même mécanique (ActionMode) que dans AddExerciseActivity, voir
+         set_selection_action_menu.xml. La réorganisation (drag & drop, "comme
+         FitNotes") est un mécanisme séparé et toujours disponible via la poignée de
+         chaque ligne (day_exercise_row.xml), pas liée à ce mode sélection. -->
+    <item
+        android:id="@+id/select_exercises"
+        android:icon="@drawable/ic_fact_check_24px"
+        android:title="Select exercises"
+        app:showAsAction="always"
+        app:iconTint="@color/cardview_light_background">
+    </item>
+
 </menu>

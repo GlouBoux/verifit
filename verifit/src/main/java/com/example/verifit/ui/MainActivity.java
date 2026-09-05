@@ -2,7 +2,10 @@ package com.example.verifit.ui;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.view.ActionMode;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
 import android.app.Activity;
@@ -13,18 +16,23 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.verifit.BackupService;
 import com.example.verifit.DataStorage;
+import com.example.verifit.LoadingDialog;
 import com.example.verifit.R;
 import com.example.verifit.SnackBarWithMessage;
 import com.example.verifit.model.WorkoutSet;
+import com.example.verifit.adapters.ViewPagerExerciseAdapter;
 import com.example.verifit.adapters.ViewPagerWorkoutDayAdapter;
 import com.example.verifit.adapters.WebdavAdapter;
 import com.example.verifit.model.WorkoutDay;
@@ -42,6 +50,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -164,8 +173,10 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     {
         setExportBackupName();
 
-        // Rename top bar to something sensible
-        getSupportActionBar().setTitle("Verifit");
+        // Retour Romain 05/09/2026 : "Verifit" ne voulait rien dire pour lui - renommé
+        // "Workout" (l'app garde son nom "Verifit" par ailleurs, seul ce titre d'écran
+        // change).
+        getSupportActionBar().setTitle("Workout");
 
         // From Settings Activity when importing CSV
         Intent in = getIntent();
@@ -514,6 +525,10 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
             Intent in = new Intent(this,SettingsActivity.class);
             startActivity(in);
         }
+        else if(item.getItemId() == R.id.select_exercises)
+        {
+            startExerciseSelectionMode();
+        }
         return super.onOptionsItemSelected(item);
     }
 
@@ -529,6 +544,215 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
                 openDay(dateKey);
             }
         }).show();
+    }
+
+    // --- Multi-select delete + drag reorder sur l'onglet Workout (retour Romain
+    // 05/09/2026) --- Même mécanique que DayActivity, mais appliquée à la page
+    // actuellement affichée dans le ViewPager2 : ce carrousel n'a pas UN seul adapter
+    // d'exercices comme DayActivity, mais un par jour (recyclé au fil du swipe), donc il
+    // faut d'abord retrouver le ViewHolder de la page visible avant de pouvoir démarrer
+    // la sélection dessus.
+
+    // ViewPager2 encapsule en interne une unique RecyclerView (son unique enfant direct)
+    // - c'est la façon standard de retrouver le ViewHolder actuellement affiché, il n'y a
+    // pas d'API publique dédiée sur ViewPager2 lui-même pour ça.
+    private ViewPagerWorkoutDayAdapter.WorkoutDayViewHolder getCurrentDayViewHolder()
+    {
+        if (viewPager2 == null || viewPager2.getChildCount() == 0)
+        {
+            return null;
+        }
+
+        View child = viewPager2.getChildAt(0);
+        if (!(child instanceof RecyclerView))
+        {
+            return null;
+        }
+
+        RecyclerView innerRecyclerView = (RecyclerView) child;
+        RecyclerView.ViewHolder viewHolder =
+                innerRecyclerView.findViewHolderForAdapterPosition(viewPager2.getCurrentItem());
+
+        if (viewHolder instanceof ViewPagerWorkoutDayAdapter.WorkoutDayViewHolder)
+        {
+            return (ViewPagerWorkoutDayAdapter.WorkoutDayViewHolder) viewHolder;
+        }
+        return null;
+    }
+
+    private ActionMode workoutSelectionActionMode = null;
+
+    private void startExerciseSelectionMode()
+    {
+        if (workoutSelectionActionMode != null)
+        {
+            return;
+        }
+
+        ViewPagerWorkoutDayAdapter.WorkoutDayViewHolder dayViewHolder = getCurrentDayViewHolder();
+        if (dayViewHolder == null || dayViewHolder.getExerciseAdapter() == null)
+        {
+            Toast.makeText(this, "No day currently displayed", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ViewPagerExerciseAdapter adapter = dayViewHolder.getExerciseAdapter();
+        String date = dayViewHolder.getCurrentDate();
+
+        workoutSelectionActionMode = startSupportActionMode(new ActionMode.Callback() {
+            @Override
+            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                MenuInflater inflater = mode.getMenuInflater();
+                inflater.inflate(R.menu.exercise_selection_action_menu, menu);
+                mode.setTitle("0 selected");
+                adapter.setOnSelectionChangedListener(count -> {
+                    if (workoutSelectionActionMode != null)
+                    {
+                        workoutSelectionActionMode.setTitle(count + " selected");
+                    }
+                });
+                adapter.enterSelectionMode();
+                return true;
+            }
+
+            @Override
+            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                return false;
+            }
+
+            @Override
+            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+                if (item.getItemId() == R.id.delete_selected_exercises)
+                {
+                    confirmDeleteSelectedExercises(adapter, date, mode);
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public void onDestroyActionMode(ActionMode mode) {
+                adapter.exitSelectionMode();
+                adapter.setOnSelectionChangedListener(null);
+                workoutSelectionActionMode = null;
+            }
+        });
+    }
+
+    private void confirmDeleteSelectedExercises(ViewPagerExerciseAdapter adapter, String date, ActionMode mode)
+    {
+        List<String> selectedNames = adapter.getSelectedExerciseNames();
+
+        if (selectedNames.isEmpty())
+        {
+            Toast.makeText(this, "No exercise selected", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Réutilise delete_set_dialog.xml, même confirmation que DayActivity.
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View view = inflater.inflate(R.layout.delete_set_dialog, null);
+        AlertDialog alertDialog = new AlertDialog.Builder(this).setView(view).create();
+
+        TextView title = view.findViewById(R.id.tv_date);
+        title.setText(selectedNames.size() + " exercise(s) selected. Delete all their sets for this day?");
+
+        Button bt_yes = view.findViewById(R.id.bt_yes3);
+        Button bt_no = view.findViewById(R.id.bt_no3);
+
+        bt_no.setOnClickListener(v -> alertDialog.dismiss());
+
+        bt_yes.setOnClickListener(v -> {
+            alertDialog.dismiss();
+            deleteSelectedExercises(selectedNames, date, mode);
+        });
+
+        alertDialog.show();
+    }
+
+    private void deleteSelectedExercises(List<String> exerciseNames, String date, ActionMode mode)
+    {
+        autoBackupRequired = true;
+        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
+        sharedPreferences.save("true", "autoBackupRequired");
+
+        int day_position = dataStorage.getDayPosition(date);
+        if (day_position < 0)
+        {
+            mode.finish();
+            return;
+        }
+
+        WorkoutDay day = dataStorage.getWorkoutDays().get(day_position);
+        List<WorkoutSet> setsToDelete = new ArrayList<>();
+        for (WorkoutSet set : day.getSets())
+        {
+            if (exerciseNames.contains(set.getExerciseName()))
+            {
+                setsToDelete.add(set);
+            }
+        }
+
+        if (setsToDelete.isEmpty())
+        {
+            mode.finish();
+            return;
+        }
+
+        if (sharedPreferences.isOfflineMode())
+        {
+            deleteExerciseSetsLocally(day_position, setsToDelete);
+            Toast.makeText(this, exerciseNames.size() + " exercise(s) deleted", Toast.LENGTH_SHORT).show();
+            mode.finish();
+        }
+        else
+        {
+            final LoadingDialog loadingDialog = new LoadingDialog(MainActivity.this);
+            loadingDialog.loadingAlertDialog();
+
+            WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getApplicationContext(), getString(R.string.API_ENDPOINT));
+            workoutSetsApi.deleteWorkoutSets(setsToDelete, new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    loadingDialog.dismissDialog();
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Can't connect to server", Toast.LENGTH_SHORT).show());
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    loadingDialog.dismissDialog();
+
+                    if (200 == response.code())
+                    {
+                        deleteExerciseSetsLocally(day_position, setsToDelete);
+                        runOnUiThread(() -> {
+                            Toast.makeText(MainActivity.this, exerciseNames.size() + " exercise(s) deleted", Toast.LENGTH_SHORT).show();
+                            mode.finish();
+                        });
+                    }
+                    else
+                    {
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, response.message(), Toast.LENGTH_SHORT).show());
+                    }
+                }
+            });
+        }
+    }
+
+    private void deleteExerciseSetsLocally(int day_position, List<WorkoutSet> setsToDelete)
+    {
+        WorkoutDay day = dataStorage.getWorkoutDays().get(day_position);
+        day.removeSets(setsToDelete);
+
+        if (day.getSets().isEmpty())
+        {
+            dataStorage.getWorkoutDays().remove(day_position);
+        }
+
+        dataStorage.saveWorkoutData(getApplicationContext());
+        dataStorage.saveKnownExerciseData(getApplicationContext());
+
+        runOnUiThread(this::initViewPager);
     }
 }
 

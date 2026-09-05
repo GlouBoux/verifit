@@ -919,6 +919,20 @@ public class DataStorage {
     // script) without touching any previously logged history. Any exercise name in the
     // file that isn't already known is created automatically, same as a manual CSV
     // import would do.
+    //
+    // BUG FIX (retour Romain 05/09/2026, PERTE DE DONNÉES) : cette méthode appelait
+    // setsToEverything() pour intégrer les séries importées, qui VIDE workoutDays et le
+    // RECONSTRUIT ENTIÈREMENT à partir de la liste "sets". Or "sets" n'est peuplée que
+    // par un import CSV complet (readFile()/csvToSets()) et n'est JAMAIS resynchronisée
+    // avec workoutDays après un simple loadWorkoutData() au démarrage de l'app - un
+    // redémarrage à froid (ex. après avoir recompilé et réinstallé l'app) laisse donc
+    // "sets" vide. Résultat concret vécu par Romain : importer une séance juste après un
+    // tel redémarrage effaçait silencieusement TOUT l'historique précédent (workoutDays
+    // reconstruit à partir d'un "sets" ne contenant que la séance importée), et ce state
+    // tronqué était aussitôt persisté par saveWorkoutData() - l'exact inverse de ce que
+    // cette méthode promettait ("additive, ne touche jamais l'historique"). Corrigé en
+    // ajoutant les séries importées directement au bon WorkoutDay (existant ou nouveau)
+    // dans workoutDays, sans jamais reconstruire toute la liste depuis "sets".
     public ImportSummary mergeImportedSession(ImportedSession session, String fallbackDate)
     {
         ImportSummary summary = new ImportSummary();
@@ -929,6 +943,21 @@ public class DataStorage {
             date = fallbackDate;
         }
         summary.date = date;
+
+        WorkoutDay day = null;
+        for(WorkoutDay existingDay : workoutDays)
+        {
+            if(date.equals(existingDay.getDate()))
+            {
+                day = existingDay;
+                break;
+            }
+        }
+        boolean isNewDay = (day == null);
+        if(isNewDay)
+        {
+            day = new WorkoutDay();
+        }
 
         for(ImportedExercise importedExercise : session.getExercises())
         {
@@ -964,14 +993,20 @@ public class DataStorage {
                 }
 
                 WorkoutSet workoutSet = new WorkoutSet(date, exerciseName, bodyPart, importedSet.getReps(), importedSet.getWeight(), importedSet.getComment());
+                // Gardée en cohérence avec "sets" au cas où un autre chemin du code s'y
+                // fierait encore, mais ce n'est plus elle qui alimente workoutDays ici.
                 sets.add(workoutSet);
+                day.addSet(workoutSet); // recalcule UpdateData() pour CE jour uniquement
                 summary.setsImported++;
             }
         }
 
         if(summary.setsImported > 0)
         {
-            setsToEverything();
+            if(isNewDay)
+            {
+                workoutDays.add(day);
+            }
             calculatePersonalRecords();
         }
 

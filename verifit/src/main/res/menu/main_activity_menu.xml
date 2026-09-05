@@ -9,6 +9,18 @@
         app:iconTint="@color/cardview_light_background">
     </item>
 
+    <!-- Retour Romain 05/09/2026 : sélection multiple (suppression + réorganisation) des
+         exercices du jour actuellement affiché dans le carrousel - même mécanique que
+         sur l'écran Day/calendrier (voir DayActivity), voir exercise_selection_action_menu.xml
+         pour la barre contextuelle. -->
+    <item
+        android:id="@+id/select_exercises"
+        android:icon="@drawable/ic_fact_check_24px"
+        android:title="Select exercises"
+        app:showAsAction="always"
+        app:iconTint="@color/cardview_light_background">
+    </item>
+
 <!--    <item-->
 <!--        android:id="@+id/account"-->
 <!--        android:icon="@drawable/ic_account_circle_24px"-->

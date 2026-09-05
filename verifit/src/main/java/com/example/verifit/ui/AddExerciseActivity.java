@@ -3,6 +3,7 @@ package com.example.verifit.ui;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.view.ActionMode;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -67,6 +68,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import okhttp3.Call;
@@ -107,6 +109,10 @@ public class AddExerciseActivity extends AppCompatActivity {
     public Button bt_reset;
 
     private AlertDialog currentDialog = null;
+
+    // Multi-select delete (retour Romain 05/09/2026) : sélectionner plusieurs séries et
+    // les supprimer en un coup, au lieu d'un "Clear" fastidieux série par série.
+    private ActionMode selectionActionMode = null;
 
 
 
@@ -565,6 +571,158 @@ public class AddExerciseActivity extends AppCompatActivity {
         });
     }
 
+    // --- Multi-select delete (retour Romain 05/09/2026) ---
+    // Entrée dans le mode sélection via une ActionMode dédiée plutôt qu'en réinterprétant
+    // le long-press existant (qui reste Éditer/Supprimer UNE série, cf. showSetPopupMenu).
+    public void startSelectionMode()
+    {
+        if (selectionActionMode != null)
+        {
+            return;
+        }
+        selectionActionMode = startSupportActionMode(new ActionMode.Callback() {
+            @Override
+            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                MenuInflater inflater = mode.getMenuInflater();
+                inflater.inflate(R.menu.set_selection_action_menu, menu);
+                mode.setTitle("0 selected");
+                workoutSetAdapter2.enterSelectionMode();
+                return true;
+            }
+
+            @Override
+            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                return false;
+            }
+
+            @Override
+            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+                if (item.getItemId() == R.id.delete_selected)
+                {
+                    confirmDeleteSelectedSets(mode);
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public void onDestroyActionMode(ActionMode mode) {
+                workoutSetAdapter2.exitSelectionMode();
+                selectionActionMode = null;
+            }
+        });
+    }
+
+    private void confirmDeleteSelectedSets(ActionMode mode)
+    {
+        List<WorkoutSet> selected = workoutSetAdapter2.getSelectedSets();
+
+        if (selected.isEmpty())
+        {
+            Toast.makeText(this, "No set selected", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Réutilise delete_set_dialog.xml (même confirmation que la suppression d'une
+        // seule série), juste avec un libellé qui reflète le nombre sélectionné.
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View view = inflater.inflate(R.layout.delete_set_dialog, null);
+        AlertDialog alertDialog = new AlertDialog.Builder(this).setView(view).create();
+
+        TextView title = view.findViewById(R.id.tv_date);
+        title.setText(selected.size() + " sets selected. Delete them?");
+
+        Button bt_yes = view.findViewById(R.id.bt_yes3);
+        Button bt_no = view.findViewById(R.id.bt_no3);
+
+        bt_no.setOnClickListener(v -> alertDialog.dismiss());
+
+        bt_yes.setOnClickListener(v -> {
+            alertDialog.dismiss();
+            deleteSelectedSets(selected, mode);
+        });
+
+        alertDialog.show();
+    }
+
+    private void deleteSelectedSets(List<WorkoutSet> setsToDelete, ActionMode mode)
+    {
+        // Let backup service know that something has changed
+        MainActivity.autoBackupRequired = true;
+        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
+        sharedPreferences.save("true", "autoBackupRequired");
+
+        if (sharedPreferences.isOfflineMode())
+        {
+            deleteSetsLocally(getApplicationContext(), setsToDelete);
+            showSnackbarMessage(setsToDelete.size() + " sets deleted");
+            mode.finish();
+        }
+        else
+        {
+            final LoadingDialog loadingDialog = new LoadingDialog(AddExerciseActivity.this);
+            loadingDialog.loadingAlertDialog();
+
+            // /sets/bulk : même endpoint déjà utilisé pour la suppression d'un exercice
+            // entier (ExerciseAdapter.locallyDeleteExercise) - un seul appel réseau pour
+            // toute la sélection, pas un par série.
+            WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getApplicationContext(), getString(R.string.API_ENDPOINT));
+            workoutSetsApi.deleteWorkoutSets(setsToDelete, new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    loadingDialog.dismissDialog();
+                    showSnackbarMessage("Can't connect to server");
+                }
+
+                @Override
+                public void onResponse(Call call, okhttp3.Response response) throws IOException {
+                    loadingDialog.dismissDialog();
+
+                    if (200 == response.code())
+                    {
+                        deleteSetsLocally(getApplicationContext(), setsToDelete);
+                        runOnUiThread(() -> {
+                            showSnackbarMessage(setsToDelete.size() + " sets deleted");
+                            mode.finish();
+                        });
+                    }
+                    else
+                    {
+                        showSnackbarMessage(response.message());
+                    }
+                }
+            });
+        }
+    }
+
+    // Local removal for a batch of sets, all belonging to the current exercise/date
+    // (Todays_Exercise_Sets is already scoped to both) - so there is exactly one
+    // WorkoutDay to touch, unlike deleteExerciseGetSets which spans every day.
+    // WorkoutDay.removeSets() does one UpdateData() for the whole batch rather than via
+    // WorkoutDay.removeSet() per item, both to avoid recomputing it N times and to
+    // sidestep removeSet()'s assert (size > 1) when the selection empties the day down
+    // to its last set.
+    private static void deleteSetsLocally(Context ct, List<WorkoutSet> setsToDelete)
+    {
+        int day_position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
+
+        if (day_position >= 0)
+        {
+            WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
+            day.removeSets(setsToDelete);
+
+            if (day.getSets().isEmpty())
+            {
+                MainActivity.dataStorage.getWorkoutDays().remove(day_position);
+            }
+        }
+
+        MainActivity.dataStorage.saveWorkoutData(ct);
+        MainActivity.dataStorage.saveKnownExerciseData(ct);
+
+        updateTodaysExercises();
+    }
+
     public static void editSet(AddExerciseWorkoutSetAdapter.MyViewHolder holder, View view, int position)
     {
         System.out.println("Edit Set on position " + position + " clicked");
@@ -733,6 +891,12 @@ public class AddExerciseActivity extends AppCompatActivity {
         // Find Recycler View Object
         recyclerView = findViewById(R.id.recycler_view);
         workoutSetAdapter2 = new AddExerciseWorkoutSetAdapter(this,Todays_Exercise_Sets);
+        workoutSetAdapter2.setOnSelectionChangedListener(count -> {
+            if (selectionActionMode != null)
+            {
+                selectionActionMode.setTitle(count + " selected");
+            }
+        });
         recyclerView.setAdapter(workoutSetAdapter2);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -792,8 +956,14 @@ public class AddExerciseActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item)
     {
+        // Select sets (multi-delete, retour Romain 05/09/2026)
+        if(item.getItemId() == R.id.select_sets)
+        {
+            startSelectionMode();
+        }
+
         // Timer
-        if(item.getItemId() == R.id.timer)
+        else if(item.getItemId() == R.id.timer)
         {
 
             setupTimer();

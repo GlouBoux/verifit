@@ -4,8 +4,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -20,6 +22,9 @@ import com.example.verifit.ui.AddExerciseActivity;
 import com.example.verifit.ui.MainActivity;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 
 // Adapter for WorkoutExercise Class
@@ -28,10 +33,108 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
     Context ct;
     ArrayList<WorkoutExercise> Exercises;
 
+    // Multi-select delete (retour Romain 05/09/2026), même mécanique que
+    // AddExerciseWorkoutSetAdapter côté séries individuelles.
+    //
+    // Suivi par NOM d'exercice plutôt que par position (retour Romain 05/09/2026) :
+    // depuis que la poignée de réorganisation reste active pendant la sélection
+    // multiple (voir plus bas), une sélection par position deviendrait fausse dès qu'un
+    // glisser-déposer change l'ordre de la liste pendant qu'une sélection est en cours.
+    private boolean selectionMode = false;
+    private final Set<String> selectedExerciseNames = new HashSet<>();
+    private OnSelectionChangedListener selectionChangedListener;
+
+    // Drag & drop pour réordonner les exercices ("comme FitNotes", retour Romain
+    // 05/09/2026) - la poignée de chaque ligne démarre le drag via ce listener,
+    // l'ItemTouchHelper lui-même vit dans DayActivity (il a besoin d'accéder au
+    // WorkoutDay pour persister l'ordre final).
+    private OnStartDragListener dragListener;
+
+    public interface OnSelectionChangedListener {
+        void onSelectionChanged(int selectedCount);
+    }
+
+    public interface OnStartDragListener {
+        void onStartDrag(RecyclerView.ViewHolder viewHolder);
+    }
+
     public DayExerciseAdapter(Context ct, ArrayList<WorkoutExercise> Exercises)
     {
         this.ct = ct;
         this.Exercises = new ArrayList<>(Exercises);
+    }
+
+    public void setOnSelectionChangedListener(OnSelectionChangedListener listener)
+    {
+        this.selectionChangedListener = listener;
+    }
+
+    public void setOnStartDragListener(OnStartDragListener listener)
+    {
+        this.dragListener = listener;
+    }
+
+    public void enterSelectionMode()
+    {
+        selectionMode = true;
+        selectedExerciseNames.clear();
+        notifyDataSetChanged();
+    }
+
+    public void exitSelectionMode()
+    {
+        selectionMode = false;
+        selectedExerciseNames.clear();
+        notifyDataSetChanged();
+    }
+
+    public boolean isSelectionMode()
+    {
+        return selectionMode;
+    }
+
+    public int getSelectedCount()
+    {
+        return selectedExerciseNames.size();
+    }
+
+    public List<String> getSelectedExerciseNames()
+    {
+        return new ArrayList<>(selectedExerciseNames);
+    }
+
+    private void toggleSelection(int position)
+    {
+        if (position < 0 || position >= Exercises.size())
+        {
+            return;
+        }
+
+        String exerciseName = Exercises.get(position).getExercise();
+        if (selectedExerciseNames.contains(exerciseName))
+        {
+            selectedExerciseNames.remove(exerciseName);
+        }
+        else
+        {
+            selectedExerciseNames.add(exerciseName);
+        }
+        notifyItemChanged(position);
+
+        if (selectionChangedListener != null)
+        {
+            selectionChangedListener.onSelectionChanged(selectedExerciseNames.size());
+        }
+    }
+
+    // Appelé par l'ItemTouchHelper.Callback (DayActivity) à chaque étape du drag -
+    // seulement la mise à jour visuelle/locale de la liste ; la persistance dans
+    // WorkoutDay.moveExercise() se fait une seule fois, à la fin du geste.
+    public void moveItem(int fromPosition, int toPosition)
+    {
+        WorkoutExercise moved = Exercises.remove(fromPosition);
+        Exercises.add(toPosition, moved);
+        notifyItemMoved(fromPosition, toPosition);
     }
 
     @NonNull
@@ -55,14 +158,49 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
         holder.recyclerView.setAdapter(workoutSetAdapter);
         holder.recyclerView.setLayoutManager(new LinearLayoutManager(ct));
 
+        holder.checkbox.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
+        holder.imageView.setVisibility(selectionMode ? View.GONE : View.VISIBLE);
+        holder.checkbox.setChecked(selectedExerciseNames.contains(Exercises.get(position).getExercise()));
+
+        // Retour Romain 05/09/2026 : la poignée de réorganisation reste disponible
+        // PENDANT la sélection multiple aussi (avant, elle disparaissait en sélection -
+        // ça empêchait de réordonner et sélectionner dans la même passe, "mode reorg" et
+        // "mode sélection" ne faisant qu'un pour Romain, comme dans FitNotes).
+        holder.dragHandle.setVisibility(View.VISIBLE);
+
+        // Retour Romain 05/09/2026 : replie les séries de CHAQUE exercice pendant la
+        // sélection multiple - plus facile de repérer/cocher plusieurs exercices ou de
+        // les glisser-déposer sans avoir à faire défiler le détail de chacun. Revient à
+        // l'affichage normal (déplié) une fois la sélection terminée.
+        if (selectionMode)
+        {
+            holder.recyclerView.setVisibility(View.GONE);
+            holder.blue_line.setVisibility(View.INVISIBLE);
+        }
+        else
+        {
+            holder.recyclerView.setVisibility(View.VISIBLE);
+            holder.blue_line.setVisibility(View.VISIBLE);
+        }
 
         holder.editButton.setOnClickListener(new View.OnClickListener()
         {
             @Override
             public void onClick(View view)
             {
-                startIntent(position);
+                if (!selectionMode)
+                {
+                    startIntent(holder.getAdapterPosition());
+                }
             }
+        });
+
+        holder.dragHandle.setOnTouchListener((v, event) -> {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN && dragListener != null)
+            {
+                dragListener.onStartDrag(holder);
+            }
+            return false;
         });
 
         // Colorize exercise icon accordingly
@@ -131,6 +269,8 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
         View blue_line;
         CardView cardview_exercise2;
         ImageView imageView;
+        CheckBox checkbox;
+        ImageView dragHandle;
 
         public MyViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -140,11 +280,19 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
             blue_line = itemView.findViewById(R.id.blue_line);
             cardview_exercise2 = itemView.findViewById(R.id.cardview_exercise_history);
             imageView = itemView.findViewById(R.id.imageView2);
+            checkbox = itemView.findViewById(R.id.exercise_checkbox);
+            dragHandle = itemView.findViewById(R.id.drag_handle);
 
-                // Expand More/Less
+                // Expand More/Less, ou bascule la sélection en mode sélection multiple.
                 cardview_exercise2.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
+                    if (selectionMode)
+                    {
+                        toggleSelection(getAdapterPosition());
+                        return;
+                    }
+
                     if(recyclerView.getVisibility() == View.GONE)
                     {
                         // Expand Button Animation

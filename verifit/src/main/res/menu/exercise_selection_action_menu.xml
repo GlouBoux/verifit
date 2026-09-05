@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Contextual action bar shown while selecting exercises to delete in bulk
+     (DayActivity, retour Romain 05/09/2026). One action: delete every set of the
+     selected exercise(s) for this day. Same shape as
+     set_selection_action_menu.xml (AddExerciseActivity's per-set equivalent). -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/delete_selected_exercises"
+        android:icon="@drawable/ic_delete_24px"
+        android:title="Delete"
+        app:showAsAction="always">
+    </item>
+
+</menu>

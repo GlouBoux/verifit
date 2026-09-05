@@ -60,7 +60,7 @@
             android:label="Add Exercise" />
         <activity
             android:name=".ui.DiaryActivity"
-            android:label="Diary" />
+            android:label="Sessions" />
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"

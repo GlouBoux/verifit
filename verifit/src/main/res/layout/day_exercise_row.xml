@@ -40,7 +40,7 @@
                 android:text="Seated Machine Shoulder Press"
                 android:textColor="@color/core_black"
                 android:textSize="26sp"
-                app:layout_constraintEnd_toStartOf="@+id/editButton"
+                app:layout_constraintEnd_toStartOf="@+id/drag_handle"
                 app:layout_constraintStart_toEndOf="@+id/imageView2"
                 app:layout_constraintTop_toTopOf="parent" />
 
@@ -55,6 +55,23 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:srcCompat="@drawable/ic_brightness_1_24px" />
+
+            <!-- Retour Romain 05/09/2026 : sélection multiple pour suppression groupée.
+                 Même emplacement que imageView2 (visibilité mutuellement exclusive) -
+                 remplace le rond de catégorie par une case à cocher pendant la
+                 sélection, comme l'avatar qui devient une case à cocher dans Gmail. -->
+            <CheckBox
+                android:id="@+id/exercise_checkbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginLeft="10dp"
+                android:layout_marginTop="14dp"
+                android:clickable="false"
+                android:focusable="false"
+                android:visibility="gone"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
             <View
                 android:id="@+id/blue_line"
@@ -78,6 +95,26 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:srcCompat="@drawable/ic_create_24px" />
+
+            <!-- Retour Romain 05/09/2026 : poignée de réorganisation ("comme
+                 FitNotes") - toujours visible hors mode sélection (drag & drop
+                 indépendant de la sélection multiple, voir DayExerciseAdapter). Icône
+                 réutilisée (pas d'icône "drag handle" dédiée dans les assets actuels) :
+                 ic_menu_24px, visuellement une poignée à trois barres tout à fait
+                 correcte pour cet usage. -->
+            <ImageView
+                android:id="@+id/drag_handle"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginTop="15dp"
+                android:layout_marginEnd="4dp"
+                android:layout_marginRight="4dp"
+                android:contentDescription="@null"
+                android:padding="4dp"
+                android:tint="@color/core_grey_55"
+                app:layout_constraintEnd_toStartOf="@+id/editButton"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_menu_24px" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recycler_view_day"

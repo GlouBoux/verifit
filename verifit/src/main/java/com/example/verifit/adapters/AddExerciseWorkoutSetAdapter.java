@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.PopupMenu;
@@ -17,6 +18,9 @@ import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.ui.AddExerciseActivity;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 // Adapter for WorkoutSet Class
 public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerciseWorkoutSetAdapter.MyViewHolder> {
@@ -24,10 +28,84 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
     Context ct;
     ArrayList<WorkoutSet> Workout_Sets;
 
+    // Multi-select ("delete several sets at once", retour Romain 05/09/2026). Positions
+    // rather than WorkoutSet references: simpler, and safe here because the list never
+    // changes shape *during* a selection - it's only mutated once, in a single batch,
+    // when the user confirms the delete (see AddExerciseActivity.deleteSelectedSets).
+    private boolean selectionMode = false;
+    private final Set<Integer> selectedPositions = new HashSet<>();
+    private OnSelectionChangedListener selectionChangedListener;
+
+    public interface OnSelectionChangedListener {
+        void onSelectionChanged(int selectedCount);
+    }
+
     public AddExerciseWorkoutSetAdapter(Context ct, ArrayList<WorkoutSet> Workout_Sets)
     {
         this.ct = ct;
         this.Workout_Sets = Workout_Sets;
+    }
+
+    public void setOnSelectionChangedListener(OnSelectionChangedListener listener)
+    {
+        this.selectionChangedListener = listener;
+    }
+
+    public void enterSelectionMode()
+    {
+        selectionMode = true;
+        selectedPositions.clear();
+        notifyDataSetChanged();
+    }
+
+    public void exitSelectionMode()
+    {
+        selectionMode = false;
+        selectedPositions.clear();
+        notifyDataSetChanged();
+    }
+
+    public boolean isSelectionMode()
+    {
+        return selectionMode;
+    }
+
+    public int getSelectedCount()
+    {
+        return selectedPositions.size();
+    }
+
+    // Snapshot of the currently selected sets, resolved now (positions are only valid
+    // while the underlying list hasn't changed, i.e. before the batch delete happens).
+    public List<WorkoutSet> getSelectedSets()
+    {
+        List<WorkoutSet> result = new ArrayList<>();
+        for (Integer position : selectedPositions)
+        {
+            if (position >= 0 && position < Workout_Sets.size())
+            {
+                result.add(Workout_Sets.get(position));
+            }
+        }
+        return result;
+    }
+
+    private void toggleSelection(int position)
+    {
+        if (selectedPositions.contains(position))
+        {
+            selectedPositions.remove(position);
+        }
+        else
+        {
+            selectedPositions.add(position);
+        }
+        notifyItemChanged(position);
+
+        if (selectionChangedListener != null)
+        {
+            selectionChangedListener.onSelectionChanged(selectedPositions.size());
+        }
     }
 
     @NonNull
@@ -48,12 +126,23 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         // Double -> Integer -> String
         holder.tv_reps.setText(String.valueOf(Workout_Sets.get(position).getReps().intValue()));
 
-        // Updates Edit Texts and Buttons when clicked
+        holder.checkbox.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
+        holder.checkbox.setChecked(selectedPositions.contains(position));
+
+        // In selection mode, tapping/long-pressing a row toggles it instead of the
+        // normal single-set edit/delete flow below.
         holder.cardView.setOnClickListener(new View.OnClickListener()
         {
             @Override
             public void onClick(View view) {
-                updateView(position);
+                if (selectionMode)
+                {
+                    toggleSelection(holder.getAdapterPosition());
+                }
+                else
+                {
+                    updateView(holder.getAdapterPosition());
+                }
             }
         });
 
@@ -63,8 +152,14 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
             @Override
             public boolean onLongClick(View view)
             {
-                AddExerciseActivity.Clicked_Set = position;
-                showSetPopupMenu(holder, view, position);
+                if (selectionMode)
+                {
+                    toggleSelection(holder.getAdapterPosition());
+                    return true;
+                }
+
+                AddExerciseActivity.Clicked_Set = holder.getAdapterPosition();
+                showSetPopupMenu(holder, view, holder.getAdapterPosition());
                 return true;
             }
         });
@@ -130,6 +225,7 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         TextView tv_reps;
         TextView tv_weight;
         CardView cardView;
+        CheckBox checkbox;
 
         public MyViewHolder(@NonNull View itemView)
         {
@@ -138,6 +234,7 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
             tv_reps = itemView.findViewById(R.id.set_reps);
             tv_weight = itemView.findViewById(R.id.tv_date);
             cardView = itemView.findViewById(R.id.cardview_set);
+            checkbox = itemView.findViewById(R.id.set_checkbox);
         }
     }
 }

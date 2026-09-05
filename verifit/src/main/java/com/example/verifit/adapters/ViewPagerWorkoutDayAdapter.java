@@ -9,6 +9,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -66,10 +67,18 @@ public class ViewPagerWorkoutDayAdapter extends RecyclerView.Adapter<ViewPagerWo
             }
         }
 
+        // Retour Romain 05/09/2026 : sélection multiple + réorganisation, même mécanique
+        // que DayActivity - voir ViewPagerExerciseAdapter et le ItemTouchHelper créé une
+        // seule fois par ViewHolder ci-dessous (WorkoutDayViewHolder.itemTouchHelper).
+        // currentDate est mis à jour à chaque bind pour que le callback de drag (créé une
+        // seule fois, dans le constructeur) sache toujours pour quel jour persister.
+        holder.currentDate = Date_Str1;
+
         // Set Recycler View
         ViewPagerExerciseAdapter workoutExerciseAdapter = new ViewPagerExerciseAdapter(ct, Today_Execrises);
         holder.recyclerView_Main.setAdapter(workoutExerciseAdapter);
         holder.recyclerView_Main.setLayoutManager(new LinearLayoutManager(ct));
+        workoutExerciseAdapter.setOnStartDragListener(viewHolder -> holder.itemTouchHelper.startDrag(viewHolder));
 
         // Convert Date To Something Sensible
         try
@@ -125,8 +134,10 @@ public class ViewPagerWorkoutDayAdapter extends RecyclerView.Adapter<ViewPagerWo
         return Workout_Days.size();
     }
 
-    // Magic Happens here
-    static class WorkoutDayViewHolder extends RecyclerView.ViewHolder
+    // Magic Happens here. Public : MainActivity (package .ui) doit pouvoir déclarer une
+    // variable de ce type pour retrouver la page actuellement affichée dans le
+    // ViewPager2 (voir MainActivity.getCurrentDayViewHolder()).
+    public static class WorkoutDayViewHolder extends RecyclerView.ViewHolder
     {
         private TextView tv_date;
         private TextView tv_full_date;
@@ -135,6 +146,21 @@ public class ViewPagerWorkoutDayAdapter extends RecyclerView.Adapter<ViewPagerWo
         private ConstraintLayout date_bg; // Used for navigating to AddExerciseActivity with date
         private ImageButton img_bt_back;
         private ImageButton img_bt_next;
+
+        // Retour Romain 05/09/2026 : réorganisation par glisser-déposer des exercices de
+        // ce jour ("comme FitNotes"). Un seul ItemTouchHelper par ViewHolder, créé ici
+        // dans le constructeur (donc une seule fois par ViewHolder recyclé, jamais
+        // recréé/rattaché à chaque bind - contrairement à DayActivity où il est recréé à
+        // chaque initActivity(), un choix qui ne pose pas de souci vu que DayActivity a
+        // une seule RecyclerView pour toute la durée de vie de l'écran, mais qui
+        // deviendrait un vrai leak d'OnItemTouchListener ici puisque les ViewHolder sont
+        // recyclés en swipant entre les jours). currentDate est mis à jour à chaque bind
+        // (voir onBindViewHolder ci-dessus) pour que onMove()/clearView() - qui vivent
+        // au-delà d'un seul bind - sachent toujours quel jour et quel adapter sont
+        // actuellement affichés dans cette page.
+        private String currentDate;
+        private int dragStartPosition = -1;
+        private final ItemTouchHelper itemTouchHelper;
 
         public WorkoutDayViewHolder(@NonNull View itemView)
         {
@@ -146,6 +172,92 @@ public class ViewPagerWorkoutDayAdapter extends RecyclerView.Adapter<ViewPagerWo
             date_bg = itemView.findViewById(R.id.date_bg);
             img_bt_back = itemView.findViewById(R.id.img_bt_back);
             img_bt_next = itemView.findViewById(R.id.img_bt_next);
+
+            itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
+                    ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0)
+            {
+                @Override
+                public boolean onMove(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder source, @NonNull RecyclerView.ViewHolder target)
+                {
+                    int from = source.getAdapterPosition();
+                    int to = target.getAdapterPosition();
+
+                    if (dragStartPosition == -1)
+                    {
+                        dragStartPosition = from;
+                    }
+
+                    ViewPagerExerciseAdapter adapter = getExerciseAdapter();
+                    if (adapter != null)
+                    {
+                        adapter.moveItem(from, to);
+                    }
+                    return true;
+                }
+
+                @Override
+                public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction)
+                {
+                    // Swipe non utilisé - drag uniquement (poignée dédiée).
+                }
+
+                @Override
+                public boolean isLongPressDragEnabled()
+                {
+                    return false;
+                }
+
+                @Override
+                public void clearView(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder viewHolder)
+                {
+                    super.clearView(rv, viewHolder);
+
+                    int finalPosition = viewHolder.getAdapterPosition();
+                    if (dragStartPosition != -1 && finalPosition != -1 && finalPosition != dragStartPosition
+                            && currentDate != null)
+                    {
+                        persistExerciseOrder(currentDate, dragStartPosition, finalPosition);
+                    }
+                    dragStartPosition = -1;
+                }
+            });
+            itemTouchHelper.attachToRecyclerView(recyclerView_Main);
+        }
+
+        // L'adapter actuellement affiché dans cette page - change à chaque bind (voir
+        // onBindViewHolder), donc jamais mis en cache : toujours relu depuis la
+        // RecyclerView au moment où on en a besoin. Public : MainActivity (package .ui,
+        // différent de .adapters) doit pouvoir y accéder pour démarrer le mode sélection
+        // sur la page actuellement affichée dans le ViewPager2 (voir MainActivity).
+        public ViewPagerExerciseAdapter getExerciseAdapter()
+        {
+            RecyclerView.Adapter<?> adapter = recyclerView_Main.getAdapter();
+            return (adapter instanceof ViewPagerExerciseAdapter) ? (ViewPagerExerciseAdapter) adapter : null;
+        }
+
+        public String getCurrentDate()
+        {
+            return currentDate;
+        }
+
+        // Persiste l'ordre final d'un geste de drag - une seule fois par geste (voir
+        // clearView() ci-dessus), jamais à chaque étape intermédiaire.
+        private void persistExerciseOrder(String date, int fromPosition, int toPosition)
+        {
+            int day_position = MainActivity.dataStorage.getDayPosition(date);
+            if (day_position < 0)
+            {
+                return;
+            }
+
+            WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
+            day.moveExercise(fromPosition, toPosition);
+            MainActivity.dataStorage.saveWorkoutData(itemView.getContext());
+
+            MainActivity.autoBackupRequired = true;
+            com.example.verifit.SharedPreferences sharedPreferences =
+                    new com.example.verifit.SharedPreferences(itemView.getContext());
+            sharedPreferences.save("true", "autoBackupRequired");
         }
     }
 }

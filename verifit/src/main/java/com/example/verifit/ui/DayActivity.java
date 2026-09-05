@@ -2,7 +2,10 @@ package com.example.verifit.ui;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.view.ActionMode;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -10,23 +13,35 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.verifit.DataStorage;
+import com.example.verifit.LoadingDialog;
 import com.example.verifit.SessionImporter;
 import com.example.verifit.adapters.DayExerciseAdapter;
 import com.example.verifit.R;
+import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
+import com.example.verifit.model.WorkoutSet;
+import com.example.verifit.verifitrs.WorkoutSetsApi;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+
+import okhttp3.Call;
+import okhttp3.Callback;
 
 public class DayActivity extends AppCompatActivity {
 
@@ -38,6 +53,17 @@ public class DayActivity extends AppCompatActivity {
     public static final int IMPORT_SESSION_REQUEST_CODE = 77;
 
     FloatingActionButton fab;
+
+    // Multi-select delete + drag reorder (retour Romain 05/09/2026), même mécanique
+    // que sur AddExerciseActivity (voir ce fichier pour le détail des choix).
+    private ActionMode selectionActionMode = null;
+    private ItemTouchHelper itemTouchHelper;
+
+    // Position de départ du geste de drag en cours - capturée une fois au début du
+    // geste (voir ItemTouchHelper.Callback ci-dessous), comparée à la position
+    // d'arrivée pour ne persister l'ordre qu'une seule fois, au relâchement, plutôt
+    // qu'à chaque étape intermédiaire du drag.
+    private int dragStartPosition = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,8 +120,68 @@ public class DayActivity extends AppCompatActivity {
 
             // Set Recycler View
             workoutExerciseAdapter = new DayExerciseAdapter(this, Today_Execrises);
+            workoutExerciseAdapter.setOnSelectionChangedListener(count -> {
+                if (selectionActionMode != null)
+                {
+                    selectionActionMode.setTitle(count + " selected");
+                }
+            });
+            workoutExerciseAdapter.setOnStartDragListener(viewHolder -> {
+                if (itemTouchHelper != null)
+                {
+                    itemTouchHelper.startDrag(viewHolder);
+                }
+            });
             recyclerView.setAdapter(workoutExerciseAdapter);
             recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+            itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
+                    ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0)
+            {
+                @Override
+                public boolean onMove(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder source, @NonNull RecyclerView.ViewHolder target)
+                {
+                    int from = source.getAdapterPosition();
+                    int to = target.getAdapterPosition();
+
+                    if (dragStartPosition == -1)
+                    {
+                        dragStartPosition = from;
+                    }
+
+                    workoutExerciseAdapter.moveItem(from, to);
+                    return true;
+                }
+
+                @Override
+                public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction)
+                {
+                    // Swipe non utilisé - drag uniquement (poignée dédiée).
+                }
+
+                @Override
+                public boolean isLongPressDragEnabled()
+                {
+                    // Le drag démarre uniquement via la poignée (voir
+                    // DayExerciseAdapter.dragHandle), jamais par long-press sur toute
+                    // la ligne - ça entrerait en conflit avec le mode sélection.
+                    return false;
+                }
+
+                @Override
+                public void clearView(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder viewHolder)
+                {
+                    super.clearView(rv, viewHolder);
+
+                    int finalPosition = viewHolder.getAdapterPosition();
+                    if (dragStartPosition != -1 && finalPosition != -1 && finalPosition != dragStartPosition)
+                    {
+                        persistExerciseOrder(dragStartPosition, finalPosition);
+                    }
+                    dragStartPosition = -1;
+                }
+            });
+            itemTouchHelper.attachToRecyclerView(recyclerView);
 
             // Notify User
             if(Today_Execrises.isEmpty())
@@ -108,6 +194,192 @@ public class DayActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
+    }
+
+    // Persiste l'ordre final d'un geste de drag (retour Romain 05/09/2026, "comme
+    // FitNotes") - une seule fois par geste, jamais à chaque étape intermédiaire
+    // (voir ItemTouchHelper.Callback.onMove ci-dessus).
+    private void persistExerciseOrder(int fromPosition, int toPosition)
+    {
+        int day_position = MainActivity.dataStorage.getDayPosition(date_clicked);
+        if (day_position < 0)
+        {
+            return;
+        }
+
+        WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
+        day.moveExercise(fromPosition, toPosition);
+        MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+
+        MainActivity.autoBackupRequired = true;
+        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
+        sharedPreferences.save("true", "autoBackupRequired");
+    }
+
+    // --- Multi-select delete (retour Romain 05/09/2026) ---
+    // Même mécanique que AddExerciseActivity.startSelectionMode() côté séries
+    // individuelles : une ActionMode dédiée plutôt que de réinterpréter un geste
+    // existant (ici, le tap sur la carte qui replie/déplie les séries).
+    public void startSelectionMode()
+    {
+        if (selectionActionMode != null)
+        {
+            return;
+        }
+        selectionActionMode = startSupportActionMode(new ActionMode.Callback() {
+            @Override
+            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                MenuInflater inflater = mode.getMenuInflater();
+                inflater.inflate(R.menu.exercise_selection_action_menu, menu);
+                mode.setTitle("0 selected");
+                workoutExerciseAdapter.enterSelectionMode();
+                return true;
+            }
+
+            @Override
+            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                return false;
+            }
+
+            @Override
+            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+                if (item.getItemId() == R.id.delete_selected_exercises)
+                {
+                    confirmDeleteSelectedExercises(mode);
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public void onDestroyActionMode(ActionMode mode) {
+                workoutExerciseAdapter.exitSelectionMode();
+                selectionActionMode = null;
+            }
+        });
+    }
+
+    private void confirmDeleteSelectedExercises(ActionMode mode)
+    {
+        List<String> selectedNames = workoutExerciseAdapter.getSelectedExerciseNames();
+
+        if (selectedNames.isEmpty())
+        {
+            Toast.makeText(this, "No exercise selected", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Réutilise delete_set_dialog.xml (même confirmation que côté
+        // AddExerciseActivity), avec un libellé qui précise que ça supprime toutes les
+        // séries du jour pour ces exercices, pas juste leur ligne dans la liste.
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View view = inflater.inflate(R.layout.delete_set_dialog, null);
+        AlertDialog alertDialog = new AlertDialog.Builder(this).setView(view).create();
+
+        TextView title = view.findViewById(R.id.tv_date);
+        title.setText(selectedNames.size() + " exercise(s) selected. Delete all their sets for this day?");
+
+        Button bt_yes = view.findViewById(R.id.bt_yes3);
+        Button bt_no = view.findViewById(R.id.bt_no3);
+
+        bt_no.setOnClickListener(v -> alertDialog.dismiss());
+
+        bt_yes.setOnClickListener(v -> {
+            alertDialog.dismiss();
+            deleteSelectedExercises(selectedNames, mode);
+        });
+
+        alertDialog.show();
+    }
+
+    private void deleteSelectedExercises(List<String> exerciseNames, ActionMode mode)
+    {
+        MainActivity.autoBackupRequired = true;
+        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
+        sharedPreferences.save("true", "autoBackupRequired");
+
+        int day_position = MainActivity.dataStorage.getDayPosition(date_clicked);
+        if (day_position < 0)
+        {
+            mode.finish();
+            return;
+        }
+
+        WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
+        List<WorkoutSet> setsToDelete = new ArrayList<>();
+        for (WorkoutSet set : day.getSets())
+        {
+            if (exerciseNames.contains(set.getExerciseName()))
+            {
+                setsToDelete.add(set);
+            }
+        }
+
+        if (setsToDelete.isEmpty())
+        {
+            mode.finish();
+            return;
+        }
+
+        if (sharedPreferences.isOfflineMode())
+        {
+            deleteExerciseSetsLocally(day_position, setsToDelete);
+            Toast.makeText(this, exerciseNames.size() + " exercise(s) deleted", Toast.LENGTH_SHORT).show();
+            mode.finish();
+        }
+        else
+        {
+            final LoadingDialog loadingDialog = new LoadingDialog(DayActivity.this);
+            loadingDialog.loadingAlertDialog();
+
+            // Même endpoint /sets/bulk que AddExerciseActivity.deleteSelectedSets - un
+            // seul appel réseau pour toute la sélection.
+            WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getApplicationContext(), getString(R.string.API_ENDPOINT));
+            workoutSetsApi.deleteWorkoutSets(setsToDelete, new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    loadingDialog.dismissDialog();
+                    runOnUiThread(() -> Toast.makeText(DayActivity.this, "Can't connect to server", Toast.LENGTH_SHORT).show());
+                }
+
+                @Override
+                public void onResponse(Call call, okhttp3.Response response) throws IOException {
+                    loadingDialog.dismissDialog();
+
+                    if (200 == response.code())
+                    {
+                        deleteExerciseSetsLocally(day_position, setsToDelete);
+                        runOnUiThread(() -> {
+                            Toast.makeText(DayActivity.this, exerciseNames.size() + " exercise(s) deleted", Toast.LENGTH_SHORT).show();
+                            mode.finish();
+                        });
+                    }
+                    else
+                    {
+                        runOnUiThread(() -> Toast.makeText(DayActivity.this, response.message(), Toast.LENGTH_SHORT).show());
+                    }
+                }
+            });
+        }
+    }
+
+    // Supprime toutes les séries d'un jour pour les exercices sélectionnés (pas
+    // seulement "aujourd'hui" au sens calendaire - date_clicked est le jour ouvert
+    // dans cet écran, qui peut être n'importe quel jour passé).
+    private void deleteExerciseSetsLocally(int day_position, List<WorkoutSet> setsToDelete)
+    {
+        WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
+        day.removeSets(setsToDelete);
+
+        if (day.getSets().isEmpty())
+        {
+            MainActivity.dataStorage.getWorkoutDays().remove(day_position);
+        }
+
+        MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+        MainActivity.dataStorage.saveKnownExerciseData(getApplicationContext());
+
+        runOnUiThread(this::initActivity);
     }
 
     // When back button is pressed by another app
@@ -132,6 +404,11 @@ public class DayActivity extends AppCompatActivity {
         if(item.getItemId() == R.id.import_session)
         {
             fileSearchImportSession();
+            return true;
+        }
+        else if(item.getItemId() == R.id.select_exercises)
+        {
+            startSelectionMode();
             return true;
         }
         return super.onOptionsItemSelected(item);
