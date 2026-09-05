@@ -23,6 +23,37 @@ Comment on avance sur ce projet, session après session.
    pourquoi et le détail de chaque chantier) et `docs/fitnotes-fork-todo.md` (l'état
    coché/pas coché), à la fois dans le projet Claude et dans ce dépôt.
 
+## Message de commit fourni par Claude
+
+Romain trouve la rédaction des messages de commit pénible (se souvenir de ce qui a
+changé, trouver quoi écrire). Du coup, **à chaque fois qu'un changement est prêt à être
+validé (étape 5), Claude fournit directement le message à utiliser tel quel** — pas
+besoin de le rédiger soi-même ni de s'en souvenir après coup.
+
+Format utilisé (une ligne de résumé + corps optionnel si plusieurs changements sont
+groupés) :
+
+```
+<résumé court, à l'impératif : "Ajoute...", "Corrige...", "Renomme...">
+
+<optionnel : quelques lignes expliquant le "pourquoi" si ce n'est pas évident, ou la
+liste des changements si plusieurs sujets sont regroupés dans un même commit>
+```
+
+Exemple concret (patch #6) :
+
+```
+Ajoute un commentaire par série (appui long)
+
+Le commentaire existant ("Exercise Comments") s'appliquait à toutes les séries de
+l'exercice du jour d'un coup. Ici chaque série peut avoir son propre commentaire,
+consultable/éditable par un appui long sur la série. Permettra de récupérer ces
+commentaires fidèlement lors d'une future migration de données FitNotes.
+```
+
+Romain n'a qu'à copier-coller ce message dans `git commit -m "..."` (ou dans la zone de
+message de VSCode) une fois le test validé sur le téléphone.
+
 ## Partager un build log
 
 Si un build échoue et que tu veux me le faire lire sans copier-coller, double-clique

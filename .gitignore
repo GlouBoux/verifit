@@ -32,3 +32,6 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Doc-editing lock files left behind by Claude's document tooling
+docs/.*.lock
