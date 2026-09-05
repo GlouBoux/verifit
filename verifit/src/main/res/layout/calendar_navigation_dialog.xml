@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Root view of CalendarPickerDialog: a month header with prev/next buttons, and a
+     7-column grid of days (calendar_day_cell.xml) below it. Replaces the plain
+     Android DatePickerDialog previously opened from the toolbar's calendar icon. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/white"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/calendar_prev_month"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_keyboard_arrow_left_24px" />
+
+        <TextView
+            android:id="@+id/calendar_month_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textColor="@color/core_black"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            tools:text="September 2026" />
+
+        <ImageButton
+            android:id="@+id/calendar_next_month"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_keyboard_arrow_right_24px" />
+
+    </LinearLayout>
+
+    <GridView
+        android:id="@+id/calendar_day_grid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:horizontalSpacing="0dp"
+        android:numColumns="7"
+        android:stretchMode="columnWidth"
+        android:verticalSpacing="4dp" />
+
+</LinearLayout>

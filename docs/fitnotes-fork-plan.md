@@ -91,10 +91,9 @@ branche) — de toute façon sans objet vu que `verifit_rs` est voué à dispara
   jamais de sélecteur de date, malgré tout le code déjà en place
   (`DatePickerDialog.OnDateSetListener`, `onDateSet()` fonctionnel) mais jamais branché
   à un `.show()`. Corrigé : ouvre maintenant ce sélecteur, pré\-rempli avec le jour
-  affiché. **Validé par Romain.** Indication visuelle des jours avec séance sur ce
-  sélecteur : pas encore faite, mais Romain a changé d'avis sur la priorité —
-  désormais à faire dans la foulée du patch \#6 plutôt que reportée (voir "Prochain
-  chantier" plus loin).
+  affiché. **Validé par Romain.** Indication visuelle des jours avec séance : voir
+  "Fonctionnalité 4" plus haut — le sélecteur basique d'Android a ensuite été remplacé
+  par un calendrier fait maison (patch \#7) pour pouvoir l'afficher.
 
 ## Incident : MainActivity.java corrompu (05/09/2026) — leçon pour le workflow
 
@@ -108,9 +107,9 @@ saine côté Claude. **Rappel ajouté dans `docs/fitnotes-fork-workflow.md` : le
 fichier source — les fichiers sont de toute façon déjà à jour sur la machine de Romain
 à chaque session.**
 
-La branche `feature/duplicate-exercise-and-session-import` a maintenant 6 commits de
+La branche `feature/duplicate-exercise-and-session-import` a maintenant 7 commits de
 fonctionnalités/correctifs (\+ quelques commits de documentation/outillage). Livrés en
-patches `0001` à `0006` (`git am`\-compatibles, pour archive uniquement) et tous appliqués
+patches `0001` à `0007` (`git am`\-compatibles, pour archive uniquement) et tous appliqués
 directement sur la machine de Romain via le pont avec son appareil. **Poussée vers
 `GlouBoux/verifit` par Romain ; pas de PR vers l'amont (décidé, voir plus haut).**
 
@@ -149,15 +148,30 @@ entrées UI de login/compte (risque faible, réversible), puis supprimer le code
 correspondant une fois le premier changement validé par Romain. À planifier pour une
 prochaine session dédiée.
 
-## Prochain chantier : indicateur visuel des jours avec séance
+## Fonctionnalité 4 — Calendrier de navigation avec indicateur de jours avec séance (implémentée, à valider par Romain)
 
-Romain, à la relecture du TODO (05/09/2026) : à faire tout de suite après le
-commentaire par série plutôt que reporté — reste léger à faire tant que c'est fait
-dans la foulée, plutôt que d'y repenser plus tard. Sur le sélecteur de date (celui
-ouvert par l'icône calendrier, patch \#5), indiquer visuellement quels jours ont une
-séance enregistrée — comme sur FitNotes. Nécessite soit de réintroduire une lib de
-calendrier (une avait été retirée plus tôt comme dépendance morte), soit un composant
-fait main.
+Priorisé par Romain juste après le commentaire par série (05/09/2026), plutôt que
+reporté comme envisagé initialement.
+
+Le sélecteur de date basique d'Android (`DatePickerDialog`, branché en patch \#5) n'a
+aucun moyen de décorer des jours individuels — impossible d'y afficher un indicateur
+par jour. Implémenté (patch \#7) : un calendrier mensuel fait maison
+(`CalendarPickerDialog`), qui remplace entièrement le `DatePickerDialog` sur l'icône
+calendrier de la barre d'outils :
+
+- Grille de 42 cases (6 semaines, dimanche en premier), navigation mois précédent/
+  suivant, jour actuellement affiché entouré d'un cercle.
+- Un petit point apparaît sous chaque jour qui a déjà une séance enregistrée
+  (`DataStorage.getDays()`), comme sur FitNotes.
+- Choisir un jour ouvre `DayActivity` pour cette date, exactement comme avant.
+
+Pas de nouvelle dépendance Gradle : une lib de calendrier (`material-calendar-view`)
+avait déjà été retirée plus tôt comme dépendance morte, cassée depuis la fermeture de
+JCenter (voir plus bas). La réintroduire (à une version plus récente) et apprendre son
+API sans pouvoir compiler pour vérifier semblait plus risqué qu'une grille "fait main"
+volontairement simple.
+
+**Statut au 05/09/2026 : livré, pas encore testé par Romain.**
 
 ## Prochain chantier majeur : intégrer le générateur de séances
 

@@ -2,10 +2,12 @@
 
 ## En cours
 
-- [ ] **Ajouter l'indication visuelle des jours avec séance sur le sélecteur de date** :
-  priorisé par Romain juste après le commentaire par série, pour ne pas avoir à y
-  repenser plus tard — reste léger à faire tant que c'est fait dans la foulée. Nécessite
-  soit de réintroduire une lib de calendrier, soit un composant fait main (voir plan).
+- [ ] **Valider le calendrier de navigation avec indicateur de jours avec séance**
+  (patch \#7) : l'icône calendrier de la barre d'outils ouvre maintenant un calendrier
+  mensuel fait maison (mois précédent/suivant, jour actuellement affiché en surbrillance)
+  au lieu du sélecteur de date basique d'Android, qui ne permettait pas cet affichage.
+  Un petit point apparaît sous chaque jour qui a déjà une séance enregistrée, comme sur
+  FitNotes. À tester par Romain.
 
 ## Fait / validé
 

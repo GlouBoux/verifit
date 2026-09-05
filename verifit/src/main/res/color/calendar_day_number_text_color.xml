@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Text color for one day number in CalendarPickerDialog: white on the selected day's
+     filled circle (see calendar_day_number_background.xml), core_black otherwise. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@android:color/white" android:state_selected="true" />
+    <item android:color="@color/core_black" />
+</selector>

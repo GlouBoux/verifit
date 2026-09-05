@@ -7,7 +7,6 @@ import androidx.viewpager2.widget.ViewPager2;
 
 import android.app.Activity;
 import android.app.ActivityManager;
-import android.app.DatePickerDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -18,7 +17,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.DatePicker;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
@@ -49,7 +47,7 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-public class MainActivity extends AppCompatActivity implements BottomNavigationView.OnNavigationItemSelectedListener , DatePickerDialog.OnDateSetListener{
+public class MainActivity extends AppCompatActivity implements BottomNavigationView.OnNavigationItemSelectedListener {
 
     public static DataStorage dataStorage = new DataStorage(); // Holds all Verifit data and handles file I/O
     public static String dateSelected; // Used for other activities to get the selected date, by default it's set to today
@@ -144,25 +142,16 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         dateSelected = dateFormat.format(date_clicked);
     }
 
-    // When choosing date from DatePicker
-    @Override
-    public void onDateSet(DatePicker datePicker, int i, int i1, int i2)
+    // Opens DayActivity for the given date ("yyyy-MM-dd") and remembers it as the
+    // currently selected date. Used both when picking a day from CalendarPickerDialog
+    // and (previously) from the plain DatePickerDialog's onDateSet() callback.
+    private void openDay(String date_clicked)
     {
-        i1++;
-        String year = String.valueOf(i);
-        String month;
-        String day;
-
-        month = String.format("%02d", i1);
-        day = String.format("%02d", i2);
-
-        String date_clicked = year+"-"+month+"-"+day;
         MainActivity.dateSelected = date_clicked;
 
         // Start Intent
         Intent in = new Intent(getApplicationContext(), DayActivity.class);
         Bundle mBundle = new Bundle();
-
 
         // Send Date and start activity
         mBundle.putString("date", date_clicked);
@@ -514,9 +503,10 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     {
         if(item.getItemId() == R.id.home)
         {
-            // This used to just snap the ViewPager back to today. Now it opens a date
-            // picker instead, like FitNotes' calendar icon, so any day can be reached
-            // directly instead of swiping through one day at a time.
+            // This used to just snap the ViewPager back to today. Now it opens a
+            // calendar instead, like FitNotes' calendar icon, so any day can be reached
+            // directly instead of swiping through one day at a time - and, unlike the
+            // plain DatePicker, it marks which days already have a logged workout.
             showDatePickerForNavigation();
         }
         else if(item.getItemId() == R.id.settings)
@@ -527,31 +517,18 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         return super.onOptionsItemSelected(item);
     }
 
-    // Opens a date picker pre-filled with whatever day is currently showing. The chosen
-    // date is handed to onDateSet() below, which opens that day directly.
+    // Opens a custom month calendar (see CalendarPickerDialog) pre-filled with whatever
+    // day is currently showing, marking the days that already have a logged workout -
+    // like FitNotes' own calendar navigation, which the plain Android DatePickerDialog
+    // this replaced couldn't do. Picking a day opens it directly via openDay() above.
     private void showDatePickerForNavigation()
     {
-        Calendar calendar = Calendar.getInstance();
-
-        if(dateSelected != null)
-        {
-            try
-            {
-                calendar.setTime(new SimpleDateFormat("yyyy-MM-dd").parse(dateSelected));
+        new CalendarPickerDialog(this, dataStorage, dateSelected, new CalendarPickerDialog.OnDaySelectedListener() {
+            @Override
+            public void onDaySelected(String dateKey) {
+                openDay(dateKey);
             }
-            catch (java.text.ParseException e)
-            {
-                // Unparsable dateSelected (shouldn't happen) - fall back to today.
-            }
-        }
-
-        new DatePickerDialog(
-            this,
-            this,
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        ).show();
+        }).show();
     }
 }
 
