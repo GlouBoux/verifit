@@ -348,6 +348,18 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     // Initialize View pager object
     public void initViewPager()
     {
+        // Remember whatever day was showing before this call. initViewPager() is called
+        // again every time the activity restarts (e.g. after minimizing the app and
+        // coming back to it) purely to refresh the data, and it used to always snap the
+        // ViewPager back to today in the process - annoying if you'd scrolled elsewhere
+        // to review a past session. The size of getInfiniteWorkoutDays() never changes
+        // once built, so a saved index still points at the same date after a refresh.
+        Integer previousPosition = null;
+        if(viewPager2 != null && viewPager2.getAdapter() != null)
+        {
+            previousPosition = viewPager2.getCurrentItem();
+        }
+
         // Skip creation of empty workouts if you don't have to
         if(dataStorage.getInfiniteWorkoutDays().isEmpty() || dataStorage.getInfiniteWorkoutDays() == null)
         {
@@ -385,7 +397,16 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         viewPager2 = findViewById(R.id.viewPager2);
         viewPager2.setAdapter(new ViewPagerWorkoutDayAdapter(this, dataStorage.getInfiniteWorkoutDays()));
         viewPager2.setVisibility(View.VISIBLE);
-        viewPager2.setCurrentItem(((dataStorage.getInfiniteWorkoutDays().size()+1)/2)-1); // Navigate to today
+
+        if(previousPosition != null)
+        {
+            // Restore whichever day was open instead of jumping back to today.
+            viewPager2.setCurrentItem(previousPosition, false);
+        }
+        else
+        {
+            viewPager2.setCurrentItem(((dataStorage.getInfiniteWorkoutDays().size()+1)/2)-1); // Navigate to today (first launch only)
+        }
 
         viewPager2.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
@@ -493,7 +514,10 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     {
         if(item.getItemId() == R.id.home)
         {
-            viewPager2.setCurrentItem(((dataStorage.getInfiniteWorkoutDays().size()+1)/2)-1); // Navigate to today
+            // This used to just snap the ViewPager back to today. Now it opens a date
+            // picker instead, like FitNotes' calendar icon, so any day can be reached
+            // directly instead of swiping through one day at a time.
+            showDatePickerForNavigation();
         }
         else if(item.getItemId() == R.id.settings)
         {
@@ -501,6 +525,33 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
             startActivity(in);
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    // Opens a date picker pre-filled with whatever day is currently showing. The chosen
+    // date is handed to onDateSet() below, which opens that day directly.
+    private void showDatePickerForNavigation()
+    {
+        Calendar calendar = Calendar.getInstance();
+
+        if(dateSelected != null)
+        {
+            try
+            {
+                calendar.setTime(new SimpleDateFormat("yyyy-MM-dd").parse(dateSelected));
+            }
+            catch (java.text.ParseException e)
+            {
+                // Unparsable dateSelected (shouldn't happen) - fall back to today.
+            }
+        }
+
+        new DatePickerDialog(
+            this,
+            this,
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show();
     }
 }
 
