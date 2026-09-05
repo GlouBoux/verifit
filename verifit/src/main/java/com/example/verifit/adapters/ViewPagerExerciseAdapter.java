@@ -44,6 +44,21 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
     private OnSelectionChangedListener selectionChangedListener;
     private OnStartDragListener dragListener;
 
+    // Retour Romain 05/09/2026 : le repli des séries doit aussi se déclencher quand on
+    // drague directement (poignée) SANS être passé par le bouton "Select" - avant, le
+    // repli ne dépendait que de selectionMode, or la poignée reste utilisable même hors
+    // sélection multiple.
+    //
+    // Retour Romain 05/09/2026 (bis) : un premier essai remettait tout en "déplié" dès
+    // la fin du geste de drag (clearView) - Romain voyait donc le repli disparaître
+    // tout seul après une seconde. Ce qu'il veut : ça replie au démarrage du drag, et ça
+    // RESTE replié une fois le drag terminé, jusqu'à ce qu'il tape sur la série pour la
+    // rouvrir manuellement - exactement le même mécanisme qu'un repli manuel. D'où
+    // collapsedExerciseNames (suivi par NOM, comme la sélection) plutôt qu'un simple
+    // booléen "dragging" : setDragging(true) replie (et mémorise) toutes les séries au
+    // début du geste ; setDragging(false), à la fin du geste, ne les rouvre plus.
+    private final Set<String> collapsedExerciseNames = new HashSet<>();
+
     public interface OnSelectionChangedListener {
         void onSelectionChanged(int selectedCount);
     }
@@ -85,6 +100,41 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
     public boolean isSelectionMode()
     {
         return selectionMode;
+    }
+
+    public void setDragging(boolean dragging)
+    {
+        if (!dragging)
+        {
+            // Fin du geste : volontairement un no-op, voir le commentaire sur
+            // collapsedExerciseNames plus haut - tout reste replié.
+            return;
+        }
+
+        for (WorkoutExercise exercise : Exercises)
+        {
+            collapsedExerciseNames.add(exercise.getExercise());
+        }
+        notifyDataSetChanged();
+    }
+
+    private void toggleCollapse(int position)
+    {
+        if (position < 0 || position >= Exercises.size())
+        {
+            return;
+        }
+
+        String exerciseName = Exercises.get(position).getExercise();
+        if (collapsedExerciseNames.contains(exerciseName))
+        {
+            collapsedExerciseNames.remove(exerciseName);
+        }
+        else
+        {
+            collapsedExerciseNames.add(exerciseName);
+        }
+        notifyItemChanged(position);
     }
 
     public int getSelectedCount()
@@ -161,10 +211,12 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
         holder.dragHandle.setVisibility(View.VISIBLE);
 
         // Retour Romain 05/09/2026 : replie les séries de chaque exercice pendant la
-        // sélection multiple - plus facile de repérer/cocher plusieurs exercices ou de
-        // les glisser-déposer sans le détail de chacun affiché. Revient à l'affichage
-        // normal (déplié) une fois la sélection terminée.
-        if (selectionMode)
+        // sélection multiple (repli temporaire, revient à l'état individuel de chacun à
+        // la sortie du mode sélection) et/ou si cette série précise a été repliée
+        // manuellement ou par un glisser-déposer (repli persistant, voir
+        // collapsedExerciseNames - se rouvre uniquement en tapant dessus).
+        boolean collapsed = selectionMode || collapsedExerciseNames.contains(Exercises.get(position).getExercise());
+        if (collapsed)
         {
             holder.recyclerView.setVisibility(View.GONE);
             holder.blue_line.setVisibility(View.INVISIBLE);
@@ -175,7 +227,10 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
             holder.blue_line.setVisibility(View.VISIBLE);
         }
 
-        // Navigate to AddActivity, sauf en mode sélection où le tap coche/décoche.
+        // Navigate to AddActivity, sauf en mode sélection où le tap coche/décoche, et
+        // sauf si la série est repliée (retour Romain 05/09/2026) où le tap la déplie
+        // d'abord plutôt que de naviguer directement - il faut pouvoir "cliquer pour la
+        // rouvrir" après un repli par glisser-déposer.
         holder.cardview_exercise2.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -187,9 +242,22 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
                     return;
                 }
 
+                int adapterPosition = holder.getAdapterPosition();
+                if (adapterPosition < 0 || adapterPosition >= Exercises.size())
+                {
+                    return;
+                }
+
+                String exerciseName = Exercises.get(adapterPosition).getExercise();
+                if (collapsedExerciseNames.contains(exerciseName))
+                {
+                    toggleCollapse(adapterPosition);
+                    return;
+                }
+
                 Intent in = new Intent(ct, AddExerciseActivity.class);
-                in.putExtra("exercise",Exercises.get(holder.getAdapterPosition()).getExercise());
-                MainActivity.dateSelected = Exercises.get(holder.getAdapterPosition()).getDate();
+                in.putExtra("exercise", exerciseName);
+                MainActivity.dateSelected = Exercises.get(adapterPosition).getDate();
                 ct.startActivity(in);
             }
         });

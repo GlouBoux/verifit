@@ -1,43 +1,6 @@
 # TODO — FitNotes\_Fork
 
-## 🔴 URGENT
-
-- [ ] **Bug critique de perte de données à l'Import Session, historique de Romain
-  potentiellement perdu (05/09/2026)** : après avoir recompilé/réinstallé l'app puis
-  importé le JSON de la séance de vendredi, Romain ne voit plus QUE cette séance dans
-  "Sessions" (ex-Diary) - tout l'historique précédent a disparu de l'app.
-  **Cause identifiée** : `DataStorage.mergeImportedSession()` (le code qui traite un
-  Import Session) appelait `setsToEverything()`, qui VIDE `workoutDays` et le
-  RECONSTRUIT ENTIÈREMENT à partir de la liste interne `sets` - or `sets` n'est peuplée
-  que par un import CSV complet et n'est JAMAIS resynchronisée avec `workoutDays` après
-  un simple démarrage de l'app (`loadWorkoutData()` charge directement dans
-  `workoutDays`, sans passer par `sets`). Un redémarrage à froid (recompilation +
-  réinstallation) laisse donc `sets` vide ; importer une séance juste après reconstruit
-  `workoutDays` à partir de ce `sets` presque vide → tout l'historique disparaît, et ce
-  state tronqué est aussitôt sauvegardé. Ce bug existait déjà avant cette session (la
-  feature "Import Session" et son commentaire "additive, ne touche jamais
-  l'historique" datent d'avant), une trace de la même fragilité de `sets` avait même déjà
-  été documentée dans `CalendarPickerDialog.java` (patch \#7). **Corrigé** (05/09/2026) :
-  `mergeImportedSession()` ajoute maintenant directement les séries importées au bon
-  `WorkoutDay` (existant ou nouveau) sans jamais reconstruire `workoutDays` depuis
-  `sets`. Pas encore buildé/testé par Romain.
-  **Récupération des données perdues : à investiguer avec Romain.** Pistes possibles :
-  sauvegarde WebDAV automatique (si configurée dans Settings - mais le prochain cycle
-  d'auto-backup après l'incident aurait pu l'écraser aussi, à vérifier côté serveur
-  WebDAV s'il garde un historique de versions) ; sauvegarde automatique Android
-  (`android:allowBackup="true"` dans le manifest - une sauvegarde cloud Google existe
-  potentiellement si activée sur son téléphone, mais ne se restaure qu'à une
-  réinstallation) ; un export CSV manuel fait par Romain à un moment donné. Pas de
-  garantie de récupération totale.
-
 ## En cours
-
-- [ ] **Valider le calendrier de navigation avec indicateur de jours avec séance**
-  (patch \#7) : l'icône calendrier de la barre d'outils ouvre maintenant un calendrier
-  mensuel fait maison (mois précédent/suivant, jour actuellement affiché en surbrillance)
-  au lieu du sélecteur de date basique d'Android, qui ne permettait pas cet affichage.
-  Un petit point apparaît sous chaque jour qui a déjà une séance enregistrée, comme sur
-  FitNotes. À tester par Romain.
 
 - [ ] **Suppression de plusieurs séries en une fois** (retour Romain 05/09/2026) : dans
   `AddExerciseActivity` (l'écran de log d'un exercice), on ne pouvait supprimer qu'une
@@ -48,8 +11,7 @@
   Supprimer de la barre contextuelle supprime toute la sélection en une seule
   confirmation. Le long-press existant (Éditer/Supprimer une seule série) n'a pas été
   touché - c'est un ajout, pas un remplacement. **Testé sur l'app par Romain, ça
-  fonctionne bien** — pas encore commité : Romain attend la feature complète ci-dessous
-  (même mécanique côté écran des exercices) pour tout commiter d'un coup.
+  fonctionne bien.**
 
 - [ ] **Réorganiser/supprimer plusieurs exercices depuis l'écran du jour** (retour Romain
   05/09/2026, sur l'écran `DayActivity`, atteint via l'icône calendrier) : même mécanique
@@ -64,12 +26,11 @@
   (`WorkoutDay.ExerciseOrder`, nouveau champ) et réordonnable à la main. Vérifié
   compatible avec les anciennes sauvegardes (un ancien fichier sans ce champ retombe sur
   une liste vide, pas sur un crash).
-  **Bug trouvé et corrigé (05/09/2026)** : Romain a recompilé et ne voyait aucun moyen de
-  réordonner - la poignée de glisser-déposer était bien câblée mais quasi invisible
-  (teintée `core_grey_02`, un gris presque blanc, sur fond de carte clair). Recolorée en
-  `core_grey_55` (même gris que les autres icônes discrètes de l'app, ex.
-  `diary_exercise_row.xml`). Toujours pas buildé/testé par Romain après ce fix (pas de
-  SDK Android côté Claude pour compiler).
+  **Bug trouvé et corrigé (05/09/2026)** : la poignée de glisser-déposer était bien câblée
+  mais quasi invisible (teintée `core_grey_02`, un gris presque blanc, sur fond de carte
+  clair). Recolorée en `core_grey_55` (même gris que les autres icônes discrètes de
+  l'app). **Réorganisation confirmée fonctionnelle par Romain (05/09/2026)** après ce
+  correctif.
 
 - [ ] **Même sélection multiple + réorganisation sur l'onglet Workout (accueil)** (retour
   Romain 05/09/2026) : Romain a d'abord essayé de réordonner depuis l'onglet
@@ -94,14 +55,40 @@
   chaque exercice se replient automatiquement (comme FitNotes) - plus facile de
   sélectionner/glisser plusieurs exercices sans avoir à faire défiler le détail de
   chacun. La poignée de glisser-déposer reste aussi disponible PENDANT la sélection
-  multiple (avant, les deux mode étaient mutuellement exclusifs). Ce changement a
+  multiple (avant, les deux modes étaient mutuellement exclusifs). Ce changement a
   nécessité de suivre la sélection par NOM d'exercice plutôt que par position (sinon une
   sélection pointait sur le mauvais exercice après un glisser-déposer pendant qu'une
-  sélection était en cours) - fait sur `DayExerciseAdapter` et
-  `ViewPagerExerciseAdapter`. Pas encore buildé/testé par Romain après ce changement.
+  sélection était en cours) - fait sur `DayExerciseAdapter` et `ViewPagerExerciseAdapter`.
+  **Testé par Romain** : le repli fonctionne bien en passant par le bouton "Select".
+  **Bug trouvé et corrigé (05/09/2026)** : en revanche, si on drague directement un
+  exercice via la poignée SANS passer par le bouton "Select" (drag "brut", hors sélection
+  multiple), les séries ne se repliaient pas - le repli ne dépendait que de
+  `selectionMode`, or la poignée reste utilisable même hors sélection multiple. Ajout
+  d'un état `dragging` séparé (mis à `true`/`false` par le
+  `ItemTouchHelper.Callback.onSelectedChanged()`/`clearView()`, sur `DayActivity` et
+  `ViewPagerWorkoutDayAdapter`) qui déclenche le même repli que `selectionMode`,
+  indépendamment du mode sélection. Pas encore buildé/testé par Romain.
 
 ## Fait / validé
 
+- [x] **Bug critique de perte de données à l'Import Session — RÉSOLU ET CONFIRMÉ
+  (05/09/2026)** : après avoir recompilé/réinstallé l'app puis importé le JSON de la
+  séance de vendredi, Romain ne voyait plus QUE cette séance dans "Sessions" (ex-Diary) -
+  tout l'historique précédent avait disparu de l'app.
+  **Cause** : `DataStorage.mergeImportedSession()` (le code qui traite un Import
+  Session) appelait `setsToEverything()`, qui VIDE `workoutDays` et le RECONSTRUIT
+  ENTIÈREMENT à partir de la liste interne `sets` - or `sets` n'est peuplée que par un
+  import CSV complet et n'est JAMAIS resynchronisée avec `workoutDays` après un simple
+  démarrage de l'app. Un redémarrage à froid laisse donc `sets` vide ; importer une
+  séance juste après reconstruisait `workoutDays` à partir de ce `sets` presque vide →
+  tout l'historique disparaissait, et ce state tronqué était aussitôt sauvegardé. Bug
+  préexistant à cette session (pas introduit par les nouvelles features).
+  **Correctif** : `mergeImportedSession()` ajoute maintenant directement les séries
+  importées au bon `WorkoutDay` (existant ou nouveau) sans jamais reconstruire
+  `workoutDays` depuis `sets`.
+  **Confirmé par Romain** : "ça fonctionne et j'ai récupéré mes anciens exo depuis mon
+  import, y compris la séance de vendredi." Historique intact, plus rien à
+  investiguer côté récupération de données.
 - [x] Renommage des onglets (retour Romain 05/09/2026) : titre de l'onglet accueil
   "Verifit" → **"Workout"** (`MainActivity`, l'app garde son nom "Verifit" par ailleurs) ;
   libellé de l'onglet "Diary" → **"Sessions"** (`AndroidManifest.xml`, label de
@@ -122,6 +109,19 @@
 - [x] Rattrapage de l'historique git côté Romain, gitignore de `build_log.txt`, script
   `scripts/build_and_log.bat` pour partager un log de build facilement.
 - [x] Commentaire par série (patch \#6) — **validé par Romain**.
+- [x] Calendrier de navigation avec indicateur de jours avec séance (patch \#7) : l'icône
+  calendrier de la barre d'outils ouvre un calendrier mensuel fait maison (mois
+  précédent/suivant, jour actuellement affiché en surbrillance, point sous chaque jour
+  qui a déjà une séance enregistrée, comme sur FitNotes) — **validé par Romain**.
+- [x] Commit des changements Android en cours (sélection multiple des séries,
+  réorganisation/suppression des exercices sur `DayActivity` et l'onglet Workout,
+  correctif du bug de perte de données, correctif de la poignée invisible) — **confirmé
+  fait par Romain**.
+- [x] **Mixup de message de commit sur le dépôt Coaching (05/09/2026)** : Romain a commité
+  du vrai travail (intégration `workout_engine.py`/export JSON, \+553/-50 lignes sur 6
+  fichiers) avec le message destiné à un commit Android sans rapport. Pas encore pushé
+  au moment du signalement → corrigé par `git commit --amend` avec le bon message.
+  **Confirmé corrigé par Romain.**
 
 ## En attente de décision / à planifier
 
@@ -153,6 +153,11 @@
   Claude pour compiler et vérifier une suppression à la volée — à faire par étapes
   prudentes (forcer le mode offline en permanence \+ masquer l'UI de login d'abord,
   suppression effective du code mort ensuite), testées une à une.
+
+- [ ] **Réorganisation/suppression multiple sur l'onglet Sessions (ex-Diary)** :
+  `DiaryExerciseAdapter` n'a pas encore reçu la mécanique appliquée à `DayActivity` et à
+  l'onglet Workout. Explicitement déprioritisé par Romain pour l'instant, mais c'est le
+  dernier des 3 écrans "liste d'exercices d'un jour" à ne pas avoir la feature.
 
 ## Prochain chantier majeur
 

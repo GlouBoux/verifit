@@ -169,6 +169,20 @@ public class DayActivity extends AppCompatActivity {
                 }
 
                 @Override
+                public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState)
+                {
+                    super.onSelectedChanged(viewHolder, actionState);
+
+                    // Retour Romain 05/09/2026 : replie les séries de tous les exercices
+                    // dès qu'un glisser-déposer démarre, même hors mode sélection (avant,
+                    // le repli ne se déclenchait qu'en cliquant sur "Select").
+                    if (actionState == ItemTouchHelper.ACTION_STATE_DRAG)
+                    {
+                        workoutExerciseAdapter.setDragging(true);
+                    }
+                }
+
+                @Override
                 public void clearView(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder viewHolder)
                 {
                     super.clearView(rv, viewHolder);
@@ -179,6 +193,7 @@ public class DayActivity extends AppCompatActivity {
                         persistExerciseOrder(dragStartPosition, finalPosition);
                     }
                     dragStartPosition = -1;
+                    workoutExerciseAdapter.setDragging(false);
                 }
             });
             itemTouchHelper.attachToRecyclerView(recyclerView);

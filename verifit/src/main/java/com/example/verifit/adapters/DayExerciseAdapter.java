@@ -44,6 +44,21 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
     private final Set<String> selectedExerciseNames = new HashSet<>();
     private OnSelectionChangedListener selectionChangedListener;
 
+    // Retour Romain 05/09/2026 : le repli des séries doit aussi se déclencher quand on
+    // drague directement (poignée) SANS être passé par le bouton "Select" - avant, le
+    // repli ne dépendait que de selectionMode, or la poignée reste utilisable même hors
+    // sélection multiple.
+    //
+    // Retour Romain 05/09/2026 (bis) : un premier essai remettait tout en "déplié" dès
+    // la fin du geste de drag (clearView) - Romain voyait donc le repli disparaître
+    // tout seul après une seconde. Ce qu'il veut : ça replie au démarrage du drag, et ça
+    // RESTE replié une fois le drag terminé, jusqu'à ce qu'il tape sur la série pour la
+    // rouvrir manuellement - exactement le même mécanisme qu'un repli manuel. D'où
+    // collapsedExerciseNames (suivi par NOM, comme la sélection) plutôt qu'un simple
+    // booléen "dragging" : setDragging(true) replie (et mémorise) toutes les séries au
+    // début du geste ; setDragging(false), à la fin du geste, ne les rouvre plus.
+    private final Set<String> collapsedExerciseNames = new HashSet<>();
+
     // Drag & drop pour réordonner les exercices ("comme FitNotes", retour Romain
     // 05/09/2026) - la poignée de chaque ligne démarre le drag via ce listener,
     // l'ItemTouchHelper lui-même vit dans DayActivity (il a besoin d'accéder au
@@ -91,6 +106,41 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
     public boolean isSelectionMode()
     {
         return selectionMode;
+    }
+
+    public void setDragging(boolean dragging)
+    {
+        if (!dragging)
+        {
+            // Fin du geste : volontairement un no-op, voir le commentaire sur
+            // collapsedExerciseNames plus haut - tout reste replié.
+            return;
+        }
+
+        for (WorkoutExercise exercise : Exercises)
+        {
+            collapsedExerciseNames.add(exercise.getExercise());
+        }
+        notifyDataSetChanged();
+    }
+
+    private void toggleCollapse(int position)
+    {
+        if (position < 0 || position >= Exercises.size())
+        {
+            return;
+        }
+
+        String exerciseName = Exercises.get(position).getExercise();
+        if (collapsedExerciseNames.contains(exerciseName))
+        {
+            collapsedExerciseNames.remove(exerciseName);
+        }
+        else
+        {
+            collapsedExerciseNames.add(exerciseName);
+        }
+        notifyItemChanged(position);
     }
 
     public int getSelectedCount()
@@ -169,10 +219,12 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
         holder.dragHandle.setVisibility(View.VISIBLE);
 
         // Retour Romain 05/09/2026 : replie les séries de CHAQUE exercice pendant la
-        // sélection multiple - plus facile de repérer/cocher plusieurs exercices ou de
-        // les glisser-déposer sans avoir à faire défiler le détail de chacun. Revient à
-        // l'affichage normal (déplié) une fois la sélection terminée.
-        if (selectionMode)
+        // sélection multiple (repli temporaire, revient à l'état individuel de chacun à
+        // la sortie du mode sélection) et/ou si cette série précise a été repliée
+        // manuellement ou par un glisser-déposer (repli persistant, voir
+        // collapsedExerciseNames - se rouvre uniquement en tapant dessus).
+        boolean collapsed = selectionMode || collapsedExerciseNames.contains(Exercises.get(position).getExercise());
+        if (collapsed)
         {
             holder.recyclerView.setVisibility(View.GONE);
             holder.blue_line.setVisibility(View.INVISIBLE);
@@ -283,7 +335,8 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
             checkbox = itemView.findViewById(R.id.exercise_checkbox);
             dragHandle = itemView.findViewById(R.id.drag_handle);
 
-                // Expand More/Less, ou bascule la sélection en mode sélection multiple.
+                // Bascule la sélection en mode sélection multiple, sinon replie/déplie
+                // cette série précise (voir toggleCollapse/collapsedExerciseNames).
                 cardview_exercise2.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -293,33 +346,7 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
                         return;
                     }
 
-                    if(recyclerView.getVisibility() == View.GONE)
-                    {
-                        // Expand Button Animation
-                        recyclerView.setVisibility(View.VISIBLE);
-                        blue_line.setVisibility(View.VISIBLE);
-                        notifyItemChanged(getAdapterPosition());
-
-//                         Expand Button Animation
-//                        RotateAnimation rotate = new RotateAnimation(180, 360, Animation.RELATIVE_TO_SELF, 0.5f,          Animation.RELATIVE_TO_SELF, 0.5f);
-//                        rotate.setDuration(200);
-//                        rotate.setInterpolator(new LinearInterpolator());
-//                        expandButton.startAnimation(rotate);
-//                        expandButton.setImageResource(R.drawable.ic_expand_less_24px);
-                    }
-                    else if(recyclerView.getVisibility() == View.VISIBLE)
-                    {
-                        recyclerView.setVisibility(View.GONE);
-                        blue_line.setVisibility(View.INVISIBLE);
-
-
-//                         Expand Button Animation
-//                        RotateAnimation rotate = new RotateAnimation(180, 0, Animation.RELATIVE_TO_SELF, 0.5f,          Animation.RELATIVE_TO_SELF, 0.5f);
-//                        rotate.setDuration(200);
-//                        rotate.setInterpolator(new LinearInterpolator());
-//                        expandButton.startAnimation(rotate);
-//                        expandButton.setImageResource(R.drawable.ic_expand_more_24px);
-                    }
+                    toggleCollapse(getAdapterPosition());
                 }
             });
 

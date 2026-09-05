@@ -208,6 +208,25 @@ public class ViewPagerWorkoutDayAdapter extends RecyclerView.Adapter<ViewPagerWo
                 }
 
                 @Override
+                public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState)
+                {
+                    super.onSelectedChanged(viewHolder, actionState);
+
+                    // Retour Romain 05/09/2026 : replie les séries de tous les exercices
+                    // de cette page dès qu'un glisser-déposer démarre, même hors mode
+                    // sélection (avant, le repli ne se déclenchait qu'en cliquant sur
+                    // "Select").
+                    if (actionState == ItemTouchHelper.ACTION_STATE_DRAG)
+                    {
+                        ViewPagerExerciseAdapter adapter = getExerciseAdapter();
+                        if (adapter != null)
+                        {
+                            adapter.setDragging(true);
+                        }
+                    }
+                }
+
+                @Override
                 public void clearView(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder viewHolder)
                 {
                     super.clearView(rv, viewHolder);
@@ -219,6 +238,12 @@ public class ViewPagerWorkoutDayAdapter extends RecyclerView.Adapter<ViewPagerWo
                         persistExerciseOrder(currentDate, dragStartPosition, finalPosition);
                     }
                     dragStartPosition = -1;
+
+                    ViewPagerExerciseAdapter adapter = getExerciseAdapter();
+                    if (adapter != null)
+                    {
+                        adapter.setDragging(false);
+                    }
                 }
             });
             itemTouchHelper.attachToRecyclerView(recyclerView_Main);
