@@ -2,6 +2,20 @@
 
 ## En cours
 
+- [ ] **Icône de commentaire cliquable pour la voir** (retour Romain 05/09/2026) : sur
+  l'onglet Workout, l'icône de commentaire sur une série (ajoutée au patch \#6) était
+  visible mais pas cliquable - il fallait deviner qu'un long-press sur toute la carte
+  l'ouvrait. Un tap direct sur l'icône (`WorkoutSetAdapter`) ouvre maintenant le même
+  dialogue voir/éditer.
+  **Manque plus large trouvé en même temps** : sur l'onglet Sessions, ouvrir un exercice
+  d'une séance passée mène à `AddExerciseActivity` (l'onglet porte le nom de l'exercice),
+  dont la liste de séries (`AddExerciseWorkoutSetAdapter`) n'avait ICI aucune icône de
+  commentaire du tout, ni aucun moyen de voir/éditer un commentaire par série - alors que
+  Romain en a besoin sur cet écran-là aussi (comme sur FitNotes). Ajouté : même icône,
+  même dialogue voir/éditer/effacer, réutilisant `workout_set_row.xml` (déjà le bon
+  layout, l'id `set_comment_indicator` existait déjà dedans) et le même mécanisme que
+  `WorkoutSetAdapter`. Pas encore buildé/testé par Romain.
+
 - [ ] **Suppression de plusieurs séries en une fois** (retour Romain 05/09/2026) : dans
   `AddExerciseActivity` (l'écran de log d'un exercice), on ne pouvait supprimer qu'une
   série à la fois (long-press → menu popup → Supprimer), fastidieux pour nettoyer
@@ -32,7 +46,9 @@
   l'app). **Réorganisation confirmée fonctionnelle par Romain (05/09/2026)** après ce
   correctif.
 
-- [ ] **Même sélection multiple + réorganisation sur l'onglet Workout (accueil)** (retour
+## Fait / validé
+
+- [x] **Même sélection multiple + réorganisation sur l'onglet Workout (accueil)** (retour
   Romain 05/09/2026) : Romain a d'abord essayé de réordonner depuis l'onglet
   accueil - anciennement titré "Verifit", renommé **"Workout"** - avant de découvrir que
   cette fonctionnalité n'existait que sur `DayActivity`. L'app a en fait 3 écrans séparés
@@ -60,16 +76,24 @@
   sélection pointait sur le mauvais exercice après un glisser-déposer pendant qu'une
   sélection était en cours) - fait sur `DayExerciseAdapter` et `ViewPagerExerciseAdapter`.
   **Testé par Romain** : le repli fonctionne bien en passant par le bouton "Select".
-  **Bug trouvé et corrigé (05/09/2026)** : en revanche, si on drague directement un
+  **Bug \#1 trouvé et corrigé (05/09/2026)** : en revanche, si on drague directement un
   exercice via la poignée SANS passer par le bouton "Select" (drag "brut", hors sélection
   multiple), les séries ne se repliaient pas - le repli ne dépendait que de
-  `selectionMode`, or la poignée reste utilisable même hors sélection multiple. Ajout
-  d'un état `dragging` séparé (mis à `true`/`false` par le
-  `ItemTouchHelper.Callback.onSelectedChanged()`/`clearView()`, sur `DayActivity` et
-  `ViewPagerWorkoutDayAdapter`) qui déclenche le même repli que `selectionMode`,
-  indépendamment du mode sélection. Pas encore buildé/testé par Romain.
-
-## Fait / validé
+  `selectionMode`, or la poignée reste utilisable même hors sélection multiple.
+  **Bug \#2 trouvé et corrigé (05/09/2026, retour Romain après test)** : le premier
+  correctif du bug \#1 (un simple booléen `dragging`, remis à `false` à la fin du geste
+  dans `clearView()`) faisait bien réapparaître le repli au début du drag, mais Romain a
+  vu tout se ré-déplier tout seul dès qu'il relâchait - "collapse pendant une seconde
+  avant de s'expand à nouveau". Ce qu'il voulait : que ça reste replié après le drag,
+  jusqu'à un tap manuel pour rouvrir. Remplacé par un suivi persistant par NOM
+  (`collapsedExerciseNames`, même mécanique que la sélection) : `setDragging(true)`
+  replie et mémorise toutes les séries au début du geste, `setDragging(false)` (fin du
+  geste) ne les rouvre plus - elles ne se rouvrent qu'en tapant dessus (comportement
+  identique au repli manuel classique). Sur l'onglet Workout, comme le tap sur une série
+  naviguait jusqu'ici toujours directement vers l'écran de log (pas de repli manuel
+  préexistant sur cet écran contrairement à `DayActivity`), le tap sur une série repliée
+  la déplie d'abord au lieu de naviguer - il faut retaper pour naviguer une fois dépliée.
+  **Confirmé fonctionnel par Romain (05/09/2026)** après build : "c'est validé".
 
 - [x] **Bug critique de perte de données à l'Import Session — RÉSOLU ET CONFIRMÉ
   (05/09/2026)** : après avoir recompilé/réinstallé l'app puis importé le JSON de la

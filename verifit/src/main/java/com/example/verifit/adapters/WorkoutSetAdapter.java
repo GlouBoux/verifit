@@ -58,21 +58,28 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
             (comment != null && !comment.trim().isEmpty()) ? View.VISIBLE : View.GONE
         );
 
-        // Shows Set Stats when Clicked
+        // Retour Romain 05/09/2026 : inversion volontaire par rapport au comportement
+        // d'origine (tap = stats, long-press = commentaire) - c'est le commentaire que
+        // Romain veut voir en un tap rapide, les stats (reps/charge/1RM) l'intéressent
+        // moins et passent donc en second (long-press).
+        //
+        // Appui court : voir/éditer le commentaire de cette série précise, indépendant
+        // des autres séries du même exercice (contrairement à "Exercise Comments" dans
+        // AddExerciseActivity, qui applique un seul commentaire à toutes les séries de
+        // l'exercice pour la journée).
         holder.cardView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                showSetDialog(position);
+                showSetCommentDialog(holder.getAdapterPosition());
             }
         });
 
-        // Long-press to view/edit this set's own comment, independent from the other
-        // sets of the same exercise (unlike "Exercise Comments" in AddExerciseActivity,
-        // which applies one comment to every set of the exercise for the day).
+        // Appui long : stats de la série (reps/charge/volume/1RM estimé), l'ancien
+        // comportement du tap court.
         holder.cardView.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View view) {
-                showSetCommentDialog(holder.getAdapterPosition());
+                showSetDialog(holder.getAdapterPosition());
                 return true;
             }
         });

@@ -1,5 +1,6 @@
 package com.example.verifit.adapters;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -7,7 +8,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.cardview.widget.CardView;
@@ -16,6 +20,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.verifit.R;
 import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.ui.AddExerciseActivity;
+import com.example.verifit.ui.MainActivity;
+import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -129,6 +135,25 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         holder.checkbox.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
         holder.checkbox.setChecked(selectedPositions.contains(position));
 
+        // Retour Romain 05/09/2026 : cet écran (AddExerciseActivity, atteint aussi
+        // depuis l'onglet Sessions) n'affichait pas du tout l'icône de commentaire par
+        // série, contrairement à l'onglet Workout (WorkoutSetAdapter, même layout
+        // workout_set_row.xml donc même id set_comment_indicator) - or Romain en a
+        // besoin ici aussi. Un tap dessus ouvre/édite le commentaire, même mécanique
+        // que WorkoutSetAdapter.showSetCommentDialog().
+        String comment = Workout_Sets.get(position).getComment();
+        holder.commentIndicator.setVisibility(
+            (comment != null && !comment.trim().isEmpty()) ? View.VISIBLE : View.GONE
+        );
+        holder.commentIndicator.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                showSetCommentDialog(holder.getAdapterPosition());
+            }
+        });
+
         // In selection mode, tapping/long-pressing a row toggles it instead of the
         // normal single-set edit/delete flow below.
         holder.cardView.setOnClickListener(new View.OnClickListener()
@@ -179,6 +204,63 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         AddExerciseActivity.UpdateViewOnClick();
     }
 
+    // Ouvre un petit dialogue pour voir/éditer/effacer le commentaire d'une série
+    // précise - copie de WorkoutSetAdapter.showSetCommentDialog() (même dialogue
+    // add_exercise_comment_dialog.xml), adaptée à cet adapter qui n'avait jusqu'ici
+    // aucune notion de commentaire par série (retour Romain 05/09/2026).
+    public void showSetCommentDialog(int position)
+    {
+        if(position < 0 || position >= Workout_Sets.size())
+        {
+            return;
+        }
+
+        LayoutInflater inflater = LayoutInflater.from(ct);
+        View view = inflater.inflate(R.layout.add_exercise_comment_dialog, null);
+        AlertDialog alertDialog = new AlertDialog.Builder(ct).setView(view).create();
+
+        TextView title = view.findViewById(R.id.tv_date);
+        EditText commentInput = view.findViewById(R.id.et_exercise_comment);
+        MaterialButton saveButton = view.findViewById(R.id.bt_save_comment);
+        MaterialButton clearButton = view.findViewById(R.id.bt_clear_comment);
+
+        title.setText("Set comment");
+
+        String existingComment = Workout_Sets.get(position).getComment();
+        if(existingComment != null && !existingComment.equals("null"))
+        {
+            commentInput.setText(existingComment);
+        }
+
+        clearButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                commentInput.setText("");
+            }
+        });
+
+        saveButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String newComment = commentInput.getText().toString();
+
+                Workout_Sets.get(position).setComment(newComment);
+
+                MainActivity.autoBackupRequired = true;
+                com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(ct);
+                sharedPreferences.save("true", "autoBackupRequired");
+
+                MainActivity.dataStorage.saveWorkoutData(ct);
+
+                notifyItemChanged(position);
+                Toast.makeText(ct, "Comment saved", Toast.LENGTH_SHORT).show();
+                alertDialog.dismiss();
+            }
+        });
+
+        alertDialog.show();
+    }
+
     // To Do: Implement Delete functionality
     private void showSetPopupMenu(AddExerciseWorkoutSetAdapter.MyViewHolder holder, View view, int position)
     {
@@ -226,6 +308,7 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         TextView tv_weight;
         CardView cardView;
         CheckBox checkbox;
+        ImageView commentIndicator;
 
         public MyViewHolder(@NonNull View itemView)
         {
@@ -235,6 +318,7 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
             tv_weight = itemView.findViewById(R.id.tv_date);
             cardView = itemView.findViewById(R.id.cardview_set);
             checkbox = itemView.findViewById(R.id.set_checkbox);
+            commentIndicator = itemView.findViewById(R.id.set_comment_indicator);
         }
     }
 }
