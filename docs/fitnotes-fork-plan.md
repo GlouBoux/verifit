@@ -18,8 +18,11 @@ Android natif.
 - Le dépôt embarque aussi un backend de compte en ligne optionnel ("verifit_rs", une API
   Rust) pour la synchronisation multi-appareils — **décision prise (04-05/09/2026) : à
   retirer**, voir section dédiée plus bas.
+- **Décidé le 05/09/2026 : on reste définitivement sur le fork perso
+  (`GlouBoux/verifit`), pas de PR vers l'amont `MakisChristou/verifit`.** C'est le
+  projet de Romain, taillé pour ses propres besoins.
 
-## Fait architectural clé qui conditionne les deux fonctionnalités
+## Fait architectural clé qui conditionne les fonctionnalités
 
 `Exercise` n'a pas d'ID — seulement un `Name` (String) + `BodyPart` + `favorite`. Toutes
 les recherches dans `DataStorage` (`doesExerciseExist`, `editExercise`, `deleteExercise`,
@@ -37,58 +40,79 @@ l'original. Confirmé par Romain : fonctionne bien.
 ## Fonctionnalité 2 — Import Session (implémentée, testée sur l'app ✅)
 
 Ouvrir un jour (`DayActivity`) → barre d'outils → **Import Session** → choisir un fichier
-`.json` → ses séries sont ajoutées à ce jour, de façon additive (contrairement à l'import
-CSV existant qui est une restauration complète et destructrice). Schéma documenté dans
+`.json` → ses séries sont ajoutées à ce jour, de façon additive. Schéma documenté dans
 `docs/session-import-format.md`. C'est le point d'intégration prévu pour le générateur de
-séances (workout_engine.py), prochain chantier majeur (voir tout en bas).
+séances (workout_engine.py), prochain chantier majeur (voir tout en bas). **Statut :
+validé, fonctionne** (le crash "IllegalStateException" croisé en route était une fausse
+manip, corrigé quand même côté robustesse — patch #4).
 
-**Statut : validé, fonctionne.** Un crash "Import failed: IllegalStateException"
-rencontré en cours de route s'est révélé être une fausse manip de Romain (mauvais
-fichier/écran) plutôt qu'un vrai bug de données ; corrigé quand même côté robustesse
-(patch #4, `SessionImporter` ne rattrapait que `JsonSyntaxException` alors que Gson lève
-directement une `IllegalStateException` quand un fichier n'a pas la forme JSON attendue —
-ça affiche maintenant un message d'erreur propre au lieu de planter).
+## Fonctionnalité 3 — Commentaire par série (implémentée, à valider par Romain)
 
-## Bugs corrigés en cours de route (dépôt de base, sans rapport avec les 2 fonctionnalités)
+Le modèle `WorkoutSet` a toujours eu un champ `comment` individuel par série, mais la
+seule UI existante pour en éditer un ("Exercise Comments" dans `AddExerciseActivity` →
+`saveComment()`) applique le même texte à **toutes** les séries de l'exercice du jour —
+donc dans les faits, un seul commentaire partagé, pas un vrai commentaire par série.
+Romain veut ce comportement pour deux raisons : il l'a sur FitNotes, et ça permettra de
+récupérer fidèlement ces commentaires si/quand il migre plus de données.
+
+Implémenté (patch #6) en restant additif, sans toucher à la fonctionnalité existante :
+- `workout_set_row.xml` : petite icône (réutilise `ic_comment_24px`), visible uniquement
+  si la série a un commentaire — repérable d'un coup d'œil, y compris en relisant des
+  données importées.
+- `WorkoutSetAdapter` : un appui long sur une série ouvre un dialogue (réutilise
+  `add_exercise_comment_dialog.xml`, même look que le dialogue existant) pour voir/
+  éditer/effacer le commentaire de **cette série précise**, indépendamment des autres
+  séries du même exercice. L'appui court continue d'ouvrir le dialogue de stats existant
+  (volume, 1RM), inchangé.
+
+Non fait délibérément : pas de synchronisation vers l'API en ligne `verifit_rs` pour
+cette nouvelle mutation (comme pour les autres fonctionnalités ajoutées sur cette
+branche) — de toute façon sans objet vu que `verifit_rs` est voué à disparaître.
+
+**Statut au 05/09/2026 : livré, pas encore testé par Romain.**
+
+## Bugs corrigés en cours de route (dépôt de base, sans rapport avec les fonctionnalités)
 
 - **Dépendances mortes** (patch #2) : `jcenter()` (fermé depuis 2022) sans
   `mavenCentral()` en repli ; deux dépendances non utilisées supprimées.
 - **Drawable manquant** (patch #3) : `@drawable/background_transparent`, bug latent du
   dépôt d'origine (présent aussi sur `master`).
-- **Crash Import Session** (patch #4) : voir ci-dessus.
-- **L'app revient toujours à aujourd'hui** (patch #5, 05/09/2026) : `MainActivity.
-  initViewPager()` recréait l'adapter du ViewPager et resettait sa position sur
-  aujourd'hui à **chaque** appel, y compris depuis `onRestart()` — déclenché à chaque
-  retour au premier plan après avoir réduit l'app. Romain a précisé que ça n'arrivait que
-  lorsque l'onglet **Verifit** (le ViewPager lui-même) était affiché au moment de réduire
-  l'app, jamais depuis Diary ou Exercises — cohérent, ces deux derniers sont des Activity
-  séparées qui ne déclenchent pas le `onRestart()` de `MainActivity`. Corrigé : la
-  position précédente est maintenant mémorisée et restaurée après le rafraîchissement des
-  données, au lieu d'être écrasée par un retour systématique à aujourd'hui. Limite
-  connue : ne couvre que le cas "app réduite, process toujours vivant" ; si Android tue
-  le process en arrière-plan, l'app repartira de zéro au prochain lancement (pas de
-  persistance du dernier jour consulté sur disque) — à ajouter plus tard seulement si ça
-  gêne réellement Romain en pratique.
-- **Icône calendrier inerte** (patch #5) : l'icône de la barre d'outils dans l'onglet
-  Verifit (`R.id.home` dans `onOptionsItemSelected`) ne faisait que recentrer sur
-  aujourd'hui — jamais de sélecteur de date, alors que `MainActivity` implémente déjà
-  `DatePickerDialog.OnDateSetListener` avec un `onDateSet()` fonctionnel (ouvre
-  `DayActivity` à la date choisie) jamais branché à un `.show()` : du code mort resté en
-  place depuis le dépôt d'origine. Romain a demandé cette fonctionnalité en comparant à
-  FitNotes ("au moins pouvoir changer de jour comme ça plutôt que de swiper"). Corrigé :
-  l'icône ouvre maintenant ce `DatePickerDialog`, pré-rempli avec le jour actuellement
-  affiché. **Pas fait** : l'indication visuelle légère des jours où une séance existe
-  (le petit "+" ou la coche que montre FitNotes sur son calendrier) — nécessiterait soit
-  de réintroduire une lib de calendrier tierce (ironiquement, on avait supprimé
-  `material-calendar-view` comme dépendance morte au patch #2 — c'était peut-être prévu
-  pour ça à l'origine), soit un composant calendrier fait main. Priorité de Romain était
-  "au moins" pouvoir changer de jour, donc reporté.
+- **Crash Import Session** (patch #4) : `SessionImporter` ne rattrapait que
+  `JsonSyntaxException` alors que Gson lève directement une `IllegalStateException`
+  quand un fichier n'a pas la forme JSON attendue.
+- **L'app revient toujours à aujourd'hui** (patch #5) : `MainActivity.initViewPager()`
+  recréait l'adapter du ViewPager et resettait sa position sur aujourd'hui à chaque
+  `onRestart()` (déclenché en réduisant l'app pendant que l'onglet Verifit était affiché).
+  Corrigé : la position précédente est mémorisée et restaurée. **Validé par Romain.**
+  Limite connue, acceptée : ne couvre que le cas "app réduite" (process vivant), pas un
+  kill de process par Android.
+- **Icône calendrier inerte** (patch #5) : ne faisait que recentrer sur aujourd'hui —
+  jamais de sélecteur de date, malgré tout le code déjà en place
+  (`DatePickerDialog.OnDateSetListener`, `onDateSet()` fonctionnel) mais jamais branché
+  à un `.show()`. Corrigé : ouvre maintenant ce sélecteur, pré-rempli avec le jour
+  affiché. **Validé par Romain.** Pas fait : indication visuelle des jours avec séance
+  (nécessiterait de réintroduire une lib de calendrier ou un composant fait main) —
+  reporté, priorité de Romain était de pouvoir changer de jour, pas l'indication
+  visuelle.
 
-La branche `feature/duplicate-exercise-and-session-import` a maintenant 5 commits
-(2 fonctionnalités + 3 correctifs de bugs). Livrés en patches `0001` à `0005`
-(`git am`-compatibles) et tous appliqués directement sur la machine de Romain via le pont
-avec son appareil. **Poussée vers `GlouBoux/verifit` par Romain** (pas encore de PR vers
-l'amont `MakisChristou/verifit`).
+## Incident : MainActivity.java corrompu (05/09/2026) — leçon pour le workflow
+
+Après le patch #5, un build a échoué avec des erreurs de syntaxe absurdes
+("class, interface, or enum expected" dès la ligne 1). Cause : `MainActivity.java`
+contenait littéralement le **texte du patch git** (`From ... Subject: [PATCH] ...
+diff --git ...`) au lieu du vrai code Java — vraisemblablement une tentative
+d'"application" manuelle du patch (copier-coller de son contenu dans le fichier) plutôt
+qu'une commande git. Corrigé en renvoyant le vrai fichier depuis la copie de référence
+saine côté Claude. **Rappel ajouté dans `docs/fitnotes-fork-workflow.md` : les patches
+`000X-....patch` sont uniquement pour l'archive git, jamais à ouvrir ni coller dans un
+fichier source — les fichiers sont de toute façon déjà à jour sur la machine de Romain
+à chaque session.**
+
+La branche `feature/duplicate-exercise-and-session-import` a maintenant 6 commits de
+fonctionnalités/correctifs (+ quelques commits de documentation/outillage). Livrés en
+patches `0001` à `0006` (`git am`-compatibles, pour archive uniquement) et tous appliqués
+directement sur la machine de Romain via le pont avec son appareil. **Poussée vers
+`GlouBoux/verifit` par Romain ; pas de PR vers l'amont (décidé, voir plus haut).**
 
 ## Import de la vraie base FitNotes (04/09/2026)
 
@@ -125,16 +149,6 @@ entrées UI de login/compte (risque faible, réversible), puis supprimer le code
 correspondant une fois le premier changement validé par Romain. À planifier pour une
 prochaine session dédiée.
 
-## Deux chantiers UX toujours ouverts (identifiés le 04/09/2026, pas encore traités)
-
-1. **Commentaire par série, pas juste par exercice.** Le modèle `WorkoutSet` a bien un
-   champ `comment` individuel par série, mais la seule UI existante ("Exercise Comments"
-   dans `AddExerciseActivity` → `saveComment()`) applique le même texte à toutes les
-   séries de l'exercice du jour. Confirmé par Romain. Il faudra une UI par ligne de
-   série (bouton sur chaque `workout_set_row.xml`, via `WorkoutSetAdapter`).
-2. Indication visuelle des jours avec séance sur le sélecteur de date (voir patch #5
-   ci-dessus).
-
 ## Prochain chantier majeur : intégrer le générateur de séances
 
 `workout_engine.py` — outil Python qui calcule des feuilles de route d'entraînement et
@@ -145,15 +159,17 @@ test — éviter un couplage trop rigide entre les deux projets pour l'instant.
 
 ## Questions ouvertes pour la prochaine session
 
-1. Étapes précises pour retirer verifit_rs (voir section dédiée) — par où commencer ?
-2. Ouvrir une PR vers `MakisChristou/verifit` en amont, ou rester sur le fork perso ?
+1. Confirmation de Romain que "commentaire par série" fonctionne comme voulu (appui
+   long sur une série).
+2. Étapes précises pour retirer verifit_rs (voir section dédiée) — par où commencer ?
 3. `workout_engine.py` peut-il produire directement le JSON du format "Import Session" ?
-4. Si le kill de process par Android (pas juste la mise en arrière-plan) s'avère gênant
+4. Ajouter l'indication visuelle des jours avec séance sur le sélecteur de date, si
+   Romain le souhaite toujours après avoir utilisé la version actuelle.
+5. Si le kill de process par Android (pas juste la mise en arrière-plan) s'avère gênant
    en pratique pour la conservation du jour affiché, ajouter une vraie persistance
    (SharedPreferences) du dernier jour consulté.
 
 Voir aussi `docs/fitnotes-fork-todo.md` pour le suivi au jour le jour.
 
 ---
-*Ce fichier est aussi tenu à jour dans le projet Claude "FitNotes_Fork" ; les deux
-copies sont synchronisées à chaque session.*
+*Ce fichier est aussi tenu à jour dans le projet Claude "FitNotes_Fork".*
