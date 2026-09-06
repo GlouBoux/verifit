@@ -2,6 +2,32 @@
 
 ## Codé, en attente de test réel (06/09/2026)
 
+- [ ] **Bug : crash en supprimant la dernière série d'un exercice/jour - CORRIGÉ, PAS
+  ENCORE TESTÉ (06/09/2026)** (retour Romain 06/09/2026) : "quand je suis sur un
+  workout donné, si je supprime la dernière ligne du dernier exercice ça fait planter
+  l'app (pas violemment mais j'ai du relancer car il n'y avait plus rien de visible sur
+  l'app)". Repro exacte : ouvrir un exercice d'un jour donné (icône crayon depuis
+  `DayActivity`), taper sur sa dernière série restante pour passer en mode édition, puis
+  "Delete".
+  Cause identifiée par lecture de code (pas de logcat disponible côté Claude pour
+  confirmer à 100% - à surveiller si le crash revient malgré ce correctif) :
+  `AddExerciseActivity.deleteSetLogic()` (le flux tap-sur-une-série -> mode édition ->
+  "Delete") appelait `WorkoutDay.removeSet()`, dont le seul garde-fou contre le cas
+  "suppression de l'unique série restante du jour" était un `assert` Java - **jamais
+  actif en production sur Android** (les asserts sont désactivés par défaut, y compris
+  en debug). Supprimer la dernière série vidait donc `Sets` sans aucune protection
+  réelle. Fait notable : toutes les AUTRES suppressions de l'app (sélection multiple
+  dans `AddExerciseActivity`, suppression d'exercices dans `DayActivity`) avaient déjà
+  été écrites avec `WorkoutDay.removeSets()` (sans assert, avec vérification explicite
+  du jour vidé) précisément pour éviter ce cas - seule cette suppression série-par-série
+  ne l'avait pas été.
+  Correctif : `deleteSetLogic()` utilise maintenant `removeSets()` (comme toutes les
+  autres suppressions) et vérifie explicitement si le jour est vidé pour le retirer de
+  `DataStorage`. `WorkoutDay.removeSet()` elle-même a été mise à jour pour déléguer à
+  `removeSets()` plutôt que de garder son assert dangereux - elle n'a d'ailleurs plus
+  aucun appelant dans le code après ce correctif. Vérifié côté Claude (équilibre
+  accolades/parenthèses). **Pas encore testé/rebuild par Romain.**
+
 - [x] **Timer de repos : ne sonne jamais, et Reset ne fonctionne pas toujours -
   VALIDÉ, COMMITÉ ET POUSSÉ PAR ROMAIN (06/09/2026)** (retour Romain 06/09/2026) : "d'une façon
   générale quand je set un timer, je veux que même téléphone verrouillé, il sonne pour

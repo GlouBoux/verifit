@@ -602,18 +602,25 @@ public class AddExerciseActivity extends AppCompatActivity {
         // exactement la ou elle etait - voir undoDeleteSet().
         int removedSetIndex = MainActivity.dataStorage.getWorkoutDays().get(finalI).getSets().indexOf(to_be_removed_set);
 
-        MainActivity.dataStorage.getWorkoutDays().get(finalI).removeSet(to_be_removed_set);
+        // Bug signale par Romain 06/09/2026 ("si je supprime la derniere ligne du
+        // dernier exercice ca fait planter l'app") : cet appel utilisait jusqu'ici
+        // WorkoutDay.removeSet(), qui repose sur un assert (Sets.size() > 1) jamais
+        // actif en production (les asserts Java sont desactives par defaut sur
+        // Android) - supprimer l'unique serie restante du jour videait donc Sets sans
+        // aucun garde-fou reel. Toutes les AUTRES suppressions de l'app (selection
+        // multiple ici et dans DayActivity) avaient deja ete ecrites avec
+        // WorkoutDay.removeSets() pour eviter exactement ce cas - seule cette
+        // suppression au cas par cas (tap sur une serie -> mode edition -> "Delete")
+        // ne l'utilisait pas. Alignee sur le meme motif : removeSets() (jamais
+        // d'assert), puis verification explicite et suppression du jour devenu vide.
+        WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(finalI);
+        day.removeSets(java.util.Collections.singletonList(to_be_removed_set));
 
-        // Cleanup potential days with 0 sets
-        for(int i = 0; i < MainActivity.dataStorage.getWorkoutDays().size(); i++)
+        if (day.getSets().isEmpty())
         {
-            if(MainActivity.dataStorage.getWorkoutDays().get(i).getSets().size() == 0)
-            {
-                MainActivity.dataStorage.getWorkoutDays().remove(i);
-            }
+            MainActivity.dataStorage.getWorkoutDays().remove(finalI);
         }
 
-        // Bug: If this last set of the day this is required
         MainActivity.dataStorage.saveWorkoutData(ct);
         MainActivity.dataStorage.saveKnownExerciseData(ct);
 
