@@ -35,6 +35,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -119,6 +120,16 @@ public class AddExerciseActivity extends AppCompatActivity {
     public ImageButton plus_seconds;
     public Button bt_start;
     public Button bt_reset;
+    // Retour Romain 06/09/2026 : "possible de gerer le volume directement depuis
+    // l'app ?" (comme sur FitNotes) - voir setupTimer()/loadVolume() ci-dessous et
+    // RestTimerReceiver.playRestTimerBeep() qui lit ce reglage au moment de sonner.
+    public SeekBar sb_volume;
+
+    // Retour Romain 06/09/2026 : "le bip est un peu court, possible de le rendre 2 fois
+    // plus long ? ou m'offrir la possibilite de l'editer dans l'app ?" - duree du bip
+    // (en ms) reglable depuis l'app, meme principe que sb_volume ci-dessus. Voir
+    // setupTimer()/loadDuration()/RestTimerReceiver.DURATION_PREF_KEY.
+    public SeekBar sb_beep_duration;
 
     private AlertDialog currentDialog = null;
 
@@ -1615,6 +1626,8 @@ public class AddExerciseActivity extends AppCompatActivity {
         plus_seconds = view.findViewById(R.id.plus_seconds);
         bt_start = view.findViewById(R.id.bt_start);
         bt_reset = view.findViewById(R.id.bt_close);
+        sb_volume = view.findViewById(R.id.sb_volume);
+        sb_beep_duration = view.findViewById(R.id.sb_beep_duration);
 
         // Set default seconds value to 180 i.e 3 minutes
         if(!TimerRunning)
@@ -1627,6 +1640,48 @@ public class AddExerciseActivity extends AppCompatActivity {
         {
             updateCountDownText();
         }
+
+        loadVolume();
+        loadDuration();
+
+        // Retour Romain 06/09/2026 : volume du bip de fin de repos reglable depuis
+        // l'app ("ajuster le volume suivant le bruit ambiant du jour") - persiste des
+        // que l'utilisateur relache le curseur (pas a chaque pixel de deplacement),
+        // lu par RestTimerReceiver.playRestTimerBeep() au moment ou le repos se
+        // termine (memes SharedPreferences que la duree du minuteur).
+        sb_volume.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener()
+        {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {}
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar)
+            {
+                saveVolume(seekBar.getProgress());
+            }
+        });
+
+        // Retour Romain 06/09/2026 : "le bip est un peu court, possible de me laisser
+        // l'editer dans l'app ?" - duree du bip reglable en ms, meme principe que
+        // sb_volume ci-dessus (le curseur va de RestTimerReceiver.MIN_DURATION_MS a
+        // MAX_DURATION_MS, cf loadDuration()/saveDuration() plus bas pour la conversion).
+        sb_beep_duration.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener()
+        {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {}
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar)
+            {
+                saveDuration(seekBar.getProgress() + RestTimerReceiver.MIN_DURATION_MS);
+            }
+        });
 
         // Reset Timer Button
         bt_reset.setOnClickListener(new View.OnClickListener()
@@ -1942,6 +1997,53 @@ public class AddExerciseActivity extends AppCompatActivity {
         TimeLeftInMillis = START_TIME_IN_MILLIS;
 
         et_seconds.setText(seconds);
+    }
+
+    // Retour Romain 06/09/2026 : volume du bip de fin de repos reglable depuis l'app -
+    // memes SharedPreferences que la duree du minuteur (loadSeconds()/saveSeconds()
+    // ci-dessus), cle partagee avec RestTimerReceiver.VOLUME_PREF_KEY. Valeur par
+    // defaut a 100% (RestTimerReceiver.DEFAULT_VOLUME_PERCENT) : le besoin exprime est
+    // d'entendre le bip par-dessus la musique de la salle de sport, donc plutot
+    // reduire le volume les jours ou l'ambiance est calme que l'inverse.
+    public void loadVolume()
+    {
+        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences", MODE_PRIVATE);
+        int volumePercent = sharedPreferences.getInt(
+                RestTimerReceiver.VOLUME_PREF_KEY, RestTimerReceiver.DEFAULT_VOLUME_PERCENT);
+        sb_volume.setProgress(volumePercent);
+    }
+
+    public void saveVolume(int volumePercent)
+    {
+        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putInt(RestTimerReceiver.VOLUME_PREF_KEY, volumePercent);
+        editor.apply();
+    }
+
+    // Retour Romain 06/09/2026 : "le bip est un peu court, possible de le rendre 2 fois
+    // plus long ? ou m'offrir la possibilite de l'editer dans l'app ?" - duree du bip
+    // (en ms) reglable depuis l'app, lue par RestTimerReceiver.playRestTimerBeep().
+    // Le SeekBar (sb_beep_duration) va de 0 a (MAX_DURATION_MS - MIN_DURATION_MS) pour
+    // rester compatible avec les anciennes versions d'Android (SeekBar.setMin()
+    // n'existe qu'a partir de l'API 26) ; on ajoute/retranche MIN_DURATION_MS ici pour
+    // convertir entre la progression du curseur et la vraie duree en ms.
+    public void loadDuration()
+    {
+        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences", MODE_PRIVATE);
+        int durationMs = sharedPreferences.getInt(
+                RestTimerReceiver.DURATION_PREF_KEY, RestTimerReceiver.DEFAULT_DURATION_MS);
+        durationMs = Math.max(RestTimerReceiver.MIN_DURATION_MS, Math.min(RestTimerReceiver.MAX_DURATION_MS, durationMs));
+        sb_beep_duration.setMax(RestTimerReceiver.MAX_DURATION_MS - RestTimerReceiver.MIN_DURATION_MS);
+        sb_beep_duration.setProgress(durationMs - RestTimerReceiver.MIN_DURATION_MS);
+    }
+
+    public void saveDuration(int durationMs)
+    {
+        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putInt(RestTimerReceiver.DURATION_PREF_KEY, durationMs);
+        editor.apply();
     }
 
     public void saveSeconds()

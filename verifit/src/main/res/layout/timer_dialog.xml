@@ -36,9 +36,10 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="5dp"
         android:layout_marginLeft="5dp"
-        android:layout_marginTop="120dp"
+        android:layout_marginTop="30dp"
         android:layout_marginEnd="100dp"
         android:layout_marginRight="100dp"
+        android:layout_marginBottom="20dp"
         android:text="Reset"
         android:textAllCaps="false"
         android:textColor="@color/colorPrimary"
@@ -46,7 +47,7 @@
         app:cornerRadius="10dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/bt_start"
-        app:layout_constraintTop_toBottomOf="@+id/blue_line" />
+        app:layout_constraintTop_toBottomOf="@+id/sb_beep_duration" />
 
 
     <EditText
@@ -108,7 +109,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="100dp"
         android:layout_marginLeft="100dp"
-        android:layout_marginTop="120dp"
+        android:layout_marginTop="30dp"
         android:layout_marginEnd="5dp"
         android:layout_marginRight="5dp"
         android:layout_marginBottom="20dp"
@@ -118,7 +119,70 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/bt_close"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/blue_line" />
+        app:layout_constraintTop_toBottomOf="@+id/sb_beep_duration" />
 
+    <!-- Retour Romain 06/09/2026 : "il faudrait pouvoir ajuster le volume suivant le
+         bruit ambiant du jour" (comme sur FitNotes) - regle le volume du bip joue par
+         RestTimerReceiver (independant du volume "notifications" du telephone), lu/ecrit
+         dans les memes SharedPreferences que la duree du minuteur. Voir
+         AddExerciseActivity.setupTimer()/loadVolume()/RestTimerReceiver.VOLUME_PREF_KEY. -->
+    <TextView
+        android:id="@+id/tv_volume_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="25dp"
+        android:text="Volume"
+        android:textColor="@color/colorPrimary"
+        android:textSize="16sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/et_seconds" />
+
+    <SeekBar
+        android:id="@+id/sb_volume"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginRight="20dp"
+        android:max="100"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tv_volume_label" />
+
+    <!-- Retour Romain 06/09/2026 : "le bip est un peu court, possible de le rendre 2
+         fois plus long ? ou m'offrir la possibilite de l'editer dans l'app ?" - regle
+         la duree du bip joue par RestTimerReceiver (synthetise a la volee, cf
+         RestTimerReceiver.generateBeepSamples()). Le curseur va de MIN_DURATION_MS a
+         MAX_DURATION_MS ; voir AddExerciseActivity.loadDuration()/saveDuration(). -->
+    <TextView
+        android:id="@+id/tv_beep_duration_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="25dp"
+        android:text="Duree du bip"
+        android:textColor="@color/colorPrimary"
+        android:textSize="16sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/sb_volume" />
+
+    <SeekBar
+        android:id="@+id/sb_beep_duration"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginRight="20dp"
+        android:max="1850"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tv_beep_duration_label" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

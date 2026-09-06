@@ -383,7 +383,7 @@ avant l'appel à `removeSet()`) et transmis à `undoDeleteSet()`.
 
 **Statut au 06/09/2026 : livré, validé et poussé par Romain** ("validé et pushé.").
 
-## Fonctionnalité 10 — Timer de repos fiable (implémentée et fonctionnelle le 06/09/2026, sonnerie affinée)
+## Fonctionnalité 10 — Timer de repos fiable (fonctionnelle et validée le 06/09/2026 ; bip dédié + volume + durée réglables en cours de test)
 
 Signalé "PRIORITAIRE" par Romain le 06/09/2026 mais mis de côté à plusieurs reprises au
 profit d'autres demandes ce jour-là : "d'une façon générale quand je set un timer, je
@@ -491,10 +491,98 @@ Corrigé :
   indéfiniment le son/la vibration d'alarme du premier jet malgré la mise à jour du
   code.
 
-**Statut au 06/09/2026 : fonctionnalité principale confirmée par Romain, ajustement de
-la sonnerie codé et livré sur sa machine, pas encore rebuildé/retesté** (pas de SDK
-Android côté Claude pour compiler - vérifié uniquement par lecture de code et
-équilibrage accolades/parenthèses).
+**Confirmé par Romain après ce correctif** : "ça fonctionne et c'est ok. Je l'ai
+commité." Nouveau retour dans la foulée, sur le même sujet :
+
+**"Je préférerais avoir un son de notification différent [...] pendant mon
+entraînement j'ai besoin de pouvoir entendre ce son à quelques mètres de distance avec
+la musique de ma salle de muscu en fond [...] il faut que je puisse discerner le son
+spécifique me disant que je peux reprendre ma série et ajuster le volume suivant le
+bruit ambiant du jour."** Deux besoins distincts, tous deux présents sur FitNotes selon
+Romain (qui expose un réglage de volume, mais pas de type de son) :
+
+1. Un son **spécifique et reconnaissable**, pas le son de notification générique du
+   téléphone (potentiellement partagé avec d'autres apps, et pas assez distinctif).
+2. Un **volume réglable depuis l'app**, indépendant du volume "notifications" du
+   système - insuffisant en salle de sport avec de la musique ambiante.
+
+Implémentation :
+
+- Nouveau `res/raw/rest_timer_beep.wav` : bip synthétisé (généré par script, pas un
+  fichier audio tiers) - ~350 ms, 880 Hz, fondu entrée/sortie de 20 ms pour éviter tout
+  "clic". Son fixe et reconnaissable, indépendant des réglages de sonnerie du
+  téléphone.
+- `RestTimerReceiver.playRestTimerBeep()` joue ce bip directement via `MediaPlayer`
+  plutôt que de le déléguer au son du canal de notification (qui ne peut pas être
+  réglé en volume depuis l'app - seulement via le volume système "notifications").
+  Diffusé sur le flux **ALARME** (`AudioAttributes.USAGE_ALARM`) : le flux le plus
+  fort du téléphone, et qui reste audible même en mode silencieux/Ne pas déranger -
+  pertinent pour le cas d'usage salle de sport. Le volume effectif est
+  `MediaPlayer.setVolume(gain, gain)` avec `gain` = réglage choisi dans l'app (0-100%)
+  / 100 - un gain logiciel appliqué par-dessus le volume système du flux alarme (donc
+  un plafond côté téléphone reste possible, mais l'appli peut toujours réduire en
+  dessous pour les jours calmes).
+  - `onReceive()` appelle `goAsync()` et ne libère le `PendingResult` qu'à la fin
+    effective de la lecture (`onCompletion`/`onError` du `MediaPlayer`, ou un filet de
+    sécurité de 3s) : sans ça, rien ne garantissait que le process reste vivant assez
+    longtemps pour terminer de jouer le son si l'app avait déjà été tuée en
+    arrière-plan au moment où l'alarme système se déclenche.
+  - La notification système (`postNotification()`) reste affichée (visuel + tap pour
+    rouvrir l'app + vibration courte) mais devient **silencieuse** côté canal
+    (`channel.setSound(null, null)`) pour éviter un double signal sonore avec le bip
+    joué séparément. Nouvel id de canal (`rest_timer_channel_v3`) pour que ce
+    changement s'applique aussi sur le téléphone de Romain, déjà passé par `_v2`.
+- Nouveau réglage **Volume** (`SeekBar` 0-100%, `timer_dialog.xml`) sous le réglage de
+  durée existant. `AddExerciseActivity.loadVolume()`/`saveVolume()` le persistent dans
+  les mêmes `SharedPreferences` ("shared preferences") que la durée du minuteur
+  (`loadSeconds()`/`saveSeconds()`), sous la clé `RestTimerReceiver.VOLUME_PREF_KEY`
+  (constante partagée pour éviter toute divergence entre l'écriture côté Activity et
+  la lecture côté Receiver). Persisté uniquement à `onStopTrackingTouch` (pas à chaque
+  pixel de déplacement du curseur). Défaut 100% - le besoin exprimé par Romain est
+  d'être entendu par-dessus la musique de la salle, donc mieux vaut un défaut fort
+  qu'on baisse au besoin plutôt que l'inverse.
+
+**Erreur de compilation signalée par Romain au build suivant, corrigée le 06/09/2026** :
+`compileDebugJavaWithJavac` échouait sur `AddExerciseActivity.loadVolume()`/
+`saveVolume()` - `RestTimerReceiver.VOLUME_PREF_KEY` et `DEFAULT_VOLUME_PERCENT`
+avaient été déclarées sans modificateur d'accès (donc `package-private`), alors que
+`AddExerciseActivity` vit dans le package `com.example.verifit.ui`, différent de celui
+de `RestTimerReceiver` (`com.example.verifit`) - inaccessibles depuis l'extérieur du
+package. Corrigé en ajoutant `public` aux deux constantes. Erreur purement locale à
+l'ajout du volume réglable, sans lien avec le reste de la Fonctionnalité 10 (bip dédié,
+fiabilité de l'alarme...).
+
+**Nouveau retour de Romain, avant même d'avoir rebuild la correction ci-dessus** : "Le
+bruit, le bip est ok mais un peu court. Possible que tu le rendes 2 fois plus long ? ou
+m'offrir la possibilité de l'éditer dans l'app ? (si pas trop violent comme feature)".
+Choix fait en faveur de l'option "éditable dans l'app", jugée pas plus complexe qu'un
+simple doublement de la durée fixe et plus utile sur la durée :
+
+- Le bip n'est plus un fichier `.wav` fixe (`res/raw/rest_timer_beep.wav`, supprimé) :
+  `RestTimerReceiver.generateBeepSamples(int durationMs)` synthétise directement en
+  mémoire les échantillons PCM (même sinusoïde 880 Hz + fondu entrée/sortie de 20 ms
+  qu'avant, mais durée désormais paramétrable) et les joue via `AudioTrack` en mode
+  `MODE_STATIC` (au lieu de `MediaPlayer` sur un asset). Toujours diffusé sur le flux
+  ALARME avec un gain logiciel proportionnel au réglage Volume, et toujours protégé par
+  `goAsync()` + filet de sécurité (porté à 4 s) + détection de fin de lecture via
+  `setNotificationMarkerPosition()`/`setPlaybackPositionUpdateListener()` (équivalent
+  audio de `onCompletion()` pour un `AudioTrack`).
+- Nouveau réglage **Durée du bip** (`SeekBar`, `timer_dialog.xml`) sous le réglage de
+  Volume : 150 ms à 2000 ms, défaut 700 ms (exactement le double de l'ancienne durée
+  fixe de 350 ms). Le curseur va de 0 à 1850 (`MAX_DURATION_MS - MIN_DURATION_MS`)
+  plutôt que d'utiliser `SeekBar.setMin()` (API 26+ seulement) pour rester compatible
+  avec d'anciennes versions d'Android ; `AddExerciseActivity` fait la conversion
+  (`+ MIN_DURATION_MS`) à la lecture comme à l'écriture. Persisté par
+  `loadDuration()`/`saveDuration()`, même principe et mêmes `SharedPreferences` que le
+  Volume, sous la clé `RestTimerReceiver.DURATION_PREF_KEY`.
+
+**Statut au 06/09/2026 : fonctionnalité principale (fiabilité + sonnerie discrète)
+confirmée et poussée par Romain ; bip dédié + volume + durée réglables codés et livrés
+sur sa machine (erreur de compilation corrigée), pas encore rebuildés/retestés** (pas de
+SDK Android ni d'émulateur côté Claude - vérifié uniquement par lecture de code et
+équilibrage accolades/parenthèses côté Java, bonne formation XML côté layout). La mise
+en page ajoutée à `timer_dialog.xml` (deux labels + deux curseurs, boutons Start/Reset
+repoussés en conséquence) n'a pas pu être vérifiée visuellement.
 
 ## Incident : bug critique de perte de données à l'Import Session (05/09/2026)
 
@@ -534,16 +622,27 @@ test — éviter un couplage trop rigide entre les deux projets pour l'instant.
 
 ## Questions ouvertes pour la prochaine session
 
-1. **Retour de test attendu sur la sonnerie affinée du timer de repos (Fonctionnalité
-   10 ci-dessus)** — fonctionnalité principale confirmée par Romain ; l'ajustement du
-   son (bref "Tuuut" au lieu d'une alarme longue) est codé le 06/09/2026 mais pas
-   encore buildé ni testé sur l'appareil.
-2. **Idée évoquée par Romain (06/09/2026, pas tranchée)** : une simulation "à blanc"
+1. **Retour de test attendu sur le bip dédié + volume + durée réglables du timer de
+   repos (Fonctionnalité 10 ci-dessus)** — fiabilité et sonnerie discrète déjà
+   confirmées et poussées par Romain ; le bip synthétisé dédié et les curseurs de
+   volume et de durée dans `timer_dialog.xml` sont codés le 06/09/2026 mais pas encore
+   buildés ni testés sur l'appareil (mise en page notamment, jamais vérifiée
+   visuellement côté Claude - tester en particulier une durée très courte et très
+   longue pour vérifier l'absence de clic/distorsion en fin de bip).
+2. **Nouvelle demande à scoper (06/09/2026, pas codée)** : démarrage/arrêt automatique
+   du timer de repos (au premier/dernier série de l'exercice, "ce que fait fitnotes"),
+   puis piste plus lointaine de suivi du temps de repos réellement pris entre deux
+   séries consécutives (indicateur de repos insuffisant) - voir
+   `docs/fitnotes-fork-todo.md`, section "Nouvelles demandes", pour le détail et les
+   points à clarifier avec Romain avant de coder (notamment ce que "dernière série"
+   signifie en pratique, l'app ne connaissant pas à l'avance le nombre de séries
+   prévues pour un exercice).
+3. **Idée évoquée par Romain (06/09/2026, pas tranchée)** : une simulation "à blanc"
    d'une vraie séance (test end-to-end manuel, sans faire réellement la séance) pour
    repérer les points de friction avant qu'ils ne se manifestent en conditions réelles -
    voir `docs/fitnotes-fork-todo.md`, section "En attente de décision / à planifier".
-3. Étapes précises pour retirer verifit\_rs (voir section dédiée) — par où commencer ?
-4. Si le kill de process par Android (pas juste la mise en arrière\-plan) s'avère gênant
+4. Étapes précises pour retirer verifit\_rs (voir section dédiée) — par où commencer ?
+5. Si le kill de process par Android (pas juste la mise en arrière\-plan) s'avère gênant
    en pratique pour la conservation du jour affiché, ajouter une vraie persistance
    (SharedPreferences) du dernier jour consulté.
 

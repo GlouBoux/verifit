@@ -56,13 +56,87 @@
     et forte plutôt qu'un simple bip. **Corrigé** : bascule sur le son/attribut de
     notification standard (`TYPE_NOTIFICATION`/`USAGE_NOTIFICATION_EVENT`, plus proche
     du "Tuuut" de FitNotes), vibration ramenée à un seul buzz court (200ms), priorité/
-    catégorie de la notification adoucies. Compromis assumé : ne passe plus forcément
-    en mode silencieux/Ne pas déranger. Nouvel id de canal (`rest_timer_channel_v2`,
-    un canal de notification étant immuable une fois créé sur Android 8+) pour que ce
-    changement s'applique même sur le téléphone de Romain qui avait déjà reçu le
-    premier jet. Codé, livré sur l'appareil, **pas encore rebuildé/retesté**.
+    catégorie de la notification adoucies. Nouvel id de canal (`rest_timer_channel_v2`).
+    **Confirmé par Romain** : "ça fonctionne et c'est ok. Je l'ai commité."
+  **Nouveau retour de Romain dans la foulée** : "je préférerais avoir un son de
+  notification différent [...] pendant mon entraînement j'ai besoin de pouvoir
+  entendre ce son à quelques mètres de distance avec la musique de ma salle de muscu
+  en fond [...] il faut que je puisse discerner le son spécifique me disant que je
+  peux reprendre ma série et ajuster le volume suivant le bruit ambiant du jour"
+  (comme sur FitNotes, qui expose un réglage de volume mais pas de type de son).
+  **Codé, livré sur l'appareil, pas encore rebuildé/retesté** :
+  - Nouveau `res/raw/rest_timer_beep.wav` : bip synthétisé dédié (~350ms, 880Hz, fondu
+    entrée/sortie) - reconnaissable et distinct du son de notification générique du
+    téléphone (qui peut être partagé avec d'autres apps).
+  - `RestTimerReceiver.playRestTimerBeep()` joue ce bip via `MediaPlayer` sur le flux
+    ALARME (le plus fort du téléphone, audible même en mode silencieux/Ne pas
+    déranger - pertinent pour la salle de sport), avec un gain
+    (`MediaPlayer.setVolume()`) proportionnel au réglage choisi dans l'app plutôt que
+    subi via le volume "notifications" du système. `goAsync()` + filet de sécurité
+    pour laisser le temps au son de jouer même si l'app était déjà tuée en
+    arrière-plan au moment où l'alarme se déclenche.
+  - La notification système reste affichée (visuel + vibration courte) mais devient
+    silencieuse (le bip est joué séparément ci-dessus) - encore un nouvel id de canal
+    (`rest_timer_channel_v3`, un canal étant immuable une fois créé) pour appliquer ce
+    changement même sur le téléphone de Romain.
+  - Nouveau réglage **Volume** (curseur 0-100%) ajouté dans la boîte de dialogue du
+    minuteur (`timer_dialog.xml`), sous le réglage de durée. Persisté par
+    `AddExerciseActivity.loadVolume()`/`saveVolume()` dans les mêmes
+    `SharedPreferences` que la durée du minuteur, lu par `RestTimerReceiver` au moment
+    de sonner. Défaut 100% (le besoin exprimé est d'entendre le bip par-dessus la
+    musique de la salle de sport - plutôt réduire le volume les jours calmes que
+    l'inverse).
+  Mise en page de la boîte de dialogue **non vérifiée visuellement** (pas d'environnement
+  de build/émulateur côté Claude) - à valider par Romain à l'usage, en plus du son/volume
+  eux-mêmes.
+  **Erreur de compilation signalée par Romain (corrigée 06/09/2026)** :
+  `compileDebugJavaWithJavac` échouait - `RestTimerReceiver.VOLUME_PREF_KEY` et
+  `DEFAULT_VOLUME_PERCENT` n'étaient pas `public`, donc inaccessibles depuis
+  `AddExerciseActivity` (package `com.example.verifit.ui`, différent du package de
+  `RestTimerReceiver`). Corrigé en ajoutant `public` aux deux constantes. Pas testé sur
+  l'appareil suite à ce correctif.
+  **Nouveau retour de Romain** : "Le bruit, le bip est ok mais un peu court. Possible
+  que tu le rendes 2 fois plus long ? ou m'offrir la possibilité de l'éditer dans
+  l'app ? (si pas trop violent comme feature)".
+  **Codé, livré sur l'appareil, pas encore rebuildé/retesté** :
+  - Le bip n'est plus un fichier `.wav` fixe : `RestTimerReceiver` le synthétise
+    maintenant à la volée (`generateBeepSamples()`, même sinusoïde 880Hz + fondu
+    entrée/sortie qu'avant, mais durée paramétrable) et le joue via `AudioTrack` en
+    mode `MODE_STATIC` (au lieu de `MediaPlayer` sur un asset `res/raw`). Le fichier
+    `res/raw/rest_timer_beep.wav`, devenu inutile, a été supprimé.
+  - Nouveau réglage **Durée du bip** (curseur 150ms-2000ms, défaut 700ms = 2x l'ancienne
+    durée de 350ms) ajouté dans `timer_dialog.xml`, sous le réglage de Volume. Persisté
+    par `AddExerciseActivity.loadDuration()`/`saveDuration()` dans les mêmes
+    `SharedPreferences` que le volume, lu par `RestTimerReceiver` au moment de sonner.
+  Mise en page **non vérifiée visuellement** (toujours pas d'environnement de build/
+  émulateur côté Claude) - à valider par Romain à l'usage, en plus du volume/de la
+  durée eux-mêmes. À tester en particulier : un réglage très court et très long (2000ms)
+  pour vérifier l'absence de "clic"/distorsion en fin de son, et reconfirmer que le
+  crash et le réglage de volume fonctionnent toujours.
 
 ## Nouvelles demandes (06/09/2026)
+
+- [ ] **Démarrage/arrêt automatique du timer de repos, puis suivi du repos réellement
+  pris** (retour Romain 06/09/2026, note "Todo" - pas encore scopé/codé) : "ajouter
+  start timer quand on valide la première série. Terminer automatiquement ce timer
+  quand on termine la dernière série. Ce que fait fitnotes." Étape suivante envisagée
+  par Romain : "on pourra aller plus loin et ajouter des timer entre chaque série
+  histoire de tracker le repos que je prends (ou plutôt le temps que je mets à valider
+  2 séries consécutives). Ça peut donner une indication si je ne prends pas assez de
+  repos par exemple." Deux volets distincts, à clarifier/scoper avant de coder :
+  1. **Auto start/stop** : démarrer le timer de repos (Fonctionnalité 10) sans action
+     manuelle dès qu'une série est validée, l'arrêter à la fin de l'exercice - à
+     préciser avec Romain ce que "dernière série" signifie exactement en pratique
+     (l'app ne sait pas à l'avance combien de séries sont prévues pour un exercice) :
+     probablement soit "quand on quitte l'écran de l'exercice", soit "le prochain
+     `startTimer()` remplace/annule implicitement celui en cours" (comportement FitNotes
+     probable - le repos se relance à chaque nouvelle série tant qu'on reste sur
+     l'exercice).
+  2. **Tracker le repos réel** (piste, pas encore de spec) : mesurer le temps écoulé
+     entre deux séries consécutives validées (indépendamment du minuteur lui-même,
+     qu'il ait été utilisé ou non) et le stocker/afficher comme indicateur - pourrait
+     rejoindre le sujet Écarts Prévu/Réalisé (donnée supplémentaire par série) ou une
+     vue dédiée. Utilité évoquée : détecter un repos insuffisant entre les séries.
 
 - [ ] **Partager une séance ("Share workout")** (retour Romain 06/09/2026) : fonctionnalité
   qu'il avait sur FitNotes - génère un rapport texte de la séance affichée, partageable
