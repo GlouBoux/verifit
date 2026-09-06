@@ -293,7 +293,7 @@ Implémentation :
 J'ai comité et poussé. Je valide."). Piste évoquée par Romain pour plus tard (pas
 demandée formellement) : exploiter cet historique depuis `workout_engine.py`.
 
-## Fonctionnalité 8 — Onglet Sessions : tap = édition d'une série (implémentée 06/09/2026, pas encore testée)
+## Fonctionnalité 8 — Onglet Sessions : tap = édition d'une série (implémentée et validée par Romain ✅)
 
 En validant la Fonctionnalité 7, Romain a signalé un problème d'UX séparé sur l'écran
 d'édition d'un exercice (`AddExerciseActivity`/`AddExerciseWorkoutSetAdapter`, atteint
@@ -319,6 +319,59 @@ confirmation, comme le menu Supprimer existant) quand le bouton affiche "Delete"
 `deleteSetLogic()` sort proprement du mode édition (champs vidés, bouton remis à
 "Save") une fois la suppression effectuée - sans quoi un "Save" ultérieur aurait recréé
 une série avec les valeurs de celle qu'on vient d'effacer.
+
+**Statut au 06/09/2026 : livré, validé et poussé par Romain** ("Je valide. Commité,
+pushé."). En testant, Romain a signalé deux points supplémentaires - voir
+Fonctionnalité 9 ci-dessous.
+
+## Fonctionnalité 9 — Undo sur suppression de série + réordonnement par appui long (implémentée 06/09/2026, pas encore testée)
+
+En validant la Fonctionnalité 8, Romain a testé le bouton "Delete" et le message "Set
+Deleted" qui l'accompagne, et signalé deux points :
+
+1. Le bouton "Dismiss" du message "Set Deleted" ne faisait que fermer le message, sans
+   annuler la suppression - "j'ai bien l'idée de garder le revert".
+2. En recréant une série qu'il venait de supprimer (test), elle atterrit en fin de liste
+   et il ne peut plus la remettre à sa place d'origine - aucun réordonnement des séries
+   n'existait sur cet écran (contrairement aux exercices, voir Fonctionnalité 5). Romain
+   propose que l'appui long lance ce réordonnement, rendant la boîte de dialogue
+   Éditer/Supprimer obsolète (Éditer = le tap simple depuis la Fonctionnalité 8,
+   Supprimer = le bouton "Delete" du mode édition) - il propose de la supprimer.
+
+Implémentation :
+
+- `SnackBarWithMessage` (jusqu'ici un simple wrapper avec un unique bouton "Dismiss" qui
+  ne faisait que fermer le message, utilisé pour tous les messages de l'app - Set
+  Updated, Set Added, Comment saved...) gagne `showSnackbarWithUndo(message,
+  undoAction)` : le bouton devient "Undo" et exécute l'action fournie au clic.
+  `showSnackbar(message)` existant est inchangé (délègue en interne avec une action
+  vide) - aucun autre appelant impacté.
+- `AddExerciseActivity.deleteSetLogic()` utilise ce nouveau bouton pour vraiment
+  restaurer la série (`undoDeleteSet()`) : comme la série supprimée n'est qu'un objet
+  retiré d'une liste (jamais modifié ni détruit), la réinsérer via `WorkoutDay.addSet()`
+  restitue exactement le même id/commentaire/valeurs prévues qu'avant suppression -
+  recrée le `WorkoutDay` si c'était sa dernière série (cas nettoyé par
+  `deleteSetLogic()` juste avant).
+- Réordonnement par glisser-déposer sur `AddExerciseWorkoutSetAdapter`/
+  `AddExerciseActivity`, avec un `ItemTouchHelper` calqué sur celui de `DayActivity`
+  (Fonctionnalité 5), à une différence près, voulue par Romain : le drag démarre par un
+  appui long directement sur la ligne (`isLongPressDragEnabled() = true`, désactivé
+  pendant le mode sélection multiple), pas via une poignée dédiée - le tap étant déjà
+  pris par l'édition, une poignée séparée n'aurait pas eu de sens ici. Persistance via
+  la nouvelle `WorkoutDay.reorderSetsForExercise()` : contrairement à `ExerciseOrder`
+  (une liste d'ordre dédiée), les séries n'ont pas de champ d'ordre séparé - leur ordre
+  d'affichage vient directement de leur position dans la liste `Sets` du jour, qui
+  mélange les séries de TOUS les exercices. La méthode retrouve donc les index de
+  `Sets` appartenant à cet exercice et y réécrit le nouvel ordre à ces mêmes positions,
+  ce qui déplace ces séries entre elles sans perturber leur entrelacement avec celles
+  des autres exercices.
+- Boîte de dialogue Éditer/Supprimer (`showSetPopupMenu`, menu
+  `set_add_exercise_activity_menu.xml`) supprimée du code (fichier de menu laissé en
+  place, inoffensif mais inutilisé).
+
+Non fait délibérément, comme pour les autres mutations locales ajoutées depuis
+(commentaires, Écarts Prévu/Réalisé) : pas de resynchronisation de l'Undo vers l'API en
+ligne `verifit_rs` en mode compte - de toute façon vouée à disparaître.
 
 **Statut au 06/09/2026 : codé et livré sur la machine de Romain, pas encore
 buildé/testé.**
@@ -361,8 +414,9 @@ test — éviter un couplage trop rigide entre les deux projets pour l'instant.
 
 ## Questions ouvertes pour la prochaine session
 
-1. **Retour de test attendu sur le tap = édition (Fonctionnalité 8 ci-dessus)** — codé le
-   06/09/2026, pas encore buildé ni testé par Romain sur l'appareil.
+1. **Retour de test attendu sur l'Undo + réordonnement des séries (Fonctionnalité 9
+   ci-dessus)** — codé le 06/09/2026, pas encore buildé ni testé par Romain sur
+   l'appareil.
 2. **Timer de repos** (retour Romain 06/09/2026, voir `docs/fitnotes-fork-todo.md`,
    section "Nouvelles demandes") : ne sonne jamais à la fin, Reset ne fonctionne pas
    toujours - marqué prioritaire par Romain, mais mis de côté le 06/09/2026 au profit des

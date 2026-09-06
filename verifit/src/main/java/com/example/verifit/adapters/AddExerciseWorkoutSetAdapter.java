@@ -2,9 +2,7 @@ package com.example.verifit.adapters;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
@@ -13,7 +11,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
-import androidx.appcompat.widget.PopupMenu;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -114,6 +111,17 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         }
     }
 
+    // Appelé par l'ItemTouchHelper.Callback (AddExerciseActivity) à chaque étape du
+    // drag - seulement la mise à jour visuelle/locale de la liste ; la persistance
+    // dans WorkoutDay.reorderSetsForExercise() se fait une seule fois, à la fin du
+    // geste (retour Romain 06/09/2026, "utilitaire de réordonnement de série").
+    public void moveItem(int fromPosition, int toPosition)
+    {
+        WorkoutSet moved = Workout_Sets.remove(fromPosition);
+        Workout_Sets.add(toPosition, moved);
+        notifyItemMoved(fromPosition, toPosition);
+    }
+
     @NonNull
     @Override
     public MyViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType)
@@ -193,9 +201,15 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         });
 
 
-        // Reste disponible en plus du tap : acces rapide a "Supprimer" sans passer par le
-        // mode edition, ou re-ouvre le meme mode edition via "Editer" (desormais
-        // equivalent au tap simple ci-dessus).
+        // Retour Romain 06/09/2026 : la boite de dialogue Editer/Supprimer ouverte ici
+        // jusqu'a present n'est plus pertinente - "Editer" fait desormais exactement ce
+        // que fait le tap simple ci-dessus, et Romain propose de reutiliser le
+        // long-press pour demarrer le reordonnement (drag & drop) d'une serie a la
+        // place. En mode selection multiple, le long-press continue de (dé)selectionner
+        // comme le tap - le drag y est desactive (voir isLongPressDragEnabled() cote
+        // AddExerciseActivity) pour ne pas entrer en conflit avec la selection. Hors
+        // selection, on ne consomme plus l'evenement ici : c'est l'ItemTouchHelper
+        // (isLongPressDragEnabled() = true) qui demarre le drag nativement.
         holder.cardView.setOnLongClickListener(new View.OnLongClickListener()
         {
             @Override
@@ -207,9 +221,7 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
                     return true;
                 }
 
-                AddExerciseActivity.Clicked_Set = holder.getAdapterPosition();
-                showSetPopupMenu(holder, view, holder.getAdapterPosition());
-                return true;
+                return false;
             }
         });
 
@@ -315,41 +327,6 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         int repsRounded = (int) Math.round(reps);
         return weight + " kg x " + repsRounded + " reps";
     }
-
-    // To Do: Implement Delete functionality
-    private void showSetPopupMenu(AddExerciseWorkoutSetAdapter.MyViewHolder holder, View view, int position)
-    {
-        PopupMenu popupMenu = new PopupMenu(view.getContext(), view, Gravity.NO_GRAVITY, R.attr.actionOverflowMenuStyle, 0);
-
-        popupMenu.inflate(R.menu.set_add_exercise_activity_menu);
-        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item)
-            {
-
-                if(item.getItemId() == R.id.delete)
-                {
-                    System.out.println("Delete Set Clicked");
-                    AddExerciseActivity.deleteSet(view.getContext());
-                }
-                else if(item.getItemId() == R.id.edit)
-                {
-                    System.out.println("Edit Set Clicked");
-
-                    // To Do:
-                    // Keep Set highlighted in Recyclerview
-                    // Save ---> Update and change color
-                    // Notify data changed in adapter
-
-                    AddExerciseActivity.editSet(holder, view, position);
-                }
-
-                return false;
-            }
-        });
-        popupMenu.show();
-    }
-
 
     @Override
     public int getItemCount()

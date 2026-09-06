@@ -2,30 +2,36 @@
 
 ## Codé, en attente de test réel (06/09/2026)
 
-- [ ] **Onglet Sessions : tap sur une série = édition, bouton "Delete" fonctionnel**
-  (retour Romain 06/09/2026) : sur l'écran d'édition d'un exercice
-  (`AddExerciseActivity`/`AddExerciseWorkoutSetAdapter`, atteint depuis l'onglet
-  Sessions), un tap sur une série ne faisait rien d'utile - il fallait rester appuyé
-  longtemps pour obtenir un menu Éditer/Supprimer. Voulu par Romain, comme sur FitNotes :
-  un tap sélectionne directement la série, la précharge dans les champs du haut, et fait
-  passer le bouton "Save" en "Update".
+- [ ] **Undo réel sur "Set Deleted" + réordonnement des séries par appui long**
+  (retour Romain 06/09/2026, en testant le point précédent) : deux demandes suite au
+  test du tap = édition sur l'onglet Sessions.
+  1. Le message "Set Deleted" propose un bouton "Dismiss" qui ne faisait que fermer le
+     message, sans annuler la suppression - Romain veut un vrai revert.
+  2. En recréant une série supprimée (test), elle atterrit en fin de liste et Romain ne
+     peut plus la remettre à sa place - aucun réordonnement des séries n'existait sur cet
+     écran. Proposé et retenu : l'appui long lance ce réordonnement (drag & drop), et la
+     boîte de dialogue Éditer/Supprimer qu'il ouvrait jusqu'ici n'a plus lieu d'être
+     (Éditer = le tap simple, Supprimer = le bouton "Delete" du mode édition).
   **Codé, livré sur l'appareil, pas encore buildé/testé** :
-  - Le tap simple (hors mode sélection multiple) appelle désormais
-    `AddExerciseActivity.editSet()` - déjà utilisé par le menu Éditer du long-press,
-    donc comportement identique, juste accessible en un tap au lieu de deux étapes.
-    L'ancien `updateView()` préremplissait bien les champs mais sans jamais activer le
-    mode édition (`isEditMode`) : cliquer "Save" ensuite créait une série en double au
-    lieu de mettre à jour celle affichée - d'où l'impression que "le tap ne fait rien".
-  - **Effet de bord corrigé au passage** : en mode édition, le bouton du bas affiche
-    "Delete" mais ne faisait en réalité QUE vider les champs (jamais de vraie
-    suppression) - bug préexistant resté invisible tant que ce mode n'était atteint que
-    via le long-press. Comme le tap devient le chemin principal, ce bouton trompeur
-    serait devenu bien plus visible. Rendu fonctionnel (option choisie par Romain) :
-    il déclenche maintenant la vraie suppression (avec confirmation, comme le menu
-    Supprimer existant), et sort proprement du mode édition (champs vidés,
-    bouton remis à "Save") une fois la suppression effectuée.
-  Le long-press reste disponible en plus (accès rapide à Supprimer, ou Éditer -
-  désormais équivalent au tap simple).
+  - `SnackBarWithMessage` gagne `showSnackbarWithUndo()` : le bouton devient "Undo" et
+    exécute une action au clic (restaurer la série, même objet donc mêmes
+    id/commentaire/valeurs prévues) au lieu de simplement fermer le message. Recrée le
+    jour si c'était sa dernière série. `showSnackbar()` existant inchangé pour tous les
+    autres messages (Set Updated, Set Added, Comment saved...).
+  - Réordonnement par glisser-déposer démarré par appui long sur la ligne (pas de
+    poignée dédiée ici, contrairement aux exercices sur `DayActivity`/l'onglet Workout -
+    le tap étant déjà pris par l'édition). `WorkoutDay.reorderSetsForExercise()` déplace
+    les séries de cet exercice entre elles dans la liste `Sets` du jour, sans perturber
+    l'entrelacement avec les séries des autres exercices du même jour.
+  - Boîte de dialogue Éditer/Supprimer (`showSetPopupMenu`) supprimée.
+  Reste en local uniquement (pas de resynchronisation vers l'API `verifit_rs` en mode
+  compte en ligne pour l'Undo, comme pour les autres mutations ajoutées depuis).
+  **Ajustement (retour Romain 06/09/2026, en testant ce point)** : l'Undo remettait la
+  série en dernière position au lieu de sa place d'origine. `WorkoutDay.insertSetAt()`
+  (nouveau) insère à un index précis au lieu de toujours ajouter en fin de liste comme
+  `addSet()` ; `deleteSetLogic()` capture l'index de la série dans `Sets` juste avant sa
+  suppression et le transmet à `undoDeleteSet()` pour réinsertion au même endroit.
+  Codé, livré sur l'appareil, pas encore buildé/testé.
 
 ## Nouvelles demandes (06/09/2026)
 
@@ -83,6 +89,26 @@
   `workout_engine.py` déjà livrée (voir `docs/fitnotes-fork-plan.md`).
 
 ## Fait / validé
+
+- [x] **Onglet Sessions : tap sur une série = édition, bouton "Delete" fonctionnel —
+  VALIDÉ ET POUSSÉ (06/09/2026)** (retour Romain 06/09/2026) : "Je valide. Commité,
+  pushé." Sur l'écran d'édition d'un exercice
+  (`AddExerciseActivity`/`AddExerciseWorkoutSetAdapter`, atteint depuis l'onglet
+  Sessions), un tap sur une série ne faisait rien d'utile - il fallait rester appuyé
+  longtemps pour obtenir un menu Éditer/Supprimer. Comme sur FitNotes : un tap
+  sélectionne directement la série, la précharge dans les champs du haut, et fait
+  passer le bouton "Save" en "Update".
+  - Le tap simple (hors mode sélection multiple) appelle
+    `AddExerciseActivity.editSet()` - déjà utilisé par le menu Éditer du long-press,
+    donc comportement identique, juste accessible en un tap au lieu de deux étapes.
+    L'ancien `updateView()` préremplissait bien les champs mais sans jamais activer le
+    mode édition (`isEditMode`) : cliquer "Save" ensuite créait une série en double au
+    lieu de mettre à jour celle affichée.
+  - **Effet de bord corrigé au passage** : en mode édition, le bouton du bas affiche
+    "Delete" mais ne faisait en réalité QUE vider les champs (jamais de vraie
+    suppression) - rendu fonctionnel (option choisie par Romain).
+  En testant ce correctif, Romain a signalé deux points supplémentaires - voir
+  "Codé, en attente de test réel" ci-dessus (Undo réel + réordonnement des séries).
 
 - [x] **Écarts Prévu/Réalisé — VALIDÉ ET POUSSÉ (06/09/2026)** (sujet confirmé par Romain
   le 05/09/2026, décisions d'affichage tranchées le 06/09/2026 via questions posées à

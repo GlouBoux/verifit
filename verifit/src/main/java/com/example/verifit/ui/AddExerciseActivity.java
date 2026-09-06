@@ -5,6 +5,7 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -113,6 +114,12 @@ public class AddExerciseActivity extends AppCompatActivity {
     // Multi-select delete (retour Romain 05/09/2026) : sélectionner plusieurs séries et
     // les supprimer en un coup, au lieu d'un "Clear" fastidieux série par série.
     private ActionMode selectionActionMode = null;
+
+    // Réordonnement des séries par glisser-déposer (retour Romain 06/09/2026, "un appui
+    // long sur la ligne lance l'utilitaire de réordonnement de série") - même mécanique
+    // que DayActivity côté exercices.
+    private ItemTouchHelper itemTouchHelper;
+    private int dragStartPosition = -1;
 
 
 
@@ -561,6 +568,11 @@ public class AddExerciseActivity extends AppCompatActivity {
 
     public static void deleteSetLogic(Context ct, int finalI, WorkoutSet to_be_removed_set)
     {
+        // Retour Romain 06/09/2026 : capture de la position d'origine (avant suppression,
+        // sinon indexOf() ne la retrouverait plus) pour que l'Undo puisse la remettre
+        // exactement la ou elle etait - voir undoDeleteSet().
+        int removedSetIndex = MainActivity.dataStorage.getWorkoutDays().get(finalI).getSets().indexOf(to_be_removed_set);
+
         MainActivity.dataStorage.getWorkoutDays().get(finalI).removeSet(to_be_removed_set);
 
         // Cleanup potential days with 0 sets
@@ -577,27 +589,64 @@ public class AddExerciseActivity extends AppCompatActivity {
         MainActivity.dataStorage.saveKnownExerciseData(ct);
 
         ((Activity) ct).runOnUiThread(() -> {
-            // Retour Romain 06/09/2026 : si la suppression vient du bouton "Delete" du
-            // mode edition (tap sur une serie -> editSet() -> ce bouton), il faut sortir
-            // de ce mode et vider les champs du haut - sinon ils gardent les valeurs de
-            // la serie qu'on vient d'effacer et un "Save" ulterieur recreerait une
-            // nouvelle serie avec ces valeurs perimees. Sans effet sur le chemin
-            // "Supprimer" du menu long-press, qui ne passait de toute facon jamais par
-            // editSet() (isEditMode deja a false, bt_save deja a "Save").
+            // Retour Romain 06/09/2026 : la suppression vient toujours du bouton
+            // "Delete" du mode edition (tap sur une serie -> editSet() -> ce bouton), il
+            // faut donc sortir de ce mode et vider les champs du haut - sinon ils
+            // gardent les valeurs de la serie qu'on vient d'effacer et un "Save"
+            // ulterieur recreerait une nouvelle serie avec ces valeurs perimees.
             isEditMode = false;
             bt_save.setText("Save");
             et_reps.setText("");
             et_weight.setText("");
 
+            // Retour Romain 06/09/2026 : "j'ai bien l'idee de garder le revert" - le
+            // bouton "Dismiss" du message existant ne faisait que le fermer, sans
+            // jamais annuler la suppression. Devient "Undo" et restaure vraiment la
+            // serie (meme objet, donc mêmes id/commentaire/valeurs prevues) si cliqué.
+            // Fonctionne en local uniquement (pas de re-synchronisation vers l'API
+            // verifit_rs en mode compte en ligne, comme pour les autres mutations
+            // ajoutees depuis - de toute facon vouee a disparaitre, voir la TODO).
             SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(((Activity) ct));
-            snackBarWithMessage.showSnackbar("Set Deleted");
+            snackBarWithMessage.showSnackbarWithUndo("Set Deleted", () -> undoDeleteSet(ct, to_be_removed_set, removedSetIndex));
+            updateTodaysExercises();
+        });
+    }
+
+    // Restaure une serie tout juste supprimee (bouton "Undo" du message "Set Deleted"),
+    // en la rajoutant au bon WorkoutDay - recree ce jour s'il a ete supprime entre
+    // temps parce que c'etait sa derniere serie (voir le nettoyage juste au-dessus dans
+    // deleteSetLogic()). Retour Romain 06/09/2026 : remise a sa position d'origine
+    // (originalIndex, capture avant suppression dans deleteSetLogic()) plutot qu'en
+    // derniere position comme le faisait addSet().
+    private static void undoDeleteSet(Context ct, WorkoutSet removedSet, int originalIndex)
+    {
+        int day_position = MainActivity.dataStorage.getDayPosition(removedSet.getDate());
+
+        if (day_position >= 0)
+        {
+            MainActivity.dataStorage.getWorkoutDays().get(day_position).insertSetAt(originalIndex, removedSet);
+        }
+        else
+        {
+            WorkoutDay workoutDay = new WorkoutDay();
+            workoutDay.addSet(removedSet);
+            MainActivity.dataStorage.getWorkoutDays().add(workoutDay);
+        }
+
+        MainActivity.dataStorage.saveWorkoutData(ct);
+        MainActivity.dataStorage.saveKnownExerciseData(ct);
+
+        ((Activity) ct).runOnUiThread(() -> {
+            SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(((Activity) ct));
+            snackBarWithMessage.showSnackbar("Set Restored");
             updateTodaysExercises();
         });
     }
 
     // --- Multi-select delete (retour Romain 05/09/2026) ---
     // Entrée dans le mode sélection via une ActionMode dédiée plutôt qu'en réinterprétant
-    // le long-press existant (qui reste Éditer/Supprimer UNE série, cf. showSetPopupMenu).
+    // le tap/long-press existants (tap = édition d'une série, long-press = son
+    // réordonnement par glisser-déposer, retour Romain 06/09/2026).
     public void startSelectionMode()
     {
         if (selectionActionMode != null)
@@ -924,6 +973,56 @@ public class AddExerciseActivity extends AppCompatActivity {
         recyclerView.setAdapter(workoutSetAdapter2);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
+        // Réordonnement par glisser-déposer (retour Romain 06/09/2026) : contrairement
+        // à DayExerciseAdapter/ViewPagerExerciseAdapter (poignée dédiée), le drag
+        // démarre ici directement par appui long sur la ligne - la poignée n'a pas de
+        // sens sur cet écran puisque le tap sert déjà à sélectionner la série pour
+        // édition. Désactivé pendant le mode sélection multiple pour ne pas entrer en
+        // conflit avec le (dé)cochage des séries.
+        itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
+                ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0)
+        {
+            @Override
+            public boolean onMove(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder source, @NonNull RecyclerView.ViewHolder target)
+            {
+                int from = source.getAdapterPosition();
+                int to = target.getAdapterPosition();
+
+                if (dragStartPosition == -1)
+                {
+                    dragStartPosition = from;
+                }
+
+                workoutSetAdapter2.moveItem(from, to);
+                return true;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction)
+            {
+                // Swipe non utilisé - drag uniquement.
+            }
+
+            @Override
+            public boolean isLongPressDragEnabled()
+            {
+                return !workoutSetAdapter2.isSelectionMode();
+            }
+
+            @Override
+            public void clearView(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder viewHolder)
+            {
+                super.clearView(rv, viewHolder);
+
+                int finalPosition = viewHolder.getAdapterPosition();
+                if (dragStartPosition != -1 && finalPosition != -1 && finalPosition != dragStartPosition)
+                {
+                    persistSetOrder();
+                }
+                dragStartPosition = -1;
+            }
+        });
+        itemTouchHelper.attachToRecyclerView(recyclerView);
 
         // Set Edit Text values to max set volume if possible
         initEditTexts();
@@ -933,6 +1032,29 @@ public class AddExerciseActivity extends AppCompatActivity {
         // Initialize Integer position or else we get a crash
         AddExerciseActivity.Clicked_Set = Todays_Exercise_Sets.size() - 1;
 
+    }
+
+    // Persiste l'ordre final d'un geste de drag sur les séries (retour Romain
+    // 06/09/2026) - une seule fois par geste, jamais à chaque étape intermédiaire (voir
+    // ItemTouchHelper.Callback.onMove ci-dessus). Todays_Exercise_Sets a déjà le bon
+    // ordre visuel à ce stade (mis à jour en continu par
+    // AddExerciseWorkoutSetAdapter.moveItem()) ; il ne reste qu'à l'écrire dans le
+    // WorkoutDay sous-jacent pour qu'il survive à un rafraîchissement de l'écran.
+    private void persistSetOrder()
+    {
+        int day_position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
+        if (day_position < 0)
+        {
+            return;
+        }
+
+        WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
+        day.reorderSetsForExercise(exercise_name, Todays_Exercise_Sets);
+        MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+
+        MainActivity.autoBackupRequired = true;
+        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
+        sharedPreferences.save("true", "autoBackupRequired");
     }
 
     // Set Edit Text values to max set volume if sets exist

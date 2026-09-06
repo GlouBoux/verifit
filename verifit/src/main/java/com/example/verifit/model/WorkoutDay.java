@@ -42,6 +42,20 @@ public class WorkoutDay {
         UpdateData();
     }
 
+    // Reinsertion a un index precis dans Sets (retour Romain 06/09/2026 : "je voudrai
+    // que l'undo remette la serie la ou elle etait avant la suppression" - addSet()
+    // ci-dessus l'ajoutait toujours en dernier position, ce qui la faisait apparaitre
+    // tout en bas au lieu de sa place d'origine parmi les series de son exercice).
+    // L'index est celui qu'occupait la serie dans Sets juste avant sa suppression ;
+    // borne aux limites actuelles de la liste au cas ou d'autres series auraient ete
+    // ajoutees/supprimees entre-temps (undo tardif).
+    public void insertSetAt(int index, WorkoutSet Set)
+    {
+        int clampedIndex = Math.max(0, Math.min(index, Sets.size()));
+        Sets.add(clampedIndex, Set);
+        UpdateData();
+    }
+
     public void removeSet(WorkoutSet Set)
     {
 
@@ -85,6 +99,39 @@ public class WorkoutDay {
         String moved = ExerciseOrder.remove(fromIndex);
         ExerciseOrder.add(toIndex, moved);
         UpdateData();
+    }
+
+    // Réordonne les séries d'UN exercice (drag & drop sur l'écran de log d'un exercice,
+    // retour Romain 06/09/2026 : "un appui long sur la ligne lance l'utilitaire de
+    // réordonnement de série"). Sets est une liste unique qui mélange les séries de TOUS
+    // les exercices du jour dans l'ordre chronologique de création/import - pas de champ
+    // d'ordre dédié comme ExerciseOrder ci-dessus. On retrouve donc les index de Sets
+    // qui appartiennent à cet exercice (dans leur ordre actuel, qui correspond à
+    // l'affichage - voir AddExerciseActivity.initrecyclerView()/updateTodaysExercises())
+    // et on y réécrit newOrder à ces MÊMES positions : ça déplace bien ces séries entre
+    // elles sans perturber leur entrelacement avec les séries des autres exercices.
+    public void reorderSetsForExercise(String exerciseName, ArrayList<WorkoutSet> newOrder)
+    {
+        ArrayList<Integer> indices = new ArrayList<Integer>();
+        for (int i = 0; i < Sets.size(); i++)
+        {
+            if (Sets.get(i).getExerciseName().equals(exerciseName))
+            {
+                indices.add(i);
+            }
+        }
+
+        // Incohérence inattendue (liste modifiée entre-temps) - on abandonne plutôt que
+        // de risquer d'écrire au mauvais endroit dans Sets.
+        if (indices.size() != newOrder.size())
+        {
+            return;
+        }
+
+        for (int i = 0; i < indices.size(); i++)
+        {
+            Sets.set(indices.get(i), newOrder.get(i));
+        }
     }
 
     // Update Data Structure Data
