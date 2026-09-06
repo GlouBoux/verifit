@@ -39,9 +39,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 public class DataStorage {
@@ -439,6 +441,84 @@ public class DataStorage {
                 }
             }
         }
+    }
+
+    // Retour Romain 06/09/2026 : "Un PR c'est un record (Personal Record) pour ce rep
+    // range (reps) pour ce poids (kgs) [...] Fitnotes garde un historique de PR pour
+    // chaque exercice". calculatePersonalRecords() ci-dessus ne trackait jusque-la que
+    // des records GLOBAUX (poids max tous nombres de reps confondus, reps max tous
+    // poids confondus, volume, 1RM) - pas de table "pour N reps precis, quel est le
+    // poids max jamais souleve", qui est la vraie definition d'un PR selon Romain.
+    // Calcule ici a la volee (pas de nouveau champ persiste sur WorkoutSet) en
+    // reparcourant tout l'historique de l'exercice, trie chronologiquement (dates au
+    // format "yyyy-MM-dd", donc un simple tri de chaines suffit). Retourne, pour
+    // chaque nombre de reps distinct deja realise, la liste chronologique des
+    // WorkoutSet qui ont chacun etabli un nouveau record a ce nombre de reps au
+    // moment ou ils ont ete loggues (le dernier de la liste = record actuel).
+    // Source de verite unique reutilisee a la fois par RepRangeRecordsActivity
+    // (affichage de l'historique complet) et par l'export de seance (tag [PR] par
+    // serie, cf. getRepRangePRSets() ci-dessous) pour garantir la meme regle partout.
+    // Exclut les series a 0 reps (retour Romain : "ca n'a pas de sens").
+    public TreeMap<Double, ArrayList<WorkoutSet>> calculateRepRangeHistory(String exerciseName)
+    {
+        TreeMap<Double, ArrayList<WorkoutSet>> history = new TreeMap<Double, ArrayList<WorkoutSet>>();
+        HashMap<Double, Double> bestWeightSoFar = new HashMap<Double, Double>();
+
+        ArrayList<WorkoutDay> sortedDays = new ArrayList<WorkoutDay>(workoutDays);
+        Collections.sort(sortedDays, new Comparator<WorkoutDay>() {
+            @Override
+            public int compare(WorkoutDay a, WorkoutDay b)
+            {
+                return a.getDate().compareTo(b.getDate());
+            }
+        });
+
+        for (WorkoutDay day : sortedDays)
+        {
+            for (WorkoutSet set : day.getSets())
+            {
+                // Retour Romain 06/09/2026 : "ne track pas le 0 rep (ca n'a pas de
+                // sens)" - une serie a 0 reps ne represente pas un vrai record.
+                if (set.getExerciseName() == null || !set.getExerciseName().equals(exerciseName)
+                        || set.getReps() == null || set.getWeight() == null
+                        || set.getReps() == 0.0)
+                {
+                    continue;
+                }
+
+                Double reps = set.getReps();
+                Double previousBest = bestWeightSoFar.get(reps);
+
+                if (previousBest == null || set.getWeight() > previousBest)
+                {
+                    bestWeightSoFar.put(reps, set.getWeight());
+
+                    if (!history.containsKey(reps))
+                    {
+                        history.put(reps, new ArrayList<WorkoutSet>());
+                    }
+                    history.get(reps).add(set);
+                }
+            }
+        }
+
+        return history;
+    }
+
+    // Aplatit calculateRepRangeHistory() en un ensemble de WorkoutSet (comparaison par
+    // reference, WorkoutSet ne redefinit pas equals/hashCode) - pratique pour tagger
+    // [PR] sur une serie precise lors de la generation de l'export de seance sans
+    // recalculer l'historique complet a chaque ligne.
+    public HashSet<WorkoutSet> getRepRangePRSets(String exerciseName)
+    {
+        HashSet<WorkoutSet> prSets = new HashSet<WorkoutSet>();
+
+        for (ArrayList<WorkoutSet> entries : calculateRepRangeHistory(exerciseName).values())
+        {
+            prSets.addAll(entries);
+        }
+
+        return prSets;
     }
 
     // Saves Workout_Days Array List in shared preferences

@@ -1145,6 +1145,17 @@ public class AddExerciseActivity extends AppCompatActivity {
             return setupExerciseHistory(item);
         }
 
+        // Retour Romain 06/09/2026 : "je voudrai pouvoir y acceder depuis la fiche de
+        // l'exercice [...] un petit trophee comme sur fitnotes qui m'amene vers mon
+        // tableau de PR" - historique des PR par nombre de reps pour cet exercice
+        // (voir DataStorage.calculateRepRangeHistory()).
+        else if(item.getItemId() == R.id.rep_range_history)
+        {
+            Intent intent = new Intent(this, RepRangeRecordsActivity.class);
+            intent.putExtra(RepRangeRecordsActivity.EXTRA_EXERCISE_NAME, exercise_name);
+            startActivity(intent);
+        }
+
         // Exercise Stats Chart
         else if (item.getItemId() == R.id.graph) {
 

@@ -13,6 +13,15 @@
         android:icon="@drawable/ic_create_24px">
     </item>
 
+    <!-- Retour Romain 06/09/2026 : "Un PR c'est un record pour ce rep range (reps)
+         pour ce poids (kgs) [...] Fitnotes garde un historique de PR pour chaque
+         exercice" - ouvre RepRangeRecordsActivity pour l'exercice concerne. -->
+    <item
+        android:id="@+id/rep_range_history"
+        android:title="Historique par nombre de reps"
+        android:icon="@drawable/ic_create_24px">
+    </item>
+
 
 
 </menu>

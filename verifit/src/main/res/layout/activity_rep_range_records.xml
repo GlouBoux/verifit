@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Retour Romain 06/09/2026 : "Un PR c'est un record pour ce rep range (reps) pour ce
+     poids (kgs) [...] Fitnotes garde un historique de PR pour chaque exercice" -
+     historique des records par nombre de reps pour un exercice, ouvert depuis
+     PersonalRecordsActivity (long-press -> "Historique par reps"). Le titre (nom de
+     l'exercice) est pose via setTitle() dans RepRangeRecordsActivity, comme les autres
+     ecrans de l'app. -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/core_grey_05"
+    android:orientation="vertical"
+    tools:context=".ui.RepRangeRecordsActivity">
+
+    <TextView
+        android:id="@+id/tv_rep_range_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:gravity="center"
+        android:padding="16dp"
+        android:text="Aucune serie enregistree pour cet exercice."
+        android:textColor="@color/core_grey_02"
+        android:textSize="16sp"
+        android:visibility="gone" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_editor_absoluteX="-16dp" />
+
+</LinearLayout>

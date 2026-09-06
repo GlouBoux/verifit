@@ -17,6 +17,19 @@
         app:iconTint="@color/cardview_light_background">
     </item>
 
+    <!-- Retour Romain 06/09/2026 : "je voudrai pouvoir y acceder depuis la fiche de
+         l'exercice [...] un petit trophee comme sur fitnotes qui m'amene vers mon
+         tableau de PR" - ouvre RepRangeRecordsActivity pour l'exercice en cours (voir
+         AddExerciseActivity.onOptionsItemSelected()). Meme icone que le badge PR
+         existant ailleurs dans l'app (ic_emoji_events_24px). -->
+    <item
+        android:id="@+id/rep_range_history"
+        android:icon="@drawable/ic_emoji_events_24px"
+        android:title="Personal Records"
+        app:showAsAction="always"
+        app:iconTint="@color/cardview_light_background">
+    </item>
+
 
     <item
         android:id="@+id/timer"

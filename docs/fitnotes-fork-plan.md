@@ -383,7 +383,7 @@ avant l'appel à `removeSet()`) et transmis à `undoDeleteSet()`.
 
 **Statut au 06/09/2026 : livré, validé et poussé par Romain** ("validé et pushé.").
 
-## Fonctionnalité 10 — Timer de repos fiable (fonctionnelle et validée le 06/09/2026 ; bip dédié + volume + durée réglables en cours de test)
+## Fonctionnalité 10 — Timer de repos fiable (fonctionnelle et VALIDÉE le 06/09/2026, bip dédié + volume + durée réglables inclus)
 
 Signalé "PRIORITAIRE" par Romain le 06/09/2026 mais mis de côté à plusieurs reprises au
 profit d'autres demandes ce jour-là : "d'une façon générale quand je set un timer, je
@@ -576,13 +576,66 @@ simple doublement de la durée fixe et plus utile sur la durée :
   `loadDuration()`/`saveDuration()`, même principe et mêmes `SharedPreferences` que le
   Volume, sous la clé `RestTimerReceiver.DURATION_PREF_KEY`.
 
-**Statut au 06/09/2026 : fonctionnalité principale (fiabilité + sonnerie discrète)
-confirmée et poussée par Romain ; bip dédié + volume + durée réglables codés et livrés
-sur sa machine (erreur de compilation corrigée), pas encore rebuildés/retestés** (pas de
-SDK Android ni d'émulateur côté Claude - vérifié uniquement par lecture de code et
-équilibrage accolades/parenthèses côté Java, bonne formation XML côté layout). La mise
-en page ajoutée à `timer_dialog.xml` (deux labels + deux curseurs, boutons Start/Reset
-repoussés en conséquence) n'a pas pu être vérifiée visuellement.
+**Statut au 06/09/2026 : fonctionnalité entièrement VALIDÉE, COMMITÉE ET POUSSÉE par
+Romain** ("ok. validé, comité, pushé") - fiabilité, sonnerie discrète, bip dédié, volume
+et durée réglables, y compris le correctif d'alignement du bouton Reset dans
+`timer_dialog.xml` (ancré par erreur sous l'ancien curseur Volume au lieu du nouveau
+curseur Durée après l'ajout de ce dernier).
+
+## Fonctionnalité 11 — Historique des PR par nombre de reps (codée le 06/09/2026, pas encore testée)
+
+Née en préparant l'export de séance (Fonctionnalité "Share workout", cf. Questions
+ouvertes) : reproduire le tag `[PR]` par série du rapport FitNotes exigeait de savoir
+précisément ce que FitNotes entend par "PR". Réponse de Romain :
+
+**"Un PR c'est un record (Personal Record) pour ce rep range (reps) pour ce poids
+(kgs). Ici mon record pour 43 reps = 47.5 (avant c'était moins du coup). Fitnotes garde
+un historique de PR pour chaque exercice (oups ça veut dire que Verifit ne l'a
+probablement pas et c'est important)."**
+
+Vérification faite en lisant `DataStorage.calculatePersonalRecords()` : Romain avait
+raison, c'était un vrai manque. Le système existant (`volumePRs`, `maxRepsPRs`,
+`maxWeightPRs`, `actualOneRepMaxPRs`, `estimatedOneRMPRs`, tous des
+`HashMap<String, Double>` par exercice) ne track que des records **globaux**, un seul
+scalaire par exercice et par métrique, tous nombres de reps confondus - jamais de table
+"pour ce nombre de reps exact, quel est le poids le plus lourd jamais soulevé". C'est
+d'ailleurs cohérent avec l'exemple fourni par Romain : sur `Assisted Floor Shoulder
+stand`, DEUX séries du même jour sont tagées `[PR]` (47.5kg x 43 reps ET 40kg x 52
+reps) - impossible avec un simple "poids max du jour", mais cohérent avec un record
+par nombre de reps distinct.
+
+Romain a choisi de construire un vrai écran d'historique (plutôt qu'un calcul interne
+limité à l'export) :
+
+- `DataStorage.calculateRepRangeHistory(String exerciseName)` : parcourt tout
+  l'historique de l'exercice trié chronologiquement (dates `"yyyy-MM-dd"`, tri de
+  chaînes suffisant) et construit une `TreeMap<Double reps, ArrayList<WorkoutSet>>` -
+  pour chaque nombre de reps déjà réalisé, la liste chronologique des `WorkoutSet` qui
+  ont chacun établi un nouveau record à ce nombre de reps au moment où ils ont été
+  loggués (le dernier de la liste = record actuel). Calculé à la volée à chaque appel,
+  aucun nouveau champ persisté sur `WorkoutSet` - contrairement à l'horodatage décidé
+  pour la ligne "Time" de l'export (voir Questions ouvertes), qui lui nécessite un vrai
+  champ stocké.
+- `DataStorage.getRepRangePRSets(String exerciseName)` : aplatit cette table en un
+  `HashSet<WorkoutSet>` (comparaison par référence, `WorkoutSet` ne redéfinit pas
+  `equals`/`hashCode`) - conçu pour être réutilisé tel quel comme source de vérité
+  unique du tag `[PR]` dans le générateur d'export, afin que l'écran et l'export
+  s'accordent toujours.
+- Nouvel écran `RepRangeRecordsActivity` (+ `RepRangeHistoryAdapter` à deux types de
+  vue, `RepRangeHistoryRow`) : pour un exercice, une liste à plat triée par nombre de
+  reps croissant (table type "rep-max" 1RM/2RM/3RM...), chaque section affichant le
+  record actuel en premier (badge "Actuel") puis les records précédents du plus récent
+  au plus ancien. Accessible via un nouvel item de menu "Historique par nombre de reps"
+  ajouté au menu contextuel (long-press) des cartes de `PersonalRecordsActivity`
+  (`exercise_personal_record_floating_context_menu.xml` /
+  `ExerciseStatsAdapter.showPopupMenu()`) - l'item `charts` existant à côté, lui, était
+  déjà un stub non implémenté avant cette session et n'a pas été touché.
+
+**Statut au 06/09/2026 : codée et livrée sur la machine de Romain, pas encore
+buildée/testée** (comme d'habitude, pas de SDK Android côté Claude - vérifié
+uniquement par lecture de code, équilibrage accolades/parenthèses, et bonne formation
+XML). Reste à utiliser `getRepRangePRSets()` dans le générateur d'export une fois
+celui-ci écrit.
 
 ## Incident : bug critique de perte de données à l'Import Session (05/09/2026)
 
@@ -622,13 +675,11 @@ test — éviter un couplage trop rigide entre les deux projets pour l'instant.
 
 ## Questions ouvertes pour la prochaine session
 
-1. **Retour de test attendu sur le bip dédié + volume + durée réglables du timer de
-   repos (Fonctionnalité 10 ci-dessus)** — fiabilité et sonnerie discrète déjà
-   confirmées et poussées par Romain ; le bip synthétisé dédié et les curseurs de
-   volume et de durée dans `timer_dialog.xml` sont codés le 06/09/2026 mais pas encore
-   buildés ni testés sur l'appareil (mise en page notamment, jamais vérifiée
-   visuellement côté Claude - tester en particulier une durée très courte et très
-   longue pour vérifier l'absence de clic/distorsion en fin de bip).
+1. **Fonctionnalité 10 (timer de repos) validée, commitée et poussée par Romain le
+   06/09/2026** ("ok. validé, comité, pushé"), y compris le bip dédié, le volume et la
+   durée réglables, et le correctif d'alignement du bouton Reset dans
+   `timer_dialog.xml` (était resté ancré sous l'ancien curseur Volume au lieu du
+   nouveau curseur Durée). Plus rien en attente de test sur ce sujet pour l'instant.
 2. **Nouvelle demande à scoper (06/09/2026, pas codée)** : démarrage/arrêt automatique
    du timer de repos (au premier/dernier série de l'exercice, "ce que fait fitnotes"),
    puis piste plus lointaine de suivi du temps de repos réellement pris entre deux
@@ -637,12 +688,23 @@ test — éviter un couplage trop rigide entre les deux projets pour l'instant.
    points à clarifier avec Romain avant de coder (notamment ce que "dernière série"
    signifie en pratique, l'app ne connaissant pas à l'avance le nombre de séries
    prévues pour un exercice).
-3. **Idée évoquée par Romain (06/09/2026, pas tranchée)** : une simulation "à blanc"
-   d'une vraie séance (test end-to-end manuel, sans faire réellement la séance) pour
-   repérer les points de friction avant qu'ils ne se manifestent en conditions réelles -
-   voir `docs/fitnotes-fork-todo.md`, section "En attente de décision / à planifier".
-4. Étapes précises pour retirer verifit\_rs (voir section dédiée) — par où commencer ?
-5. Si le kill de process par Android (pas juste la mise en arrière\-plan) s'avère gênant
+3. **Simulation "à blanc" d'une vraie séance (test end-to-end) - Romain a annoncé le
+   06/09/2026 vouloir s'y mettre** (résultat/points de friction attendus à la prochaine
+   session) - voir `docs/fitnotes-fork-todo.md`, section "Codé, en attente de test réel".
+4. **Export/partage de séance ("Share workout") - template reçu, en cours (06/09/2026)** :
+   Romain a fourni un exemple réel de rapport FitNotes. Deux points bloquants
+   identifiés en l'étudiant, tous deux résolus avec Romain : (a) la ligne "Time" exige
+   un horodatage par série que Verifit ne trackait pas - décision : l'ajouter (nouveau
+   champ sur `WorkoutSet`, pas encore codé) ; (b) le tag `[PR]` par série exige un
+   historique de records **par nombre de reps précis**, que Verifit ne trackait pas non
+   plus (confirmé comme un manque important par Romain) - **codé** le 06/09/2026, voir
+   Fonctionnalité "Historique des PR par nombre de reps" ci-dessous. Reste : ajouter
+   l'horodatage, puis écrire le générateur de rapport texte lui-même et son
+   déclencheur de partage - voir `docs/fitnotes-fork-todo.md`, section "Nouvelles
+   demandes", item "Partager une séance", pour le détail complet et le format exact
+   attendu.
+5. Étapes précises pour retirer verifit\_rs (voir section dédiée) — par où commencer ?
+6. Si le kill de process par Android (pas juste la mise en arrière\-plan) s'avère gênant
    en pratique pour la conservation du jour affiché, ajouter une vraie persistance
    (SharedPreferences) du dernier jour consulté.
 

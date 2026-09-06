@@ -81,6 +81,10 @@
             android:label="Ecarts Prevu/Realise"
             android:parentActivityName=".ui.ChartsActivity" />
         <activity
+            android:name=".ui.RepRangeRecordsActivity"
+            android:label="Historique par nombre de reps"
+            android:parentActivityName=".ui.PersonalRecordsActivity" />
+        <activity
             android:name=".ui.AddExerciseActivity"
             android:label="Add Exercise" />
         <activity

@@ -1,6 +1,7 @@
 package com.example.verifit.adapters;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -22,6 +23,7 @@ import com.example.verifit.R;
 import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.ui.MainActivity;
 import com.example.verifit.ui.PersonalRecordsActivity;
+import com.example.verifit.ui.RepRangeRecordsActivity;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -168,6 +170,19 @@ public class ExerciseStatsAdapter extends RecyclerView.Adapter<ExerciseStatsAdap
                 if(item.getItemId() == R.id.charts)
                 {
                     System.out.println("Charts Clicked");
+                }
+
+                // Retour Romain 06/09/2026 : "Un PR c'est un record pour ce rep range
+                // (reps) pour ce poids (kgs) [...] Fitnotes garde un historique de PR
+                // pour chaque exercice" - ouvre l'historique des records par nombre de
+                // reps pour cet exercice.
+                else if(item.getItemId() == R.id.rep_range_history)
+                {
+                    String exercise_name = exercisePersonalStats.get(position).getExerciseName();
+
+                    Intent intent = new Intent(ct, RepRangeRecordsActivity.class);
+                    intent.putExtra(RepRangeRecordsActivity.EXTRA_EXERCISE_NAME, exercise_name);
+                    ct.startActivity(intent);
                 }
 
                 // Delete Remote Webdav Resource

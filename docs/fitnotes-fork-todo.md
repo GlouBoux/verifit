@@ -2,8 +2,8 @@
 
 ## Codé, en attente de test réel (06/09/2026)
 
-- [ ] **Timer de repos : ne sonne jamais, et Reset ne fonctionne pas toujours -
-  FONCTIONNEL, sonnerie affinée (06/09/2026)** (retour Romain 06/09/2026) : "d'une façon
+- [x] **Timer de repos : ne sonne jamais, et Reset ne fonctionne pas toujours -
+  VALIDÉ, COMMITÉ ET POUSSÉ PAR ROMAIN (06/09/2026)** (retour Romain 06/09/2026) : "d'une façon
   générale quand je set un timer, je veux que même téléphone verrouillé, il sonne pour
   me dire que je peux reprendre ma série. Et je dois pouvoir lui faire confiance sur le
   fait de sonner." **Confirmé par Romain après correctif du crash** : "Ok c'est très
@@ -113,6 +113,66 @@
   durée eux-mêmes. À tester en particulier : un réglage très court et très long (2000ms)
   pour vérifier l'absence de "clic"/distorsion en fin de son, et reconfirmer que le
   crash et le réglage de volume fonctionnent toujours.
+  **Bug d'alignement signalé par Romain (corrigé 06/09/2026)** : le bouton Reset
+  apparaissait plus haut que le bouton Start dans le dialogue du minuteur - le curseur
+  Durée du bip venait d'être inséré entre le curseur Volume et les boutons, mais seul le
+  bouton Start avait été réancré dessous ; Reset était resté ancré sous l'ancien
+  curseur Volume. Corrigé en réancrant `bt_close` (Reset) sous `sb_beep_duration`
+  comme `bt_start`.
+  **VALIDÉ, COMMITÉ ET POUSSÉ PAR ROMAIN** : "ok. validé, comité, pushé." Fonctionnalité
+  10 (timer de repos) entièrement close.
+
+- [ ] **Historique des PR par nombre de reps - CODÉ, PAS ENCORE TESTÉ (06/09/2026)**
+  (retour Romain, à propos de la définition exacte d'un PR pour l'export de séance) :
+  "Un PR c'est un record (Personal Record) pour ce rep range (reps) pour ce poids
+  (kgs). Ici mon record pour 43 reps = 47.5 (avant c'était moins du coup). Fitnotes
+  garde un historique de PR pour chaque exercice (oups ça veut dire que Verifit ne l'a
+  probablement pas et c'est important)". Confirmé en lisant le code : Verifit ne
+  trackait que des records **globaux** par exercice (poids max et reps max tous
+  nombres de reps confondus, volume, 1RM) - aucune table "pour N reps précis, quel est
+  le poids max jamais soulevé", qui est la vraie définition d'un PR selon Romain (et le
+  point bloquant pour tagger correctement `[PR]` dans l'export de séance). Manque
+  confirmé comme important par Romain, qui a choisi de construire un vrai écran plutôt
+  qu'un simple calcul interne à l'export.
+  - `DataStorage.calculateRepRangeHistory(exerciseName)` : calcule à la volée (aucun
+    nouveau champ persisté sur `WorkoutSet`, recalcul à chaque appel à partir de
+    l'historique complet trié chronologiquement) la table des records par nombre de
+    reps, avec tout l'historique (pas juste le record actuel) - donc plusieurs séries
+    du même exercice/jour peuvent chacune être un record, à des nombres de reps
+    différents (exactement le cas remarqué dans le rapport FitNotes fourni par Romain :
+    47.5kg x 43 reps ET 40kg x 52 reps tagués `[PR]` le même jour, pour le même
+    exercice).
+  - `DataStorage.getRepRangePRSets(exerciseName)` : aplatit cette table en un
+    `HashSet<WorkoutSet>` (comparaison par référence) - source de vérité unique
+    destinée à être réutilisée telle quelle pour le tag `[PR]` de l'export de séance
+    (voir item "Partager une séance" plus bas), afin de garantir la même règle entre
+    l'écran et l'export.
+  - Nouvel écran `RepRangeRecordsActivity` (+ `RepRangeHistoryAdapter`,
+    `RepRangeHistoryRow`) : pour un exercice donné, liste chaque nombre de reps déjà
+    réalisé (triés du plus petit au plus grand, table type "rep-max"), avec le record
+    actuel en premier puis l'historique des records précédents (dates + poids).
+    Accessible via un nouvel item de menu "Historique par nombre de reps" (long-press
+    sur une carte dans Personal Records, `ExerciseStatsAdapter.showPopupMenu()` -
+    l'item "Charts" existant, lui, restait un stub non implémenté et n'a pas été
+    touché).
+  Mise en page **non vérifiée visuellement** (toujours pas d'environnement de
+  build/émulateur côté Claude) - à tester en particulier : un exercice avec plusieurs
+  nombres de reps distincts et plusieurs records successifs au même nombre de reps
+  (pour vérifier l'ordre le plus récent en premier, et le badge "Actuel" sur la bonne
+  entrée).
+  **Retour de Romain après avoir vu l'écran** : "j'aime bien. Même si un peu difficile
+  d'accès. Ce que j'aimerai c'est pouvoir y accèder depuis la fiche de l'éxercice en
+  question. Quand j'ajoute une série sur cet exo, il faut que j'ai une icone (par
+  exemple un petit trophée comme sur fitnotes qui m'améne vers mon tableau de PR)." -
+  screenshot de l'écran "Records" de FitNotes fourni comme inspiration (onglets
+  Records/Stats/Goals, filtres Type/Period/Date, table 1RM/2RM/3RM...). **Point
+  d'accès ajouté** : nouvelle icône trophée (`ic_emoji_events_24px`, déjà présente
+  dans les ressources - même icône que le badge PR utilisé ailleurs dans l'app) dans
+  la barre d'outils de `AddExerciseActivity` (la fiche de l'exercice), ouvrant
+  `RepRangeRecordsActivity` pour l'exercice affiché. Les filtres Type/Period/Date et
+  les onglets Records/Stats/Goals de FitNotes n'ont volontairement pas été reproduits
+  pour l'instant (Romain n'a demandé que le point d'accès) - à revoir si besoin plus
+  tard. Pas encore testé/rebuild par Romain.
 
 ## Nouvelles demandes (06/09/2026)
 
@@ -138,14 +198,43 @@
      rejoindre le sujet Écarts Prévu/Réalisé (donnée supplémentaire par série) ou une
      vue dédiée. Utilité évoquée : détecter un repos insuffisant entre les séries.
 
-- [ ] **Partager une séance ("Share workout")** (retour Romain 06/09/2026) : fonctionnalité
-  qu'il avait sur FitNotes - génère un rapport texte de la séance affichée, partageable
-  vers d'autres apps (Discord principalement dans son usage actuel) via le sélecteur de
-  partage standard Android, ou copiable en texte brut pour coller où il veut. **Pas
-  prioritaire pour l'instant** ("l'app n'est pas encore prête") mais Romain pense s'en
-  servir assez vite. Pas encore investigué côté implémentation (probablement un
-  `Intent.ACTION_SEND` texte/plain généré à partir des exercices/séries du jour affiché,
-  depuis `DayActivity` et/ou `AddExerciseActivity`).
+- [ ] **Partager une séance ("Share workout") - TEMPLATE REÇU, EN COURS (06/09/2026)** :
+  fonctionnalité que Romain avait sur FitNotes - génère un rapport texte de la séance
+  affichée, partageable vers d'autres apps (Discord principalement dans son usage
+  actuel) via le sélecteur de partage standard Android, ou copiable en texte brut.
+  Romain a fourni un exemple réel (sa séance du 04/09/2026), à reproduire à l'identique
+  puis enrichir. Format observé :
+  ```
+  FitNotes Workout - vendredi 4th septembre 2026
+  Time: 17:43 – 22:15 (4h 31m)
+  ** Nom de l'exercice **
+  - 40.0 kgs x 4 reps
+  - 50.0 kgs x 2 reps [Échec d'un 7. <commentaire libre de la série>]
+  - 41.0 kgs x 14 reps [PR]
+  ** Exercice suivant **
+  ...
+  ```
+  Deux points à éclaircir avant de pouvoir générer le rapport, résolus avec Romain :
+  1. **Ligne "Time" (heure de début/fin + durée)** : Verifit ne stocke aujourd'hui
+     aucune heure par série (juste la date du jour). **Décision de Romain : ajouter
+     l'horodatage.** On enregistrera l'heure de création de chaque série (nouveau champ
+     sur `WorkoutSet`, valeur `null` pour toutes les séries déjà enregistrées - même
+     pattern que `plannedReps`/`plannedWeight`). Sert aussi à débloquer, plus tard, le
+     calcul du repos réel entre 2 séries consécutives (voir plus haut). **Pas encore
+     codé.**
+  2. **Tag `[PR]` par série** : voir l'item "Historique des PR par nombre de reps"
+     ci-dessus, maintenant codé (`DataStorage.getRepRangePRSets()`) - reste à
+     l'utiliser dans le générateur de rapport.
+  Reste à faire : ajouter l'horodatage sur `WorkoutSet` (point 1 ci-dessus), écrire le
+  générateur de rapport texte (regrouper les séries du jour par exercice dans l'ordre
+  d'apparition, combiner `[PR]` et commentaire de série quand les deux sont présents -
+  `[PR]` en premier d'après l'exemple), et ajouter le déclencheur (probablement un
+  `Intent.ACTION_SEND` texte/plain + une option copier-coller, depuis `DayActivity`).
+  Point encore ouvert, pas bloquant : reproduire tel quel le format de date FitNotes
+  ("vendredi 4th septembre 2026", mélange bizarre d'ordinal anglais et de mois
+  français - probablement un bug de locale côté FitNotes) ou utiliser un format
+  français propre ("vendredi 4 septembre 2026") - à trancher avec Romain, ou décision
+  prise par Claude si Romain ne se prononce pas (format propre par défaut).
 
 - [ ] **Générer un programme ("Routine")** (retour Romain 06/09/2026) : équivalent de la
   fonctionnalité "Routines" de FitNotes - sélectionner un ensemble d'exercices (dans le
@@ -398,13 +487,33 @@
 
 ## En attente de décision / à planifier
 
-- [ ] **Idée : simulation "à blanc" d'une vraie séance (test end-to-end)** (retour Romain
-  06/09/2026, à propos du timer de repos - "je ne sais pas s'il faut vraiment le mettre
-  en todo") : dérouler tout le process comme une vraie séance (créer le jour, logger des
-  séries, lancer le timer de repos, éditer/réordonner/supprimer, etc.) sans la faire
-  réellement (pour ne pas perturber l'entraînement de Romain), dans le but de repérer les
-  points de friction éventuels avant qu'ils ne se manifestent en conditions réelles. Pas
-  tranché comme prioritaire, gardé ici comme piste à évaluer.
+- [ ] **Autoriser des charges négatives (exercices délestés/assistés)** (retour Romain
+  06/09/2026, gros pain point identifié sur FitNotes) : "j'ai des exercices ou je me
+  deleste (assisted) et je suis obligé de faire un truc naze pour tracker mes PRs :
+  définir mon poids comme étant de 70 kilos, et set 50 kgs x 1 rep si j'ai réussi à
+  faire une rep délesté de 20 kilos. Si Verifit autorisait le tracking de charge
+  négative il n'y aurait pas de problème (ex : -15 x 5 reps, -10 x 3 reps)". Permettrait
+  de logger directement l'assistance/le délestage en négatif plutôt que de bidouiller
+  un faux poids de référence. **Complication identifiée par Romain lui-même** : "0
+  <-- ok là on aura un souci pour dire une rep au poids du corps" - un poids à 0kg
+  redeviendrait ambigu (poids du corps sans charge ajoutée, ou juste "0 de charge
+  négative ajoutée" ?) une fois que le négatif devient un cas normal, à distinguer
+  proprement. D'autres impacts à étudier avant de coder : le calcul du volume
+  (`reps * weight`, qui deviendrait négatif ou nul), les comparaisons de records (`>`
+  utilisé partout pour détecter un nouveau PR, y compris dans
+  `calculateRepRangeHistory()` ajouté cette session - sens à revalider avec du
+  négatif), les formules de 1RM (Epley), l'affichage (`"X kgs"` avec un signe moins),
+  et l'export CSV/JSON. **Pas urgent** : "A étudier pour le moment je peux me
+  contenter de l'existant" - Romain garde son contournement actuel en attendant.
+
+- [ ] **Simulation "à blanc" d'une vraie séance (test end-to-end) - EN COURS (06/09/2026)**
+  (retour Romain 06/09/2026, à propos du timer de repos - "je ne sais pas s'il faut
+  vraiment le mettre en todo") : dérouler tout le process comme une vraie séance (créer
+  le jour, logger des séries, lancer le timer de repos, éditer/réordonner/supprimer,
+  etc.) sans la faire réellement (pour ne pas perturber l'entraînement de Romain), dans
+  le but de repérer les points de friction éventuels avant qu'ils ne se manifestent en
+  conditions réelles. Initialement gardé comme piste à évaluer, Romain a annoncé le
+  06/09/2026 vouloir s'y mettre. Résultat/retours attendus à la prochaine session.
 
 - [ ] **Retirer le backend de compte en ligne `verifit_rs`** : décision prise par Romain
   ("feature abandonnée officiellement"), à faire. Périmètre réel : au moins 14 fichiers
