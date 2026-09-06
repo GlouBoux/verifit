@@ -444,12 +444,24 @@ public class AddExerciseActivity extends AppCompatActivity {
         return  set_id;
     }
 
-    // Clear
+    // Clear (mode normal) / Delete (mode edition d'une serie existante). Retour Romain
+    // 06/09/2026 : un tap sur une serie passe maintenant en mode edition (bouton du bas
+    // = "Delete"), donc ce bouton doit vraiment supprimer la serie selectionnee dans ce
+    // mode - avant ce correctif il ne faisait QUE vider les champs quel que soit son
+    // libelle, la suppression n'etant accessible que via le menu Editer/Supprimer du
+    // long-press.
     public void clickClear(View view)
     {
-        bt_clear.setText("Clear");
-        et_reps.setText("");
-        et_weight.setText("");
+        if(isEditMode)
+        {
+            deleteSet(this);
+        }
+        else
+        {
+            bt_clear.setText("Clear");
+            et_reps.setText("");
+            et_weight.setText("");
+        }
     }
 
     public static void deleteSet(Context ct)
@@ -565,6 +577,18 @@ public class AddExerciseActivity extends AppCompatActivity {
         MainActivity.dataStorage.saveKnownExerciseData(ct);
 
         ((Activity) ct).runOnUiThread(() -> {
+            // Retour Romain 06/09/2026 : si la suppression vient du bouton "Delete" du
+            // mode edition (tap sur une serie -> editSet() -> ce bouton), il faut sortir
+            // de ce mode et vider les champs du haut - sinon ils gardent les valeurs de
+            // la serie qu'on vient d'effacer et un "Save" ulterieur recreerait une
+            // nouvelle serie avec ces valeurs perimees. Sans effet sur le chemin
+            // "Supprimer" du menu long-press, qui ne passait de toute facon jamais par
+            // editSet() (isEditMode deja a false, bt_save deja a "Save").
+            isEditMode = false;
+            bt_save.setText("Save");
+            et_reps.setText("");
+            et_weight.setText("");
+
             SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(((Activity) ct));
             snackBarWithMessage.showSnackbar("Set Deleted");
             updateTodaysExercises();

@@ -244,7 +244,7 @@ Romain (05/09/2026) :
 **Statut au 05/09/2026 : livré, validé et commité par Romain** ("c'est validé et
 comité").
 
-## Fonctionnalité 7 — Écarts Prévu/Réalisé (implémentée 06/09/2026, pas encore testée sur l'app)
+## Fonctionnalité 7 — Écarts Prévu/Réalisé (implémentée et validée par Romain ✅)
 
 Sujet annoncé par Romain en fin de session le 05/09/2026 comme prochain chantier.
 FitNotes/verifit ne distingue nulle part "ce qui était prévu" de "ce qui a été fait" -
@@ -289,9 +289,39 @@ Implémentation :
   décroissante (les dates étant au format `yyyy-MM-dd`, un simple tri de chaînes suffit)
   - même dialogue de détail au tap sur une ligne.
 
+**Statut au 06/09/2026 : livré, validé et poussé par Romain** ("Ok ça fonctionne bien.
+J'ai comité et poussé. Je valide."). Piste évoquée par Romain pour plus tard (pas
+demandée formellement) : exploiter cet historique depuis `workout_engine.py`.
+
+## Fonctionnalité 8 — Onglet Sessions : tap = édition d'une série (implémentée 06/09/2026, pas encore testée)
+
+En validant la Fonctionnalité 7, Romain a signalé un problème d'UX séparé sur l'écran
+d'édition d'un exercice (`AddExerciseActivity`/`AddExerciseWorkoutSetAdapter`, atteint
+depuis l'onglet Sessions) : un tap sur une série ne faisait rien de visible - il fallait
+un appui long pour obtenir un menu Éditer/Supprimer. Voulu, comme sur FitNotes : un tap
+sélectionne directement la série pour édition (champs du haut préremplis, bouton "Save"
+→ "Update").
+
+En creusant, le tap appelait déjà un `updateView()` qui préremplissait bien les champs,
+mais sans jamais activer `isEditMode` - cliquer "Save" ensuite créait donc une série en
+double au lieu de mettre à jour celle affichée, d'où l'impression que "le tap ne fait
+rien". Remplacé par un appel direct à `AddExerciseActivity.editSet()` (déjà utilisé par
+le menu Éditer du long-press) ; `updateView()` supprimé (dead code).
+
+**Effet de bord trouvé et corrigé au passage** : en mode édition, le bouton du bas
+affiche "Delete" mais ne faisait en réalité QUE vider les champs de saisie, jamais une
+vraie suppression - bug préexistant invisible tant que ce mode n'était atteint que via
+le long-press (peu emprunté). Le tap devenant le chemin principal pour sélectionner une
+série, ce bouton trompeur allait devenir bien plus visible. Question posée à Romain :
+le rendre fonctionnel, ou garder "Clear" même en édition. **Choix de Romain : le rendre
+fonctionnel** - `clickClear()` déclenche maintenant une vraie suppression (avec
+confirmation, comme le menu Supprimer existant) quand le bouton affiche "Delete", et
+`deleteSetLogic()` sort proprement du mode édition (champs vidés, bouton remis à
+"Save") une fois la suppression effectuée - sans quoi un "Save" ultérieur aurait recréé
+une série avec les valeurs de celle qu'on vient d'effacer.
+
 **Statut au 06/09/2026 : codé et livré sur la machine de Romain, pas encore
-buildé/testé.** Piste évoquée par Romain pour plus tard (pas demandée formellement) :
-exploiter cet historique depuis `workout_engine.py`.
+buildé/testé.**
 
 ## Incident : bug critique de perte de données à l'Import Session (05/09/2026)
 
@@ -331,12 +361,13 @@ test — éviter un couplage trop rigide entre les deux projets pour l'instant.
 
 ## Questions ouvertes pour la prochaine session
 
-1. **Retour de test attendu sur les Écarts Prévu/Réalisé** (Fonctionnalité 7 ci-dessus) —
-   codé le 06/09/2026, pas encore buildé ni testé par Romain sur l'appareil.
+1. **Retour de test attendu sur le tap = édition (Fonctionnalité 8 ci-dessus)** — codé le
+   06/09/2026, pas encore buildé ni testé par Romain sur l'appareil.
 2. **Timer de repos** (retour Romain 06/09/2026, voir `docs/fitnotes-fork-todo.md`,
    section "Nouvelles demandes") : ne sonne jamais à la fin, Reset ne fonctionne pas
    toujours - marqué prioritaire par Romain, mais mis de côté le 06/09/2026 au profit des
-   Écarts Prévu/Réalisé. Root-cause déjà identifiée, pas encore corrigé.
+   Écarts Prévu/Réalisé puis du correctif Sessions ci-dessus. Root-cause déjà identifiée,
+   pas encore corrigé.
 3. Étapes précises pour retirer verifit\_rs (voir section dédiée) — par où commencer ?
 4. Si le kill de process par Android (pas juste la mise en arrière\-plan) s'avère gênant
    en pratique pour la conservation du jour affiché, ajouter une vraie persistance

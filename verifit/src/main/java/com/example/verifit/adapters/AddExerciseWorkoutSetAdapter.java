@@ -169,8 +169,14 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
             }
         });
 
-        // In selection mode, tapping/long-pressing a row toggles it instead of the
-        // normal single-set edit/delete flow below.
+        // Retour Romain 06/09/2026 ("comme sur FitNotes") : en dehors du mode selection,
+        // un tap simple selectionne directement la serie pour edition - remplit les
+        // champs du haut avec ses valeurs et fait passer le bouton du bas de "Save" a
+        // "Update" (AddExerciseActivity.editSet(), jusqu'ici accessible uniquement via le
+        // menu Editer du long-press). Avant ce changement, un tap appelait updateView()
+        // qui pre-remplissait bien les champs mais SANS passer isEditMode a true : cliquer
+        // "Save" ensuite creait une nouvelle serie en double au lieu de mettre a jour
+        // celle-ci - d'ou l'impression que "le tap ne fait rien" d'utile.
         holder.cardView.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -181,12 +187,15 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
                 }
                 else
                 {
-                    updateView(holder.getAdapterPosition());
+                    AddExerciseActivity.editSet(holder, view, holder.getAdapterPosition());
                 }
             }
         });
 
 
+        // Reste disponible en plus du tap : acces rapide a "Supprimer" sans passer par le
+        // mode edition, ou re-ouvre le meme mode edition via "Editer" (desormais
+        // equivalent au tap simple ci-dessus).
         holder.cardView.setOnLongClickListener(new View.OnLongClickListener()
         {
             @Override
@@ -204,19 +213,6 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
             }
         });
 
-    }
-
-    // Notify AddExerciseActivity of the clicked position
-    public void updateView(int position)
-    {
-        AddExerciseActivity.bt_clear.setText("Clear");
-        AddExerciseActivity.bt_save.setText("Save");
-
-        // Updates the position of the user selected set in AddExerciseActivity
-        AddExerciseActivity.Clicked_Set = position;
-
-        // Updates ets buttons and sets in AddExerciseActivity
-        AddExerciseActivity.UpdateViewOnClick();
     }
 
     // Ouvre un petit dialogue pour voir/éditer/effacer le commentaire d'une série

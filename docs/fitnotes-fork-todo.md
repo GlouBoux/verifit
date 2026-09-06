@@ -2,41 +2,30 @@
 
 ## Codé, en attente de test réel (06/09/2026)
 
-- [ ] **Écarts Prévu/Réalisé** (sujet confirmé par Romain le 05/09/2026, décisions
-  d'affichage tranchées le 06/09/2026 via questions posées à Romain) : **codé, livré sur
-  l'appareil, pas encore buildé/testé**.
-  Décisions retenues (les 3 points posés le 05/09 + le point 3 tranché le 06/09) :
-  1. **Prévu** = la valeur écrite par `build_session_import_json` au moment de l'import,
-     figée ensuite.
-  2. **Réalisé** = la valeur que Romain modifie ensuite dans l'app - les deux coexistent
-     désormais pour une série importée au lieu que la modif écrase le prévu.
-  3. **Affichage** : "Badge discret + détail au tap" pendant la séance (recommandé,
-     retenu) + **écran dédié "Écarts"** pour l'historique (les deux demandés par
-     Romain, pas juste l'un ou l'autre).
-  Implémentation :
-  - `WorkoutSet` (`model/WorkoutSet.java`) gagne deux champs nullables
-    `plannedReps`/`plannedWeight`, distincts de `reps`/`weight` (le "réalisé", toujours
-    modifiable normalement). Renseignés UNIQUEMENT dans
-    `DataStorage.mergeImportedSession()` au moment de la construction du `WorkoutSet` -
-    restent `null` pour une saisie manuelle, un import CSV d'historique, ou une série
-    déjà sauvegardée avant ce changement (Gson retombe sur `null` pour les champs
-    absents des anciennes données). Vérifié que le flux d'édition d'une série
-    (`AddExerciseActivity.updateSet()`) ne touche que `reps`/`weight` sur l'objet déjà
-    en mémoire - `plannedReps`/`plannedWeight` ne sont donc jamais écrasés par une
-    modification ultérieure.
-  - `WorkoutSet.hasDiscrepancy()` : vrai si la série a un prévu ET que le réalisé actuel
-    en diffère.
-  - Badge discret (icône rouge, `ic_error_outline_24px`) ajouté à `workout_set_row.xml`
-    (layout partagé), affiché uniquement si `hasDiscrepancy()` - dans `WorkoutSetAdapter`
-    (onglet Workout + `DayActivity`) ET `AddExerciseWorkoutSetAdapter` (onglet Sessions).
-    Un tap dessus ouvre un dialogue "Prévu / Réalisé" (lecture seule,
-    `set_discrepancy_dialog.xml`).
-  - Nouvel écran dédié `DiscrepancyHistoryActivity`, accessible depuis l'onglet Charts →
-    menu (⋮) → "Ecarts Prevu/Realise" : liste chaque série en écart, toutes séances
-    confondues, la plus récente en premier, avec le même dialogue de détail au tap.
-  **Reste à faire une fois testé par Romain** : rien de prévu côté code sauf retour
-  négatif ; potentiellement exploiter cet historique plus tard depuis
-  `workout_engine.py` (mentionné par Romain comme piste, pas demandé formellement).
+- [ ] **Onglet Sessions : tap sur une série = édition, bouton "Delete" fonctionnel**
+  (retour Romain 06/09/2026) : sur l'écran d'édition d'un exercice
+  (`AddExerciseActivity`/`AddExerciseWorkoutSetAdapter`, atteint depuis l'onglet
+  Sessions), un tap sur une série ne faisait rien d'utile - il fallait rester appuyé
+  longtemps pour obtenir un menu Éditer/Supprimer. Voulu par Romain, comme sur FitNotes :
+  un tap sélectionne directement la série, la précharge dans les champs du haut, et fait
+  passer le bouton "Save" en "Update".
+  **Codé, livré sur l'appareil, pas encore buildé/testé** :
+  - Le tap simple (hors mode sélection multiple) appelle désormais
+    `AddExerciseActivity.editSet()` - déjà utilisé par le menu Éditer du long-press,
+    donc comportement identique, juste accessible en un tap au lieu de deux étapes.
+    L'ancien `updateView()` préremplissait bien les champs mais sans jamais activer le
+    mode édition (`isEditMode`) : cliquer "Save" ensuite créait une série en double au
+    lieu de mettre à jour celle affichée - d'où l'impression que "le tap ne fait rien".
+  - **Effet de bord corrigé au passage** : en mode édition, le bouton du bas affiche
+    "Delete" mais ne faisait en réalité QUE vider les champs (jamais de vraie
+    suppression) - bug préexistant resté invisible tant que ce mode n'était atteint que
+    via le long-press. Comme le tap devient le chemin principal, ce bouton trompeur
+    serait devenu bien plus visible. Rendu fonctionnel (option choisie par Romain) :
+    il déclenche maintenant la vraie suppression (avec confirmation, comme le menu
+    Supprimer existant), et sort proprement du mode édition (champs vidés,
+    bouton remis à "Save") une fois la suppression effectuée.
+  Le long-press reste disponible en plus (accès rapide à Supprimer, ou Éditer -
+  désormais équivalent au tap simple).
 
 ## Nouvelles demandes (06/09/2026)
 
@@ -94,6 +83,35 @@
   `workout_engine.py` déjà livrée (voir `docs/fitnotes-fork-plan.md`).
 
 ## Fait / validé
+
+- [x] **Écarts Prévu/Réalisé — VALIDÉ ET POUSSÉ (06/09/2026)** (sujet confirmé par Romain
+  le 05/09/2026, décisions d'affichage tranchées le 06/09/2026 via questions posées à
+  Romain) : "Ok ça fonctionne bien. J'ai comité et poussé. Je valide."
+  Décisions retenues (les 3 points posés le 05/09 + le point 3 tranché le 06/09) :
+  1. **Prévu** = la valeur écrite par `build_session_import_json` au moment de l'import,
+     figée ensuite.
+  2. **Réalisé** = la valeur que Romain modifie ensuite dans l'app - les deux coexistent
+     désormais pour une série importée au lieu que la modif écrase le prévu.
+  3. **Affichage** : "Badge discret + détail au tap" pendant la séance + **écran dédié
+     "Écarts"** pour l'historique (les deux demandés par Romain).
+  Implémentation :
+  - `WorkoutSet` (`model/WorkoutSet.java`) gagne deux champs nullables
+    `plannedReps`/`plannedWeight`, distincts de `reps`/`weight` (le "réalisé", toujours
+    modifiable normalement). Renseignés UNIQUEMENT dans
+    `DataStorage.mergeImportedSession()` au moment de la construction du `WorkoutSet` -
+    restent `null` pour une saisie manuelle, un import CSV d'historique, ou une série
+    déjà sauvegardée avant ce changement.
+  - `WorkoutSet.hasDiscrepancy()` : vrai si la série a un prévu ET que le réalisé actuel
+    en diffère.
+  - Badge discret (icône rouge, `ic_error_outline_24px`) sur `workout_set_row.xml`,
+    dans `WorkoutSetAdapter` (onglet Workout + `DayActivity`) ET
+    `AddExerciseWorkoutSetAdapter` (onglet Sessions). Un tap dessus ouvre un dialogue
+    "Prévu / Réalisé" (lecture seule, `set_discrepancy_dialog.xml`).
+  - Nouvel écran dédié `DiscrepancyHistoryActivity`, accessible depuis l'onglet Charts →
+    menu (⋮) → "Ecarts Prevu/Realise" : liste chaque série en écart, toutes séances
+    confondues, la plus récente en premier.
+  Piste évoquée par Romain pour plus tard (pas demandée formellement) : exploiter cet
+  historique depuis `workout_engine.py`.
 
 - [x] **Suppression de plusieurs séries en une fois** (retour Romain 05/09/2026) : dans
   `AddExerciseActivity` (l'écran de log d'un exercice), on ne pouvait supprimer qu'une
