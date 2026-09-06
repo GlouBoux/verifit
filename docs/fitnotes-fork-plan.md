@@ -582,7 +582,7 @@ et durée réglables, y compris le correctif d'alignement du bouton Reset dans
 `timer_dialog.xml` (ancré par erreur sous l'ancien curseur Volume au lieu du nouveau
 curseur Durée après l'ajout de ce dernier).
 
-## Fonctionnalité 11 — Historique des PR par nombre de reps (codée le 06/09/2026, pas encore testée)
+## Fonctionnalité 11 — Historique des PR par nombre de reps (v2 codée le 06/09/2026, pas encore testée)
 
 Née en préparant l'export de séance (Fonctionnalité "Share workout", cf. Questions
 ouvertes) : reproduire le tag `[PR]` par série du rapport FitNotes exigeait de savoir
@@ -605,33 +605,64 @@ reps) - impossible avec un simple "poids max du jour", mais cohérent avec un re
 par nombre de reps distinct.
 
 Romain a choisi de construire un vrai écran d'historique (plutôt qu'un calcul interne
-limité à l'export) :
+limité à l'export). Une v1 (record = meilleur poids pour EXACTEMENT N reps, liste
+plate avec badge "Actuel") a été codée et livrée en premier - Romain n'a pas encore eu
+le temps de la tester qu'elle a été remplacée par la v2 ci-dessous, suite à deux
+screenshots du popup "Personal Record History" de FitNotes et à ce retour :
 
+**"On va même aller plus loin en trackant comme sur ce screenshot : quand on clique sur
+un RM sur cet écran, ça en ouvre un autre avec current record, previous record et la
+date (l'historique quoi). Les PRs sont également déduis (20 kgs pour 8 reps est
+également un PR pour 7 reps s'il n'y a pas de valeur. transitivité). [...] les PR
+déduits sont grisés/non mis en avant."**
+
+L'algorithme exact a été reconstitué par rétro-ingénierie à partir des deux
+screenshots (la table 1RM à 8RM, puis le détail du "5 RM" : record actuel 49.0kg
+31/08, précédents 46.5kg 21/08 étiqueté "6 RM" et 30.0kg 17/08 étiqueté "5 RM") et
+validé en retraçant à la main les 8 lignes visibles avant d'être codé :
+
+- **Transitivité** : le record pour N reps = le poids max jamais soulevé sur une série
+  d'AU MOINS N reps (pas seulement N reps exactement) - réussir R reps prouve qu'on
+  pouvait aussi en faire moins. Un évènement est "déduit" quand le nombre de reps réel
+  de sa série source diffère de la case qu'il occupe (grisé dans l'affichage), "réel"
+  sinon (mis en avant) - reproduit exactement le rendu du screenshot.
 - `DataStorage.calculateRepRangeHistory(String exerciseName)` : parcourt tout
   l'historique de l'exercice trié chronologiquement (dates `"yyyy-MM-dd"`, tri de
-  chaînes suffisant) et construit une `TreeMap<Double reps, ArrayList<WorkoutSet>>` -
-  pour chaque nombre de reps déjà réalisé, la liste chronologique des `WorkoutSet` qui
-  ont chacun établi un nouveau record à ce nombre de reps au moment où ils ont été
-  loggués (le dernier de la liste = record actuel). Calculé à la volée à chaque appel,
-  aucun nouveau champ persisté sur `WorkoutSet` - contrairement à l'horodatage décidé
-  pour la ligne "Time" de l'export (voir Questions ouvertes), qui lui nécessite un vrai
-  champ stocké.
+  chaînes suffisant) et construit une `TreeMap<Integer reps, ArrayList<RepRangePREvent>>`
+  - pour chaque nombre de reps, la liste chronologique de TOUS les évènements
+  (transitifs compris) qui ont établi un nouveau record à cette case, chacun portant
+  poids, date, nombre de reps source réel et indicateur "déduit" (le dernier de la
+  liste = record actuel). Calculé à la volée à chaque appel, aucun nouveau champ
+  persisté sur `WorkoutSet` - contrairement à l'horodatage décidé pour la ligne "Time"
+  de l'export (voir Questions ouvertes), qui lui nécessite un vrai champ stocké.
+  Exclut les séries à 0 reps (retour Romain : "ça n'a pas de sens").
+- `RepRangePREvent` (nouvelle classe) : `{weight, date, sourceReps, deduced,
+  sourceSet}` - un évènement de record pour une case donnée.
 - `DataStorage.getRepRangePRSets(String exerciseName)` : aplatit cette table en un
   `HashSet<WorkoutSet>` (comparaison par référence, `WorkoutSet` ne redéfinit pas
-  `equals`/`hashCode`) - conçu pour être réutilisé tel quel comme source de vérité
-  unique du tag `[PR]` dans le générateur d'export, afin que l'écran et l'export
-  s'accordent toujours.
-- Nouvel écran `RepRangeRecordsActivity` (+ `RepRangeHistoryAdapter` à deux types de
-  vue, `RepRangeHistoryRow`) : pour un exercice, une liste à plat triée par nombre de
-  reps croissant (table type "rep-max" 1RM/2RM/3RM...), chaque section affichant le
-  record actuel en premier (badge "Actuel") puis les records précédents du plus récent
-  au plus ancien. Accessible via un nouvel item de menu "Historique par nombre de reps"
-  ajouté au menu contextuel (long-press) des cartes de `PersonalRecordsActivity`
-  (`exercise_personal_record_floating_context_menu.xml` /
-  `ExerciseStatsAdapter.showPopupMenu()`) - l'item `charts` existant à côté, lui, était
-  déjà un stub non implémenté avant cette session et n'a pas été touché.
+  `equals`/`hashCode`, évènements réels uniquement pour ne pas compter deux fois la
+  même série) - conçu pour être réutilisé tel quel comme source de vérité unique du tag
+  `[PR]` dans le générateur d'export, afin que l'écran et l'export s'accordent toujours.
+- Écran `RepRangeRecordsActivity` (+ `RepRangeHistoryAdapter`, `RepRangeHistoryRow`) :
+  pour un exercice, une ligne par nombre de reps (triées du plus petit au plus grand,
+  table type "rep-max" 1RM/2RM/3RM...) montrant le record ACTUEL, grisé si déduit.
+  **Cliquer une ligne ouvre une popup** (`rep_range_history_dialog.xml`, inspirée du
+  motif `set_discrepancy_dialog.xml` déjà présent dans le code - conteneurs
+  `LinearLayout` peuplés dynamiquement plutôt qu'un `RecyclerView` imbriqué) avec le
+  record actuel puis les records précédents (du plus récent au plus ancien), chaque
+  ligne précédente affichant le nombre de reps RÉEL de sa série source (et non celui de
+  la case consultée) et sa date. Le bouton "Graph" du screenshot FitNotes n'a
+  volontairement pas été reproduit (non demandé). Accessible via le même point d'accès
+  qu'avant (menu contextuel "Historique par nombre de reps" en long-press sur une carte
+  de `PersonalRecordsActivity`, et icône trophée dans la fiche de l'exercice
+  `AddExerciseActivity` - cf. item TODO correspondant).
+- `rep_range_history_entry_row.xml` simplifiée en une seule ligne unifiée (reps/poids/
+  date), réutilisée à la fois pour la liste principale et pour chaque ligne de la
+  popup - le badge "Actuel" de la v1 a disparu (remplacé par le placement en section
+  dans la popup). `rep_range_history_header_row.xml` (créé pour la v1) n'est plus
+  utilisé, supprimé du dépôt.
 
-**Statut au 06/09/2026 : codée et livrée sur la machine de Romain, pas encore
+**Statut au 06/09/2026 : v2 codée et livrée sur la machine de Romain, pas encore
 buildée/testée** (comme d'habitude, pas de SDK Android côté Claude - vérifié
 uniquement par lecture de code, équilibrage accolades/parenthèses, et bonne formation
 XML). Reste à utiliser `getRepRangePRSets()` dans le générateur d'export une fois

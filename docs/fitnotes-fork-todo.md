@@ -122,7 +122,7 @@
   **VALIDÉ, COMMITÉ ET POUSSÉ PAR ROMAIN** : "ok. validé, comité, pushé." Fonctionnalité
   10 (timer de repos) entièrement close.
 
-- [ ] **Historique des PR par nombre de reps - CODÉ, PAS ENCORE TESTÉ (06/09/2026)**
+- [ ] **Historique des PR par nombre de reps - v2 CODÉE, PAS ENCORE TESTÉE (06/09/2026)**
   (retour Romain, à propos de la définition exacte d'un PR pour l'export de séance) :
   "Un PR c'est un record (Personal Record) pour ce rep range (reps) pour ce poids
   (kgs). Ici mon record pour 43 reps = 47.5 (avant c'était moins du coup). Fitnotes
@@ -134,45 +134,63 @@
   point bloquant pour tagger correctement `[PR]` dans l'export de séance). Manque
   confirmé comme important par Romain, qui a choisi de construire un vrai écran plutôt
   qu'un simple calcul interne à l'export.
-  - `DataStorage.calculateRepRangeHistory(exerciseName)` : calcule à la volée (aucun
-    nouveau champ persisté sur `WorkoutSet`, recalcul à chaque appel à partir de
-    l'historique complet trié chronologiquement) la table des records par nombre de
-    reps, avec tout l'historique (pas juste le record actuel) - donc plusieurs séries
-    du même exercice/jour peuvent chacune être un record, à des nombres de reps
-    différents (exactement le cas remarqué dans le rapport FitNotes fourni par Romain :
-    47.5kg x 43 reps ET 40kg x 52 reps tagués `[PR]` le même jour, pour le même
-    exercice).
+  Une v1 (simple : record = meilleur poids pour EXACTEMENT N reps, liste plate) a été
+  codée puis remplacée avant même que Romain ne la teste, suite à deux screenshots du
+  popup "Personal Record History" de FitNotes et à ce retour : "On va même aller plus
+  loin en trackant comme sur ce screenshot : quand on clique sur un RM sur cet écran, ça
+  en ouvre un autre avec current record, previous record et la date (l'historique quoi).
+  Les PRs sont également déduis (20 kgs pour 8 reps est également un PR pour 7 reps s'il
+  n'y a pas de valeur. transitivité). [...] les PR déduits sont grisés/non mis en avant."
+  L'algorithme a été reconstitué par rétro-ingénierie à partir des deux screenshots
+  fournis (table 1RM à 8RM + détail du "5 RM") et validé point par point (poids/date/
+  couleur) sur les 8 lignes visibles avant d'être codé - v2 :
+  - **Transitivité** : le record pour N reps = le poids max jamais soulevé sur une série
+    d'AU MOINS N reps (pas seulement N reps exactement), puisque réussir R reps prouve
+    qu'on pouvait aussi en faire moins. Un évènement est "déduit" quand la série source a
+    un nombre de reps différent de la case qu'il occupe (ex : une série de 43 reps établit
+    aussi un record déduit pour 42, 41... reps si rien de mieux n'existe) ; "réel" quand
+    reps source = reps de la case. Les déduits sont affichés grisés, les réels mis en
+    avant - exactement le rendu du screenshot FitNotes.
+  - `DataStorage.calculateRepRangeHistory(exerciseName)` : recalculée à la volée (aucun
+    nouveau champ persisté sur `WorkoutSet`), retourne `TreeMap<Integer,
+    ArrayList<RepRangePREvent>>` - pour chaque nombre de reps, tout l'historique
+    chronologique des évènements (pas juste le record actuel), chacun portant son poids,
+    sa date, son nombre de reps source réel et s'il est déduit.
   - `DataStorage.getRepRangePRSets(exerciseName)` : aplatit cette table en un
-    `HashSet<WorkoutSet>` (comparaison par référence) - source de vérité unique
-    destinée à être réutilisée telle quelle pour le tag `[PR]` de l'export de séance
-    (voir item "Partager une séance" plus bas), afin de garantir la même règle entre
-    l'écran et l'export.
-  - Nouvel écran `RepRangeRecordsActivity` (+ `RepRangeHistoryAdapter`,
-    `RepRangeHistoryRow`) : pour un exercice donné, liste chaque nombre de reps déjà
-    réalisé (triés du plus petit au plus grand, table type "rep-max"), avec le record
-    actuel en premier puis l'historique des records précédents (dates + poids).
-    Accessible via un nouvel item de menu "Historique par nombre de reps" (long-press
-    sur une carte dans Personal Records, `ExerciseStatsAdapter.showPopupMenu()` -
-    l'item "Charts" existant, lui, restait un stub non implémenté et n'a pas été
-    touché).
-  Mise en page **non vérifiée visuellement** (toujours pas d'environnement de
-  build/émulateur côté Claude) - à tester en particulier : un exercice avec plusieurs
-  nombres de reps distincts et plusieurs records successifs au même nombre de reps
-  (pour vérifier l'ordre le plus récent en premier, et le badge "Actuel" sur la bonne
-  entrée).
-  **Retour de Romain après avoir vu l'écran** : "j'aime bien. Même si un peu difficile
-  d'accès. Ce que j'aimerai c'est pouvoir y accèder depuis la fiche de l'éxercice en
-  question. Quand j'ajoute une série sur cet exo, il faut que j'ai une icone (par
-  exemple un petit trophée comme sur fitnotes qui m'améne vers mon tableau de PR)." -
-  screenshot de l'écran "Records" de FitNotes fourni comme inspiration (onglets
-  Records/Stats/Goals, filtres Type/Period/Date, table 1RM/2RM/3RM...). **Point
-  d'accès ajouté** : nouvelle icône trophée (`ic_emoji_events_24px`, déjà présente
-  dans les ressources - même icône que le badge PR utilisé ailleurs dans l'app) dans
-  la barre d'outils de `AddExerciseActivity` (la fiche de l'exercice), ouvrant
-  `RepRangeRecordsActivity` pour l'exercice affiché. Les filtres Type/Period/Date et
-  les onglets Records/Stats/Goals de FitNotes n'ont volontairement pas été reproduits
-  pour l'instant (Romain n'a demandé que le point d'accès) - à revoir si besoin plus
-  tard. Pas encore testé/rebuild par Romain.
+    `HashSet<WorkoutSet>` (comparaison par référence, évènements réels uniquement pour ne
+    pas compter deux fois la même série) - source de vérité unique destinée à être
+    réutilisée telle quelle pour le tag `[PR]` de l'export de séance (voir item "Partager
+    une séance" plus bas), afin de garantir la même règle entre l'écran et l'export.
+  - Écran `RepRangeRecordsActivity` (+ `RepRangeHistoryAdapter`, `RepRangeHistoryRow`,
+    `RepRangePREvent`) : une ligne par nombre de reps (triées du plus petit au plus
+    grand, table type "rep-max"), montrant le record ACTUEL, grisé si déduit. **Cliquer
+    une ligne ouvre désormais une popup** "Personal Record History"
+    (`rep_range_history_dialog.xml`) avec le record actuel puis les records précédents
+    (du plus récent au plus ancien), chaque ligne précédente affichant le nombre de reps
+    RÉEL de sa série source (ex "6 RM" pour un évènement déduit apparaissant dans le
+    détail du "5 RM") et sa date - comportement calqué sur le screenshot fourni. Le
+    bouton "Graph" visible dans le screenshot FitNotes n'a volontairement pas été
+    reproduit (non demandé par Romain). Accessible via le même point d'accès qu'avant
+    (menu "Historique par nombre de reps" en long-press sur une carte dans Personal
+    Records, et icône trophée dans la fiche de l'exercice - voir plus bas).
+  Vérification faite côté Claude (pas de build/émulateur disponible) : équilibre des
+  accolades/parenthèses de tous les fichiers Java touchés et bonne formation XML des
+  layouts - OK. **Pas encore testé/rebuild par Romain.** Fichier
+  `rep_range_history_header_row.xml` (créé pour la v1, plus utilisé par la v2) supprimé
+  du dépôt - à supprimer manuellement sur ta machine si tu veux nettoyer (`git rm`/`git
+  add` s'en chargera au commit, il ne sera pas recréé).
+  **Retour de Romain après avoir vu l'écran (v1)** : "j'aime bien. Même si un peu
+  difficile d'accès. Ce que j'aimerai c'est pouvoir y accèder depuis la fiche de
+  l'éxercice en question. Quand j'ajoute une série sur cet exo, il faut que j'ai une
+  icone (par exemple un petit trophée comme sur fitnotes qui m'améne vers mon tableau de
+  PR)." - screenshot de l'écran "Records" de FitNotes fourni comme inspiration (onglets
+  Records/Stats/Goals, filtres Type/Period/Date, table 1RM/2RM/3RM...). **Point d'accès
+  ajouté** : icône trophée (`ic_emoji_events_24px`, déjà présente dans les ressources -
+  même icône que le badge PR utilisé ailleurs dans l'app) dans la barre d'outils de
+  `AddExerciseActivity` (la fiche de l'exercice), ouvrant `RepRangeRecordsActivity` pour
+  l'exercice affiché. Les filtres Type/Period/Date et les onglets Records/Stats/Goals de
+  FitNotes n'ont volontairement pas été reproduits pour l'instant (Romain n'a demandé que
+  le point d'accès) - à revoir si besoin plus tard.
 
 ## Nouvelles demandes (06/09/2026)
 

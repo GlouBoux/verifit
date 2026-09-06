@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Une entree de l'ecran "Historique des PR par nombre de reps" (retour Romain
-     06/09/2026) : un record atteint a une date donnee, pour le nombre de reps du
-     header au-dessus. Le record actuel est mis en avant (badge "Actuel" + couleur),
-     les records precedents (battus depuis) restent visibles mais en grise. -->
+<!-- Une ligne de l'ecran "Historique des PR par nombre de reps" (retour Romain
+     06/09/2026) : un nombre de reps et le record retenu pour cette case (poids +
+     date). Reutilisee a la fois pour la liste principale (le record ACTUEL) et pour
+     les lignes de la popup de detail (record actuel + precedents) - la couleur du
+     texte est mise a jour par l'adapter selon RepRangePREvent.isDeduced() (grise si
+     deduit par transitivite, mis en avant sinon). -->
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -19,37 +21,34 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tv_entry_reps"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:minWidth="56dp"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            tools:text="5 RM" />
 
         <TextView
             android:id="@+id/tv_entry_weight"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="@color/core_black"
             android:textSize="16sp"
             android:textStyle="bold"
-            tools:text="47.5 kgs" />
+            tools:text="49.0 kgs" />
 
         <TextView
             android:id="@+id/tv_entry_date"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_marginEnd="8dp"
-            android:textColor="@color/core_grey_02"
             android:textSize="13sp"
-            tools:text="2026-09-04" />
-
-        <TextView
-            android:id="@+id/tv_entry_current_badge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:text="Actuel"
-            android:textColor="@color/colorPrimary"
-            android:textSize="13sp"
-            android:textStyle="bold" />
+            tools:text="2026-08-31" />
 
     </LinearLayout>
 

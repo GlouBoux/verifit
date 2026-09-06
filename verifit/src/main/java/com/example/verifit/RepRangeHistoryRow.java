@@ -1,56 +1,37 @@
 package com.example.verifit;
 
-import com.example.verifit.model.WorkoutSet;
+import java.util.ArrayList;
 
-// Une ligne de l'ecran "Historique des PR par nombre de reps" (retour Romain
-// 06/09/2026 : "Un PR c'est un record [...] pour ce rep range [...] pour ce poids.
-// Fitnotes garde un historique de PR pour chaque exercice"). Soit un en-tete de
-// section (un nombre de reps donne, ex "43 reps"), soit une entree d'historique (le
-// record atteint a une date donnee pour ce nombre de reps - le plus recent etant
-// marque comme "actuel"). Construite par RepRangeRecordsActivity a partir de
-// DataStorage.calculateRepRangeHistory().
+// Une ligne de la liste principale de l'ecran "Historique des PR par nombre de reps"
+// (retour Romain 06/09/2026) : un nombre de reps et son record ACTUEL (le dernier
+// evenement de DataStorage.calculateRepRangeHistory() pour cette case - grise dans
+// l'affichage s'il est deduit, cf. RepRangePREvent.isDeduced()). L'historique complet
+// (record actuel + precedents) ne s'affiche qu'au clic, dans une popup - voir
+// RepRangeHistoryAdapter.
 public class RepRangeHistoryRow
 {
-    private boolean header;
-    private Double reps;
-    private WorkoutSet set; // null si header
-    private boolean current; // vrai si c'est le record actuel pour ce nombre de reps
+    private final int reps;
+    private final ArrayList<RepRangePREvent> allEvents;
 
-    public static RepRangeHistoryRow newHeader(Double reps)
+    public RepRangeHistoryRow(int reps, ArrayList<RepRangePREvent> allEvents)
     {
-        RepRangeHistoryRow row = new RepRangeHistoryRow();
-        row.header = true;
-        row.reps = reps;
-        return row;
+        this.reps = reps;
+        this.allEvents = allEvents;
     }
 
-    public static RepRangeHistoryRow newEntry(Double reps, WorkoutSet set, boolean current)
-    {
-        RepRangeHistoryRow row = new RepRangeHistoryRow();
-        row.header = false;
-        row.reps = reps;
-        row.set = set;
-        row.current = current;
-        return row;
-    }
-
-    public boolean isHeader()
-    {
-        return header;
-    }
-
-    public Double getReps()
+    public int getReps()
     {
         return reps;
     }
 
-    public WorkoutSet getSet()
+    public ArrayList<RepRangePREvent> getAllEvents()
     {
-        return set;
+        return allEvents;
     }
 
-    public boolean isCurrent()
+    // Le dernier evenement chronologique = le record actuel pour cette case.
+    public RepRangePREvent getCurrentEvent()
     {
-        return current;
+        return allEvents.get(allEvents.size() - 1);
     }
 }

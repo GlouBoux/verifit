@@ -449,20 +449,34 @@ public class DataStorage {
     // des records GLOBAUX (poids max tous nombres de reps confondus, reps max tous
     // poids confondus, volume, 1RM) - pas de table "pour N reps precis, quel est le
     // poids max jamais souleve", qui est la vraie definition d'un PR selon Romain.
+    //
+    // Retour Romain complementaire : "Les PRs sont egalement deduis (20 kgs pour 8
+    // reps est egalement un PR pour 7 reps s'il n'y a pas de valeur. transitivite).
+    // [...] les PR deduits sont grises/non mis en avant." Une serie de R reps a un
+    // poids W prouve, par transitivite, qu'un record d'AU MOINS W est atteignable
+    // pour TOUT nombre de reps r <= R (si on a reussi R repetitions, on a forcement pu
+    // en faire moins) - c'est la convention standard des tables "rep-max"
+    // (1RM/2RM/3RM...) que Fitnotes affiche. Pour chaque case (nombre de reps r), le
+    // record retenu est donc le MAX parmi TOUTES les series realisees avec un nombre
+    // de reps >= r, pas seulement celles a EXACTEMENT r reps - une serie propage donc
+    // sa mise a jour vers toutes les cases r = 1..setReps qu'elle ameliore.
+    //
     // Calcule ici a la volee (pas de nouveau champ persiste sur WorkoutSet) en
     // reparcourant tout l'historique de l'exercice, trie chronologiquement (dates au
     // format "yyyy-MM-dd", donc un simple tri de chaines suffit). Retourne, pour
-    // chaque nombre de reps distinct deja realise, la liste chronologique des
-    // WorkoutSet qui ont chacun etabli un nouveau record a ce nombre de reps au
-    // moment ou ils ont ete loggues (le dernier de la liste = record actuel).
-    // Source de verite unique reutilisee a la fois par RepRangeRecordsActivity
-    // (affichage de l'historique complet) et par l'export de seance (tag [PR] par
-    // serie, cf. getRepRangePRSets() ci-dessous) pour garantir la meme regle partout.
-    // Exclut les series a 0 reps (retour Romain : "ca n'a pas de sens").
-    public TreeMap<Double, ArrayList<WorkoutSet>> calculateRepRangeHistory(String exerciseName)
+    // chaque nombre de reps distinct concerne, la liste chronologique des
+    // RepRangePREvent qui ont chacun etabli un nouveau record a cette case (le
+    // dernier de la liste = record actuel) - RepRangePREvent.isDeduced() indique si
+    // l'evenement provient d'une serie a un nombre de reps different de la case
+    // (deduit) ou exactement egal (reel). Exclut les series a 0 reps (retour Romain :
+    // "ca n'a pas de sens"). Source de verite unique reutilisee a la fois par
+    // RepRangeRecordsActivity (affichage de l'historique complet) et par l'export de
+    // seance (tag [PR] par serie, cf. getRepRangePRSets() ci-dessous) pour garantir
+    // la meme regle partout.
+    public TreeMap<Integer, ArrayList<RepRangePREvent>> calculateRepRangeHistory(String exerciseName)
     {
-        TreeMap<Double, ArrayList<WorkoutSet>> history = new TreeMap<Double, ArrayList<WorkoutSet>>();
-        HashMap<Double, Double> bestWeightSoFar = new HashMap<Double, Double>();
+        TreeMap<Integer, ArrayList<RepRangePREvent>> history = new TreeMap<Integer, ArrayList<RepRangePREvent>>();
+        HashMap<Integer, Double> bestWeightSoFar = new HashMap<Integer, Double>();
 
         ArrayList<WorkoutDay> sortedDays = new ArrayList<WorkoutDay>(workoutDays);
         Collections.sort(sortedDays, new Comparator<WorkoutDay>() {
@@ -477,8 +491,6 @@ public class DataStorage {
         {
             for (WorkoutSet set : day.getSets())
             {
-                // Retour Romain 06/09/2026 : "ne track pas le 0 rep (ca n'a pas de
-                // sens)" - une serie a 0 reps ne represente pas un vrai record.
                 if (set.getExerciseName() == null || !set.getExerciseName().equals(exerciseName)
                         || set.getReps() == null || set.getWeight() == null
                         || set.getReps() == 0.0)
@@ -486,18 +498,22 @@ public class DataStorage {
                     continue;
                 }
 
-                Double reps = set.getReps();
-                Double previousBest = bestWeightSoFar.get(reps);
+                int setReps = (int) Math.round(set.getReps());
 
-                if (previousBest == null || set.getWeight() > previousBest)
+                for (int r = 1; r <= setReps; r++)
                 {
-                    bestWeightSoFar.put(reps, set.getWeight());
+                    Double previousBest = bestWeightSoFar.get(r);
 
-                    if (!history.containsKey(reps))
+                    if (previousBest == null || set.getWeight() > previousBest)
                     {
-                        history.put(reps, new ArrayList<WorkoutSet>());
+                        bestWeightSoFar.put(r, set.getWeight());
+
+                        if (!history.containsKey(r))
+                        {
+                            history.put(r, new ArrayList<RepRangePREvent>());
+                        }
+                        history.get(r).add(new RepRangePREvent(set.getWeight(), set.getDate(), setReps, setReps != r, set));
                     }
-                    history.get(reps).add(set);
                 }
             }
         }
@@ -508,14 +524,24 @@ public class DataStorage {
     // Aplatit calculateRepRangeHistory() en un ensemble de WorkoutSet (comparaison par
     // reference, WorkoutSet ne redefinit pas equals/hashCode) - pratique pour tagger
     // [PR] sur une serie precise lors de la generation de l'export de seance sans
-    // recalculer l'historique complet a chaque ligne.
+    // recalculer l'historique complet a chaque ligne. Ne retient que les evenements
+    // REELS (isDeduced() == false, c'est-a-dire ou la case correspond exactement au
+    // nombre de reps de la serie) : un evenement deduit designe la MEME serie source
+    // qui apparait deja, ailleurs dans la table, comme son propre record reel (a son
+    // nombre de reps exact) - inutile de le compter deux fois pour le tag [PR].
     public HashSet<WorkoutSet> getRepRangePRSets(String exerciseName)
     {
         HashSet<WorkoutSet> prSets = new HashSet<WorkoutSet>();
 
-        for (ArrayList<WorkoutSet> entries : calculateRepRangeHistory(exerciseName).values())
+        for (ArrayList<RepRangePREvent> events : calculateRepRangeHistory(exerciseName).values())
         {
-            prSets.addAll(entries);
+            for (RepRangePREvent event : events)
+            {
+                if (!event.isDeduced())
+                {
+                    prSets.add(event.getSourceSet());
+                }
+            }
         }
 
         return prSets;
