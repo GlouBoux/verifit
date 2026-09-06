@@ -8,6 +8,55 @@
     android:orientation="vertical"
     tools:context=".ui.DayActivity">
 
+    <!-- Retour Romain 06/09/2026 : chrono de la SEANCE entiere - meme barre que sur
+         AddExerciseActivity (voir ce layout pour le detail du commentaire), affichee
+         aussi ici car c'est l'autre ecran ou Romain regarde sa seance en cours. Voir
+         DayActivity.refreshSessionTimerBar()/toggleSessionTimer(). -->
+    <LinearLayout
+        android:id="@+id/session_timer_bar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="10dp"
+        android:background="@color/core_grey_10"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="8dp"
+            app:srcCompat="@drawable/ic_run_circle_24px"
+            app:tint="@color/colorPrimary" />
+
+        <TextView
+            android:id="@+id/tv_session_timer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/core_black"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            tools:text="00:00:00" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/bt_session_timer_toggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="0dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:text="Stop"
+            android:textAllCaps="false"
+            app:cornerRadius="10dp" />
+
+    </LinearLayout>
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/floatingActionButton"
         style="@style/AppTheme"
@@ -28,10 +77,12 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view_day"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        tools:layout_editor_absoluteX="0dp"
-
-        tools:layout_editor_absoluteY="84dp" >
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@+id/session_timer_bar"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:layout_editor_absoluteX="0dp" >
 
     </androidx.recyclerview.widget.RecyclerView>
 

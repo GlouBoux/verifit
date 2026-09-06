@@ -25,14 +25,22 @@ public class WorkoutSet {
     private Double plannedWeight;
 
     // Horodatage (epoch millis) du moment ou cette serie a ete VALIDEE dans l'app
-    // (retour Romain 06/09/2026, pour la ligne "Time: HH:mm - HH:mm" de l'export de
-    // seance - cf. docs/fitnotes-fork-plan.md "Partager une seance"). Renseigne
-    // UNIQUEMENT lors d'une saisie manuelle d'une NOUVELLE serie (voir
-    // AddExerciseActivity.clickSave()) - jamais lors d'une modification d'une serie
-    // existante (l'horodatage reste celui de la creation initiale), jamais lors d'un
-    // import CSV d'historique ni d'un import de seance generee (aucune heure reelle
-    // disponible dans ces cas). Reste null pour toute serie deja sauvegardee avant
-    // l'ajout de ce champ - Gson retombe sur cette valeur par defaut.
+    // (retour Romain 06/09/2026). Renseigne UNIQUEMENT lors d'une saisie manuelle d'une
+    // NOUVELLE serie (voir AddExerciseActivity.clickSave()) - jamais lors d'une
+    // modification d'une serie existante (l'horodatage reste celui de la creation
+    // initiale), jamais lors d'un import CSV d'historique ni d'un import de seance
+    // generee (aucune heure reelle disponible dans ces cas). Reste null pour toute
+    // serie deja sauvegardee avant l'ajout de ce champ - Gson retombe sur cette valeur
+    // par defaut.
+    //
+    // N'est PLUS utilise pour la ligne "Time" de l'export de seance (retour Romain
+    // 06/09/2026, correctif) : cette ligne se base desormais sur le chrono de session
+    // manuel WorkoutDay.SessionStartTimestamp/SessionEndTimestamp (voir
+    // WorkoutReportGenerator.buildTimeLine()) - "je ne sais ni ne peux controler ce
+    // timer [par horodatages de series], il faut que je puisse y acceder [...] je dois
+    // pouvoir le controler". Ce champ par-serie reste renseigne et disponible pour un
+    // usage futur (ex. mesurer le repos reellement pris entre deux series, idee deja
+    // notee dans docs/fitnotes-fork-todo.md).
     private Long timestamp;
 
 

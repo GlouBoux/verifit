@@ -149,6 +149,97 @@
   **VALIDÉ, COMMITÉ ET POUSSÉ PAR ROMAIN** : "ok. validé, comité, pushé." Fonctionnalité
   10 (timer de repos) entièrement close.
 
+- [ ] **Barre de minuteur persistante sur l'écran de saisie - CODÉ, PAS ENCORE TESTÉ
+  (06/09/2026)** (retour Romain 06/09/2026, après validation de "Share workout") : "il
+  faudrait que le timer de workout soit visible sur l'interface du workout en cours avec
+  la possibilité de le déclencher, l'arrêter, le reset. ça m'a traumatisé sur fitnotes
+  avec le timer qui continuait parce que je n'avais pas coché une série comme étant
+  marqué et ou arrêté le workout." Cause du traumatisme identifiée par lecture de code :
+  avant ce chantier, Start/Pause/Reset (Fonctionnalité 10) n'existaient QUE dans la boîte
+  de dialogue "Timer" ouverte depuis le menu - une fois cette boîte fermée, le minuteur
+  continuait de tourner en arrière-plan sans plus aucun retour visuel à l'écran.
+  **Codé, livré sur l'appareil, pas encore rebuildé/testé** :
+  - Nouvelle barre toujours affichée en haut de `AddExerciseActivity` (icône alarme,
+    décompte `MM:SS`, bouton Start/Pause, bouton Reset) - le réglage fin (durée exacte,
+    volume, durée du bip) reste dans la boîte de dialogue "Timer" du menu, inchangée.
+  - `AddExerciseActivity` : les vues de la boîte de dialogue (`et_seconds`, `bt_start`)
+    restent `null` tant que cette boîte n'a jamais été ouverte de la session - toutes les
+    méthodes partagées du minuteur (`startTimer()`, `pauseTimer()`,
+    `updateCountDownText()`) sont désormais protégées par une vérification de nullité
+    avant de les utiliser, pour permettre à la nouvelle barre de piloter le minuteur sans
+    jamais ouvrir cette boîte.
+  - Nouvelle `loadTimerDurationFromPrefs()` (extraite de `loadSeconds()`) charge la durée
+    configurée (`SharedPreferences`) dès `onCreate()`, pour que la barre utilise la vraie
+    durée réglée même si la boîte de dialogue n'a jamais été ouverte cette session.
+  - Nouvelle `updateTimerButtonsLabel()` garde le bouton de la boîte de dialogue et celui
+    de la nouvelle barre synchronisés dans les deux sens (démarré depuis la barre -> la
+    boîte de dialogue le reflète si rouverte, et inversement).
+  Vérifié côté Claude (équilibre accolades/parenthèses, XML bien formé). **Pas encore
+  testé/rebuild par Romain** - en particulier : l'affichage de la barre à l'écran (pas
+  d'environnement de build/émulateur côté Claude), et la synchronisation Start/Pause
+  entre la barre et la boîte de dialogue "Timer" du menu.
+
+- [ ] **Chrono de la séance entière, contrôlable (Start auto / Stop-Resume manuel) -
+  CODÉ, PAS ENCORE TESTÉ (06/09/2026)** (retour Romain 06/09/2026, après un
+  malentendu sur la barre de minuteur de repos ci-dessus) : "on ne s'est pas compris.
+  Je voulais parler du timer interne de toute la séance. Depuis combien de temps je
+  fais ma séance. Celle qui sera envoyé dans le rapport de séance (le share). Comme je
+  ne sais pas ni ne peut controler ce timer il faut que je puisse y accéder (dans
+  fitnotes il y avait toujoours une checkbox à coté d'une série [...] lorsqu'on coche
+  la première série ça lance le timer de la séance et quand toutes les séries sont
+  cochés alors le timer s'arrête). Pas obligé de reproduire cet UX mais le timer lui je
+  dois pouvoir le controler."
+  Jusqu'ici, la ligne "Time" de l'export de séance (voir item "Partager une séance"
+  plus bas) était calculée à partir du plus petit/plus grand horodatage de série
+  (`WorkoutSet.timestamp`) - un calcul entièrement implicite, sans aucun affichage ni
+  contrôle possible pendant la séance. Trois décisions prises avec Romain (questions
+  posées explicitement, chacune avec une option recommandée) :
+  1. **Emplacement** : chrono visible et contrôlable à la fois sur l'écran de saisie
+     (`AddExerciseActivity`, à côté du minuteur de repos) et sur la vue d'ensemble du
+     jour (`DayActivity`) - même chrono partagé (au niveau du `WorkoutDay`), affiché
+     aux deux endroits.
+  2. **Source du rapport** : ce chrono manuel devient la **seule** source de la ligne
+     "Time" exportée - remplace entièrement l'ancien calcul par horodatages de séries
+     (pas de repli automatique dessus).
+  3. **Démarrage** : automatique à la première série loggée de la journée (pas
+     d'action manuelle requise pour démarrer), arrêt uniquement manuel (bouton Stop) -
+     pas de reproduction du mécanisme de cases à cocher de FitNotes (non demandé).
+  **Codé, livré sur l'appareil, pas encore rebuildé/testé** :
+  - `WorkoutDay` : nouveaux champs `SessionStartTimestamp`/`SessionEndTimestamp`
+    (epoch millis, `null` par défaut pour les jours déjà sauvegardés avant cet ajout -
+    la ligne "Time" est alors omise à l'export, comme avant que
+    `WorkoutSet.timestamp` n'existe) + `isSessionTimerRunning()`.
+  - Nouvelle barre affichée en haut des deux écrans (icône course à pied, décompte
+    `HH:mm:ss`, bouton Stop/Resume) - fond légèrement plus foncé que la barre du
+    minuteur de repos pour bien les distinguer visuellement. Bouton désactivé tant
+    qu'aucune série n'a encore été loggée ce jour-là (rien à démarrer/arrêter
+    manuellement).
+  - `AddExerciseActivity.addSetExistingWorkoutDay()`/`addSetNewWorkoutDay()` démarrent
+    (ou reprennent, si le chrono avait été arrêté manuellement) le chrono à chaque
+    nouvelle série loggée - reprise automatique et silencieuse plutôt que de laisser un
+    chrono "arrêté" pendant qu'un entraînement continue visiblement.
+  - Nouvelle classe partagée `SessionTimerTicker` (package `com.example.verifit`) :
+    fait défiler l'affichage `HH:mm:ss` chaque seconde sur les deux écrans - lecture
+    seule, ne modifie jamais le `WorkoutDay` (le démarrage/l'arrêt reste géré par
+    chaque écran, car impliquant une sauvegarde immédiate des données).
+  - Sauvegarde immédiate (`DataStorage.saveWorkoutData()`) à chaque changement d'état
+    du chrono (démarrage, reprise, Stop manuel) plutôt que de compter sur le flag
+    `autoBackupRequired` différé utilisé pour l'ajout de séries - pour ne jamais perdre
+    ce chrono si l'app est tuée juste après.
+  - `WorkoutReportGenerator.buildTimeLine()` réécrite pour lire exclusivement
+    `WorkoutDay.SessionStartTimestamp`/`SessionEndTimestamp` (plus aucune lecture des
+    horodatages de série). Si le chrono n'a pas encore été arrêté au moment du
+    partage, l'heure de fin prise est "maintenant" (instantané de la séance en cours).
+  - `WorkoutSet.timestamp` (champ par série) reste renseigné mais n'est plus utilisé
+    par l'export - conservé pour un usage futur éventuel (ex. mesurer le repos
+    réellement pris entre deux séries, idée déjà notée plus bas dans ce document).
+  Vérifié côté Claude (équilibre accolades/parenthèses de tous les fichiers Java
+  touchés, XML bien formé des deux layouts). **Pas encore testé/rebuild par Romain** -
+  en particulier : l'affichage réel des deux barres à l'écran (pas d'environnement de
+  build/émulateur côté Claude), la reprise automatique après un Stop manuel suivi
+  d'une nouvelle série, et le format de la ligne "Time" du rapport avec cette nouvelle
+  source (devrait être identique en apparence, seul le calcul sous-jacent a changé).
+
 - [x] **Historique des PR par nombre de reps - v2 VALIDÉE, COMMITÉE ET POUSSÉE PAR ROMAIN (06/09/2026)**
   (retour Romain, à propos de la définition exacte d'un PR pour l'export de séance) :
   "Un PR c'est un record (Personal Record) pour ce rep range (reps) pour ce poids
@@ -243,7 +334,7 @@
      rejoindre le sujet Écarts Prévu/Réalisé (donnée supplémentaire par série) ou une
      vue dédiée. Utilité évoquée : détecter un repos insuffisant entre les séries.
 
-- [ ] **Partager une séance ("Share workout") - CODÉ, PAS ENCORE TESTÉ (06/09/2026)** :
+- [x] **Partager une séance ("Share workout") - VALIDÉ, COMMITÉ ET POUSSÉ PAR ROMAIN (06/09/2026)** :
   fonctionnalité que Romain avait sur FitNotes - génère un rapport texte de la séance
   affichée, partageable vers d'autres apps (Discord principalement dans son usage
   actuel) via le sélecteur de partage standard Android. Romain a fourni un exemple réel
@@ -270,11 +361,16 @@
     anglais et de mois français, probablement un bug de locale FitNotes) - Romain ne
     s'étant pas prononcé sur ce point, décision prise par Claude comme convenu.
   - Ligne `"Time: HH:mm – HH:mm (XhYm)"` (avec le vrai tiret cadratin – du template) :
-    calculée à partir du plus petit et du plus grand `WorkoutSet.timestamp` du jour -
-    **omise entièrement** si aucune série du jour n'a d'horodatage connu (séries
-    anciennes ou importées) plutôt que d'afficher une heure fausse. Minutes de la durée
-    non paddées à 2 chiffres (`"4h 5m"`, pas `"4h 05m"` - c'est une durée, pas une heure
-    d'horloge) - à ajuster si Romain préfère le padding.
+    à l'origine calculée à partir du plus petit et du plus grand `WorkoutSet.timestamp`
+    du jour, **omise entièrement** si aucune série n'avait d'horodatage connu.
+    **Remplacée depuis (voir item "Chrono de la séance entière" plus haut, retour
+    Romain 06/09/2026 : "je ne sais ni ne peux controler ce timer [...] il faut que je
+    puisse y accéder")** : cette ligne se base désormais exclusivement sur le chrono de
+    séance manuel `WorkoutDay.SessionStartTimestamp`/`SessionEndTimestamp`, contrôlable
+    par Romain (Start auto à la première série, Stop/Resume manuel) - toujours omise
+    si ce chrono n'a jamais été démarré. Minutes de la durée non paddées à 2 chiffres
+    (`"4h 5m"`, pas `"4h 05m"` - c'est une durée, pas une heure d'horloge) - à ajuster
+    si Romain préfère le padding.
   - Une section `"** Nom **"` par exercice, dans l'ordre d'apparition du jour
     (`WorkoutDay.getExercises()`, qui respecte déjà `ExerciseOrder` - même ordre que
     l'écran `DayActivity`).
@@ -287,10 +383,12 @@
   (Android 10+) propose aussi une action "Copier" intégrée, ce qui couvre le besoin
   "copiable en texte brut" sans bouton dédié supplémentaire côté app - à ajouter
   explicitement si Romain le souhaite quand même après avoir testé.
-  Vérifié côté Claude (équilibre accolades/parenthèses, XML bien formé). **Pas encore
-  testé/rebuild par Romain** - en particulier : le rendu réel du tiret cadratin et des
-  caractères accentués dans le sélecteur de partage/Discord, et le cas d'une séance
-  sans aucune série horodatée (ligne "Time" absente).
+  Vérifié côté Claude (équilibre accolades/parenthèses, XML bien formé).
+  **Confirmé par Romain avec deux exemples réels** ("Ok c'est bien voici l'output (j'en
+  ai mis 2. un historique, un nouvellement créé)") : une séance historique/importée sans
+  aucune série horodatée (ligne "Time" correctement absente), une séance avec une série
+  nouvellement créée (ligne "Time: 22:31 – 22:31 (0h 0m)" correctement calculée, tag
+  `[PR]` correct) - aucun bug relevé sur les deux exemples.
 
 - [ ] **Générer un programme ("Routine")** (retour Romain 06/09/2026) : équivalent de la
   fonctionnalité "Routines" de FitNotes - sélectionner un ensemble d'exercices (dans le

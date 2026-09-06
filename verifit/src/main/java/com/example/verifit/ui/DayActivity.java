@@ -25,6 +25,7 @@ import android.widget.Toast;
 import com.example.verifit.DataStorage;
 import com.example.verifit.LoadingDialog;
 import com.example.verifit.SessionImporter;
+import com.example.verifit.SessionTimerTicker;
 import com.example.verifit.WorkoutReportGenerator;
 import com.example.verifit.adapters.DayExerciseAdapter;
 import com.example.verifit.R;
@@ -32,6 +33,7 @@ import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.verifitrs.WorkoutSetsApi;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.IOException;
@@ -66,6 +68,15 @@ public class DayActivity extends AppCompatActivity {
     // qu'à chaque étape intermédiaire du drag.
     private int dragStartPosition = -1;
 
+    // Chrono de la SEANCE entiere (retour Romain 06/09/2026, voir le meme chrono sur
+    // AddExerciseActivity - detail du choix dans le commentaire sur
+    // WorkoutDay.SessionStartTimestamp). Affiche ici aussi car cet ecran (vue
+    // d'ensemble des exercices du jour) est l'autre endroit ou Romain regarde sa
+    // seance en cours, pas seulement pendant la saisie d'une serie.
+    private TextView tv_session_timer;
+    private MaterialButton bt_session_timer_toggle;
+    private SessionTimerTicker sessionTimerTicker;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,6 +84,22 @@ public class DayActivity extends AppCompatActivity {
 
         // Self Explanatory I guess
         initActivity();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Chrono de session : rafraichir a chaque retour sur cet ecran (une serie a pu
+        // etre loggee/supprimee depuis AddExerciseActivity entre-temps) et relancer le
+        // defilement de l'affichage.
+        refreshSessionTimerBar();
+        sessionTimerTicker.start();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        sessionTimerTicker.stop();
     }
 
 
@@ -92,6 +119,22 @@ public class DayActivity extends AppCompatActivity {
 
         // Recycler View Stuff
         recyclerView = findViewById(R.id.recycler_view_day);
+
+        // Chrono de session (retour Romain 06/09/2026) - l'etat reel n'est connu qu'une
+        // fois date_clicked lu plus bas ; le rafraichissement initial se fait donc dans
+        // onResume() (appele juste apres onCreate()), pas ici.
+        tv_session_timer = findViewById(R.id.tv_session_timer);
+        bt_session_timer_toggle = findViewById(R.id.bt_session_timer_toggle);
+        sessionTimerTicker = new SessionTimerTicker(tv_session_timer);
+
+        bt_session_timer_toggle.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                toggleSessionTimer();
+            }
+        });
 
         // From Main Activity
         Intent mIntent = getIntent();
@@ -456,6 +499,57 @@ public class DayActivity extends AppCompatActivity {
         shareIntent.setType("text/plain");
         shareIntent.putExtra(Intent.EXTRA_TEXT, report);
         startActivity(Intent.createChooser(shareIntent, "Share workout"));
+    }
+
+    // Retrouve le WorkoutDay du jour affiche (peut etre null si aucune serie n'a encore
+    // ete loggee ce jour-la) et met a jour l'affichage du chrono de session - meme
+    // logique que AddExerciseActivity.refreshSessionTimerBar(), voir ce fichier pour le
+    // detail du choix (retour Romain 06/09/2026).
+    private void refreshSessionTimerBar()
+    {
+        int position = MainActivity.dataStorage.getDayPosition(date_clicked);
+        WorkoutDay day = (position >= 0) ? MainActivity.dataStorage.getWorkoutDays().get(position) : null;
+
+        sessionTimerTicker.setWorkoutDay(day);
+        updateSessionTimerButtonLabel(day);
+    }
+
+    private void updateSessionTimerButtonLabel(WorkoutDay day)
+    {
+        boolean hasStarted = day != null && day.getSessionStartTimestamp() != null;
+        bt_session_timer_toggle.setEnabled(hasStarted);
+        bt_session_timer_toggle.setText(hasStarted && day.isSessionTimerRunning() ? "Stop" : "Resume");
+    }
+
+    // Bouton Stop/Resume du chrono de session, depuis la vue d'ensemble du jour - meme
+    // logique que AddExerciseActivity.toggleSessionTimer().
+    private void toggleSessionTimer()
+    {
+        int position = MainActivity.dataStorage.getDayPosition(date_clicked);
+        if (position < 0)
+        {
+            return;
+        }
+
+        WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(position);
+        if (day.getSessionStartTimestamp() == null)
+        {
+            return;
+        }
+
+        if (day.isSessionTimerRunning())
+        {
+            day.setSessionEndTimestamp(System.currentTimeMillis());
+        }
+        else
+        {
+            day.setSessionEndTimestamp(null);
+        }
+
+        MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+
+        sessionTimerTicker.setWorkoutDay(day);
+        updateSessionTimerButtonLabel(day);
     }
 
     // Opens the system file picker so the user can pick a JSON file describing a

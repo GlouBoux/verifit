@@ -90,52 +90,42 @@ public class WorkoutReportGenerator
         }
     }
 
-    // "Time: 17:43 – 22:15 (4h 31m)", ou null si aucune serie du jour n'a
-    // d'horodatage connu (series anciennes ou importees - voir
-    // WorkoutSet.hasTimestamp()) : impossible de calculer une heure de debut/fin
-    // fiable dans ce cas, mieux vaut omettre la ligne que d'en afficher une fausse.
+    // "Time: 17:43 – 22:15 (4h 31m)", ou null si le chrono de session n'a jamais ete
+    // demarre pour ce jour (voir WorkoutDay.SessionStartTimestamp - jours anciens/
+    // importes, ou seance jamais loggee via l'app).
+    //
+    // Retour Romain 06/09/2026 (correctif) : la premiere version de cette ligne se
+    // basait sur le plus petit/plus grand WorkoutSet.timestamp du jour - "je ne sais ni
+    // ne peux controler ce timer, il faut que je puisse y acceder [...] je dois pouvoir
+    // le controler". Remplace par le chrono de session manuel (demarre automatiquement
+    // a la premiere serie, arrete manuellement par l'utilisateur - voir
+    // AddExerciseActivity/DayActivity), choisi par Romain comme SEULE source (pas de
+    // repli automatique sur l'ancien calcul) pour en garder le controle total. Si le
+    // chrono n'a pas encore ete arrete au moment du partage, la fin de journee est prise
+    // comme "maintenant" (instantane de l'etat actuel de la seance).
     private static String buildTimeLine(WorkoutDay day)
     {
-        long earliest = Long.MAX_VALUE;
-        long latest = Long.MIN_VALUE;
-        boolean found = false;
-
-        for (WorkoutSet set : day.getSets())
-        {
-            if (!set.hasTimestamp())
-            {
-                continue;
-            }
-
-            found = true;
-            long timestamp = set.getTimestamp();
-            if (timestamp < earliest)
-            {
-                earliest = timestamp;
-            }
-            if (timestamp > latest)
-            {
-                latest = timestamp;
-            }
-        }
-
-        if (!found)
+        Long start = day.getSessionStartTimestamp();
+        if (start == null)
         {
             return null;
         }
 
-        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.FRENCH);
-        String start = timeFormat.format(new Date(earliest));
-        String end = timeFormat.format(new Date(latest));
+        long startMillis = start;
+        long endMillis = (day.getSessionEndTimestamp() != null) ? day.getSessionEndTimestamp() : System.currentTimeMillis();
 
-        long durationMinutesTotal = (latest - earliest) / (60 * 1000);
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.FRENCH);
+        String startStr = timeFormat.format(new Date(startMillis));
+        String endStr = timeFormat.format(new Date(endMillis));
+
+        long durationMinutesTotal = (endMillis - startMillis) / (60 * 1000);
         long hours = durationMinutesTotal / 60;
         long minutes = durationMinutesTotal % 60;
 
         // Tiret cadratin (–), pas un simple tiret, pour reproduire a l'identique le
         // format observe dans le template fourni par Romain ("Time: 17:43 - 22:15
         // (4h 31m)" avec un vrai en-dash).
-        return "Time: " + start + " – " + end + " (" + hours + "h " + minutes + "m)";
+        return "Time: " + startStr + " – " + endStr + " (" + hours + "h " + minutes + "m)";
     }
 
     // "- 40.0 kgs x 4 reps", avec l'annotation entre crochets quand pertinente :

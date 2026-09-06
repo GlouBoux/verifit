@@ -23,6 +23,26 @@ public class WorkoutDay {
     // UpdateData() la garde quand même défensivement.
     private ArrayList<String> ExerciseOrder;
 
+    // Chrono de la seance entiere (retour Romain 06/09/2026) : "je ne sais ni ne peux
+    // controler ce timer, il faut que je puisse y acceder [...] je dois pouvoir le
+    // controler". Demarre automatiquement (epoch millis) au moment ou la PREMIERE serie
+    // de ce jour est loggee (voir AddExerciseActivity.startOrResumeSessionTimer()),
+    // arrete manuellement par l'utilisateur (bouton Stop/Resume sur AddExerciseActivity
+    // et DayActivity) plutot que par la mecanique de cases a cocher de FitNotes (pas
+    // demandee). SessionEndTimestamp reste null tant que la seance n'a pas ete arretee -
+    // si une nouvelle serie est loggee apres un Stop, la seance est consideree reprise
+    // (SessionEndTimestamp remis a null, voir startOrResumeSessionTimer()) plutot que de
+    // laisser un chrono "arrete" pendant qu'un entrainement continue visiblement.
+    // Remplace desormais l'ancien calcul par horodatages de series (WorkoutSet.timestamp)
+    // comme source de la ligne "Time" de l'export de seance (voir
+    // WorkoutReportGenerator) : Romain a explicitement choisi ce chrono manuel comme
+    // SEULE source, plutot qu'un repli automatique, pour en garder le controle total.
+    // Restent null pour tout jour deja sauvegarde avant l'ajout de ce champ - Gson
+    // retombe sur cette valeur par defaut (la ligne "Time" est alors omise a l'export,
+    // comme avant que WorkoutSet.timestamp n'existe).
+    private Long SessionStartTimestamp;
+    private Long SessionEndTimestamp;
+
 
     // Default Constructor
     public WorkoutDay()
@@ -323,6 +343,26 @@ public class WorkoutDay {
     }
     public void setDayVolume(Double volume) {
         DayVolume = volume;
+    }
+
+    public Long getSessionStartTimestamp() {
+        return SessionStartTimestamp;
+    }
+    public void setSessionStartTimestamp(Long timestamp) {
+        SessionStartTimestamp = timestamp;
+    }
+    public Long getSessionEndTimestamp() {
+        return SessionEndTimestamp;
+    }
+    public void setSessionEndTimestamp(Long timestamp) {
+        SessionEndTimestamp = timestamp;
+    }
+
+    // Vrai uniquement si le chrono a ete demarre ET n'a pas ete arrete depuis - cf.
+    // commentaire sur SessionStartTimestamp/SessionEndTimestamp ci-dessus.
+    public boolean isSessionTimerRunning()
+    {
+        return SessionStartTimestamp != null && SessionEndTimestamp == null;
     }
 
 }

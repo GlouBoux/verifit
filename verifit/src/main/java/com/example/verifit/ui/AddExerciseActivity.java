@@ -44,6 +44,7 @@ import com.example.verifit.KeyboardHider;
 import com.example.verifit.LoadingDialog;
 import com.example.verifit.MonthXAxisFormatter;
 import com.example.verifit.RestTimerReceiver;
+import com.example.verifit.SessionTimerTicker;
 import com.example.verifit.SnackBarWithMessage;
 import com.example.verifit.adapters.AddExerciseWorkoutSetAdapter;
 import com.example.verifit.adapters.ExerciseHistoryExerciseAdapter;
@@ -61,6 +62,7 @@ import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.highlight.Highlight;
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
+import com.google.android.material.button.MaterialButton;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -131,6 +133,23 @@ public class AddExerciseActivity extends AppCompatActivity {
     // setupTimer()/loadDuration()/RestTimerReceiver.DURATION_PREF_KEY.
     public SeekBar sb_beep_duration;
 
+    // Barre de minuteur persistante (retour Romain 06/09/2026, voir commentaire dans
+    // activity_add_exercise.xml) : Start/Pause + Reset toujours visibles sur cet ecran,
+    // sans passer par le dialogue "Timer" du menu. et_seconds/bt_start (ci-dessus)
+    // restent null tant que ce dialogue n'a jamais ete ouvert cette session - toute
+    // methode partagee (startTimer(), pauseTimer(), updateCountDownText()...) doit donc
+    // rester garde-foue (verification de nullite) avant de les utiliser.
+    private TextView tv_inline_timer;
+    private MaterialButton bt_inline_timer_toggle;
+    private ImageButton bt_inline_timer_reset;
+
+    // Chrono de la SEANCE entiere (retour Romain 06/09/2026, distinct du minuteur de
+    // repos ci-dessus) - voir refreshSessionTimerBar()/toggleSessionTimer() plus bas et
+    // le commentaire sur WorkoutDay.SessionStartTimestamp.
+    private TextView tv_session_timer;
+    private MaterialButton bt_session_timer_toggle;
+    private SessionTimerTicker sessionTimerTicker;
+
     private AlertDialog currentDialog = null;
 
     // Multi-select delete (retour Romain 05/09/2026) : sélectionner plusieurs séries et
@@ -168,6 +187,62 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
+        // Barre de minuteur persistante (retour Romain 06/09/2026) : chargement de la
+        // duree configuree (SharedPreferences) des l'ouverture de l'ecran, sans attendre
+        // que le dialogue "Timer" du menu ait jamais ete ouvert - sinon Start/Pause/Reset
+        // depuis cette barre utiliseraient la valeur par defaut codee en dur (3 minutes).
+        loadTimerDurationFromPrefs();
+
+        tv_inline_timer = findViewById(R.id.tv_inline_timer);
+        bt_inline_timer_toggle = findViewById(R.id.bt_inline_timer_toggle);
+        bt_inline_timer_reset = findViewById(R.id.bt_inline_timer_reset);
+
+        updateCountDownText();
+        updateTimerButtonsLabel();
+
+        bt_inline_timer_toggle.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                if(TimerRunning)
+                {
+                    pauseTimer();
+                }
+                else
+                {
+                    startTimer();
+                }
+            }
+        });
+
+        bt_inline_timer_reset.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                resetTimer();
+            }
+        });
+
+        // Chrono de la seance entiere (retour Romain 06/09/2026) - demarrage automatique
+        // a la premiere serie loggee (voir startOrResumeSessionTimer()), affichage et
+        // Stop/Resume geres ici. L'etat reel (WorkoutDay) n'est connu qu'apres
+        // initActivity()/MainActivity.dateSelected - le rafraichissement initial se fait
+        // donc dans onResume() (appele juste apres onCreate()), pas ici.
+        tv_session_timer = findViewById(R.id.tv_session_timer);
+        bt_session_timer_toggle = findViewById(R.id.bt_session_timer_toggle);
+        sessionTimerTicker = new SessionTimerTicker(tv_session_timer);
+
+        bt_session_timer_toggle.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                toggleSessionTimer();
+            }
+        });
+
         // Self Explanatory I guess
         initActivity();
 
@@ -189,6 +264,20 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
         sharedPreferences.save("true", "inAddExerciseActivity");
+
+        // Chrono de session (retour Romain 06/09/2026) : rafraichir l'etat affiche a
+        // chaque retour sur cet ecran (une serie a pu etre loggee/supprimee ailleurs
+        // entre-temps) et relancer le defilement de l'affichage.
+        refreshSessionTimerBar();
+        sessionTimerTicker.start();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Chrono de session : plus la peine de faire defiler un affichage qui n'est plus
+        // visible - la valeur reelle reste sur WorkoutDay, pas sur ce Handler.
+        sessionTimerTicker.stop();
     }
 
     // Save / Update
@@ -449,7 +538,9 @@ public class AddExerciseActivity extends AppCompatActivity {
 
     public void addSetExistingWorkoutDay(WorkoutSet workoutSet, Integer position)
     {
-        MainActivity.dataStorage.getWorkoutDays().get(position).addSet(workoutSet);
+        WorkoutDay workoutDay = MainActivity.dataStorage.getWorkoutDays().get(position);
+        workoutDay.addSet(workoutSet);
+        startOrResumeSessionTimer(workoutDay);
         updateViewAndShowMessage();
     }
 
@@ -457,8 +548,35 @@ public class AddExerciseActivity extends AppCompatActivity {
     {
         WorkoutDay workoutDay = new WorkoutDay();
         workoutDay.addSet(workoutSet);
+        startOrResumeSessionTimer(workoutDay);
         MainActivity.dataStorage.getWorkoutDays().add(workoutDay);
         updateViewAndShowMessage();
+    }
+
+    // Retour Romain 06/09/2026 (chrono de session) : demarre le chrono a la toute
+    // premiere serie du jour. Si une nouvelle serie est loggee apres un Stop manuel, la
+    // seance est consideree reprise (le Stop precedent est efface) plutot que de laisser
+    // un chrono "arrete" pendant qu'un entrainement continue visiblement - voir le
+    // commentaire sur WorkoutDay.SessionStartTimestamp pour le detail du choix. Sauvegarde
+    // immediatement (comme les autres actions explicites de cet ecran, ex.
+    // deleteSetLogic()) plutot que de compter sur le flag autoBackupRequired differe,
+    // pour ne jamais perdre ce chrono si l'app est tuee juste apres.
+    private void startOrResumeSessionTimer(WorkoutDay workoutDay)
+    {
+        if (workoutDay.getSessionStartTimestamp() == null)
+        {
+            workoutDay.setSessionStartTimestamp(System.currentTimeMillis());
+        }
+        else if (workoutDay.getSessionEndTimestamp() != null)
+        {
+            workoutDay.setSessionEndTimestamp(null);
+        }
+        else
+        {
+            return;
+        }
+
+        MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
     }
 
 
@@ -466,8 +584,64 @@ public class AddExerciseActivity extends AppCompatActivity {
     {
         runOnUiThread(()->{
             updateTodaysExercises();
+            refreshSessionTimerBar();
             showSnackbarMessage("Set Added");
         });
+    }
+
+    // Retrouve le WorkoutDay du jour affiche (peut etre null si aucune serie n'a encore
+    // ete loggee aujourd'hui) et met a jour l'affichage du chrono de session en
+    // consequence - a appeler a chaque fois que l'etat peut avoir change (onResume(),
+    // nouvelle serie loggee, Stop/Resume manuel...).
+    private void refreshSessionTimerBar()
+    {
+        int position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
+        WorkoutDay day = (position >= 0) ? MainActivity.dataStorage.getWorkoutDays().get(position) : null;
+
+        sessionTimerTicker.setWorkoutDay(day);
+        updateSessionTimerButtonLabel(day);
+    }
+
+    private void updateSessionTimerButtonLabel(WorkoutDay day)
+    {
+        boolean hasStarted = day != null && day.getSessionStartTimestamp() != null;
+
+        // Rien a demarrer/arreter manuellement tant qu'aucune serie n'a ete loggee -
+        // desactive plutot que de laisser un bouton sans effet visible.
+        bt_session_timer_toggle.setEnabled(hasStarted);
+        bt_session_timer_toggle.setText(hasStarted && day.isSessionTimerRunning() ? "Stop" : "Resume");
+    }
+
+    // Bouton Stop/Resume de la barre de chrono de session (retour Romain 06/09/2026) :
+    // "il faut que je puisse y acceder [...] je dois pouvoir le controler" - sauvegarde
+    // immediatement, meme raisonnement que startOrResumeSessionTimer() ci-dessus.
+    private void toggleSessionTimer()
+    {
+        int position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
+        if (position < 0)
+        {
+            return;
+        }
+
+        WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(position);
+        if (day.getSessionStartTimestamp() == null)
+        {
+            return;
+        }
+
+        if (day.isSessionTimerRunning())
+        {
+            day.setSessionEndTimestamp(System.currentTimeMillis());
+        }
+        else
+        {
+            day.setSessionEndTimestamp(null);
+        }
+
+        MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+
+        sessionTimerTicker.setWorkoutDay(day);
+        updateSessionTimerButtonLabel(day);
     }
 
     public Integer getSetIdFromResponse(okhttp3.Response response) throws IOException
@@ -1652,6 +1826,12 @@ public class AddExerciseActivity extends AppCompatActivity {
         sb_volume = view.findViewById(R.id.sb_volume);
         sb_beep_duration = view.findViewById(R.id.sb_beep_duration);
 
+        // Barre de minuteur persistante (retour Romain 06/09/2026) : si le minuteur a ete
+        // demarre/mis en pause depuis la barre persistante avant l'ouverture de ce
+        // dialogue, bt_start doit refleter l'etat reel (sinon il affiche toujours "Start"
+        // par defaut, meme si le minuteur tourne deja).
+        updateTimerButtonsLabel();
+
         // Set default seconds value to 180 i.e 3 minutes
         if(!TimerRunning)
         {
@@ -1917,14 +2097,33 @@ public class AddExerciseActivity extends AppCompatActivity {
                 // commentaire), meme si ce CountDownTimer a ete throttle/tue entre
                 // temps.
                 TimerRunning = false;
-                bt_start.setText("Start");
+                updateTimerButtonsLabel();
             }
         }.start();
 
         TimerRunning = true;
-        bt_start.setText("Pause");
+        updateTimerButtonsLabel();
 
         scheduleTimerAlarm();
+    }
+
+    // Retour Romain 06/09/2026 (barre de minuteur persistante) : bt_start (bouton du
+    // dialogue "Timer" du menu) reste null tant que ce dialogue n'a jamais ete ouvert
+    // cette session - toujours verifier avant de l'utiliser. bt_inline_timer_toggle (barre
+    // persistante) est lie des onCreate() et ne devrait jamais etre null, mais on le
+    // verifie quand meme par coherence/robustesse si jamais cette methode est appelee
+    // trop tot.
+    private void updateTimerButtonsLabel()
+    {
+        String label = TimerRunning ? "Pause" : "Start";
+        if (bt_start != null)
+        {
+            bt_start.setText(label);
+        }
+        if (bt_inline_timer_toggle != null)
+        {
+            bt_inline_timer_toggle.setText(label);
+        }
     }
 
     // Retour Romain 06/09/2026 : "meme telephone verrouille, il sonne ... je dois
@@ -2010,7 +2209,12 @@ public class AddExerciseActivity extends AppCompatActivity {
                 this, REST_TIMER_REQUEST_CODE, new Intent(this, RestTimerReceiver.class), flags);
     }
 
-    public void loadSeconds()
+    // Retour Romain 06/09/2026 (barre de minuteur persistante) : partie de l'ancien
+    // loadSeconds() qui ne touche PAS a et_seconds (dialogue "Timer" du menu, null tant
+    // que ce dialogue n'a jamais ete ouvert) - appelable depuis onCreate() pour que
+    // Start/Pause/Reset depuis la barre persistante utilisent la duree configuree
+    // (SharedPreferences) meme si le dialogue n'a jamais ete ouvert cette session.
+    private void loadTimerDurationFromPrefs()
     {
         SharedPreferences sharedPreferences = getSharedPreferences("shared preferences",MODE_PRIVATE);
         String seconds = sharedPreferences.getString("seconds","180");
@@ -2018,7 +2222,14 @@ public class AddExerciseActivity extends AppCompatActivity {
         // Change actual values that timer uses
         START_TIME_IN_MILLIS = Integer.parseInt(seconds) * 1000;
         TimeLeftInMillis = START_TIME_IN_MILLIS;
+    }
 
+    public void loadSeconds()
+    {
+        loadTimerDurationFromPrefs();
+
+        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences",MODE_PRIVATE);
+        String seconds = sharedPreferences.getString("seconds","180");
         et_seconds.setText(seconds);
     }
 
@@ -2093,7 +2304,7 @@ public class AddExerciseActivity extends AppCompatActivity {
         countDownTimer.cancel();
         cancelTimerAlarm();
         TimerRunning = false;
-        bt_start.setText("Start");
+        updateTimerButtonsLabel();
     }
 
     // Retour Romain 06/09/2026 : "je dois pouvoir lui faire confiance" - Reset ne
@@ -2123,7 +2334,21 @@ public class AddExerciseActivity extends AppCompatActivity {
     {
         int seconds = (int) TimeLeftInMillis / 1000;
         int minutes = (int) seconds / 60;
-        et_seconds.setText(String.valueOf(seconds));
+
+        // et_seconds (dialogue "Timer" du menu) reste null tant que ce dialogue n'a
+        // jamais ete ouvert cette session - cf. barre de minuteur persistante ci-dessus,
+        // retour Romain 06/09/2026.
+        if (et_seconds != null)
+        {
+            et_seconds.setText(String.valueOf(seconds));
+        }
+
+        if (tv_inline_timer != null)
+        {
+            int displayMinutes = seconds / 60;
+            int displaySeconds = seconds % 60;
+            tv_inline_timer.setText(String.format(Locale.getDefault(), "%02d:%02d", displayMinutes, displaySeconds));
+        }
     }
 
 }
