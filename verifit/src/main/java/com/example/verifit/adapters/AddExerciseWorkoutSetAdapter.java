@@ -154,6 +154,21 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
             }
         });
 
+        // Badge discret "Ecart Prevu/Realise" (retour Romain 06/09/2026), meme mecanique
+        // que WorkoutSetAdapter - visible ici aussi car cet ecran (Sessions > exercice
+        // d'un jour) peut afficher des series importees.
+        holder.discrepancyBadge.setVisibility(
+            Workout_Sets.get(position).hasDiscrepancy() ? View.VISIBLE : View.GONE
+        );
+        holder.discrepancyBadge.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                showDiscrepancyDialog(holder.getAdapterPosition());
+            }
+        });
+
         // In selection mode, tapping/long-pressing a row toggles it instead of the
         // normal single-set edit/delete flow below.
         holder.cardView.setOnClickListener(new View.OnClickListener()
@@ -261,6 +276,50 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         alertDialog.show();
     }
 
+    // Detail "Prevu / Realise" (retour Romain 06/09/2026) - copie de
+    // WorkoutSetAdapter.showDiscrepancyDialog(), lecture seule.
+    public void showDiscrepancyDialog(int position)
+    {
+        if(position < 0 || position >= Workout_Sets.size())
+        {
+            return;
+        }
+
+        WorkoutSet workoutSet = Workout_Sets.get(position);
+        if(!workoutSet.hasDiscrepancy())
+        {
+            return;
+        }
+
+        LayoutInflater inflater = LayoutInflater.from(ct);
+        View view = inflater.inflate(R.layout.set_discrepancy_dialog, null);
+        AlertDialog alertDialog = new AlertDialog.Builder(ct).setView(view).create();
+
+        TextView exerciseName = view.findViewById(R.id.tv_discrepancy_exercise);
+        TextView planned = view.findViewById(R.id.tv_discrepancy_planned);
+        TextView actual = view.findViewById(R.id.tv_discrepancy_actual);
+        MaterialButton closeButton = view.findViewById(R.id.bt_close_discrepancy);
+
+        exerciseName.setText(workoutSet.getExerciseName());
+        planned.setText("Prevu : " + formatSetValue(workoutSet.getPlannedWeight(), workoutSet.getPlannedReps()));
+        actual.setText("Realise : " + formatSetValue(workoutSet.getWeight(), workoutSet.getReps()));
+
+        closeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alertDialog.dismiss();
+            }
+        });
+
+        alertDialog.show();
+    }
+
+    private String formatSetValue(Double weight, Double reps)
+    {
+        int repsRounded = (int) Math.round(reps);
+        return weight + " kg x " + repsRounded + " reps";
+    }
+
     // To Do: Implement Delete functionality
     private void showSetPopupMenu(AddExerciseWorkoutSetAdapter.MyViewHolder holder, View view, int position)
     {
@@ -309,6 +368,7 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         CardView cardView;
         CheckBox checkbox;
         ImageView commentIndicator;
+        ImageView discrepancyBadge;
 
         public MyViewHolder(@NonNull View itemView)
         {
@@ -319,6 +379,7 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
             cardView = itemView.findViewById(R.id.cardview_set);
             checkbox = itemView.findViewById(R.id.set_checkbox);
             commentIndicator = itemView.findViewById(R.id.set_comment_indicator);
+            discrepancyBadge = itemView.findViewById(R.id.set_discrepancy_badge);
         }
     }
 }

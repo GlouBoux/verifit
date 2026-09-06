@@ -103,6 +103,23 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <!-- Badge discret "Ecart Prevu/Realise" (retour Romain 06/09/2026) : visible
+                 uniquement quand le realise (reps/weight) d'une serie importee differe de
+                 sa valeur prevue a l'import. Un tap dessus ouvre le detail Prevu/Realise. -->
+            <ImageView
+                android:id="@+id/set_discrepancy_badge"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginRight="8dp"
+                android:visibility="gone"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_error_outline_24px"
+                app:tint="@color/red"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/set_comment_indicator"
+                app:layout_constraintTop_toTopOf="parent" />
+
             <View
                 android:id="@+id/blue_line"
                 android:layout_width="match_parent"

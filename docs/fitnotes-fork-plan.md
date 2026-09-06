@@ -171,7 +171,155 @@ JCenter (voir plus bas). La réintroduire (à une version plus récente) et appr
 API sans pouvoir compiler pour vérifier semblait plus risqué qu'une grille "fait main"
 volontairement simple.
 
-**Statut au 05/09/2026 : livré, pas encore testé par Romain.**
+**Statut au 05/09/2026 : livré, validé par Romain.**
+
+## Fonctionnalité 5 — Sélection multiple et réorganisation des exercices (implémentée, validée ✅)
+
+Demande de Romain (05/09/2026) : partout où l'app affiche une sélection de séries ou une
+liste d'exercices d'un jour (hors onglet Exercises), pouvoir supprimer en masse ou
+réordonner par glisser-déposer, "comme sur FitNotes".
+
+Trois écrans distincts affichent chacun "la liste des exercices d'un jour", codés
+indépendamment (aucun n'hérite des autres) :
+
+- **AddExerciseActivity** (log d'un exercice) : sélection multiple des séries
+  (`AddExerciseWorkoutSetAdapter`) - suppression en masse via ActionMode. Pas de
+  réorganisation ici (les séries d'un exercice n'ont pas d'ordre à changer).
+- **DayActivity** (écran du jour, atteint via l'icône calendrier) : sélection multiple +
+  suppression + glisser-déposer des exercices (`DayExerciseAdapter`). Nouveau champ
+  `WorkoutDay.ExerciseOrder` pour mémoriser l'ordre par jour (avant : toujours
+  alphabétique, jamais mémorisé).
+- **Onglet Workout** (accueil, `ViewPagerExerciseAdapter` dans le carrousel `ViewPager2`
+  de `MainActivity`) : même mécanique, plus délicate techniquement car les pages du
+  carrousel (et leurs adapters d'exercices) sont recyclées au fil du swipe -
+  l'`ItemTouchHelper` est donc créé une seule fois par ViewHolder de page recyclée
+  (constructeur), jamais recréé à chaque bind, pour éviter d'empiler des
+  `OnItemTouchListener` sur la même RecyclerView.
+
+Amélioration demandée dans la foulée ("comme FitNotes") : replier automatiquement les
+séries de chaque exercice pendant une sélection multiple ou un glisser-déposer, pour
+mieux visualiser/sélectionner en masse. Deux bugs trouvés en la construisant :
+
+1. Le repli ne se déclenchait qu'en passant par le bouton "Select" (mode sélection),
+   jamais lors d'un glisser-déposer démarré directement via la poignée.
+2. Une fois corrigé, le repli disparaissait tout seul une seconde après la fin du geste
+   de drag (le premier correctif utilisait un simple booléen remis à `false` en fin de
+   geste). Attendu par Romain : rester replié jusqu'à un tap manuel pour rouvrir - remplacé
+   par un suivi persistant par nom d'exercice (`collapsedExerciseNames`, même mécanique
+   que la sélection).
+
+Sélection et repli sont tous les deux suivis par **nom d'exercice** plutôt que par
+position, dans `DayExerciseAdapter` et `ViewPagerExerciseAdapter` : la poignée de
+réorganisation reste active pendant la sélection multiple, donc un suivi par position
+deviendrait faux dès qu'un glisser-déposer change l'ordre pendant qu'une sélection est en
+cours.
+
+**Statut au 05/09/2026 : livré, validé par Romain sur les trois écrans concernés**
+(Sessions/`DiaryExerciseAdapter` explicitement laissé de côté pour l'instant, à la
+demande de Romain).
+
+## Fonctionnalité 6 — Commentaire par série : icône cliquable, écran Sessions, inversion tap/appui long (implémentée, validée ✅)
+
+Suite logique de la Fonctionnalité 3 (patch \#6), affinée par les retours d'usage réel de
+Romain (05/09/2026) :
+
+- L'icône de commentaire sur une série (onglet Workout, `WorkoutSetAdapter`) était
+  visible mais pas cliquable directement - il fallait deviner qu'un long-press sur toute
+  la carte l'ouvrait.
+- En creusant, l'écran ouvert en tapant un exercice d'une séance passée (onglet
+  Sessions → `AddExerciseActivity`, dont l'onglet porte le nom de l'exercice) s'est
+  révélé n'avoir AUCUN commentaire par série (`AddExerciseWorkoutSetAdapter` n'avait
+  jamais reçu cette feature du patch \#6), alors que Romain en a besoin là aussi. Ajouté :
+  même icône, même dialogue voir/éditer/effacer, en réutilisant `workout_set_row.xml`
+  (le bon layout, avec l'id `set_comment_indicator` déjà présent) et le même mécanisme
+  que `WorkoutSetAdapter`.
+- Après un premier essai (icône cliquable en plus du tap/long-press existants), retour
+  d'usage de Romain : c'est le commentaire qui l'intéresse au quotidien, pas les stats
+  (reps/charge/volume/1RM) - **inversion complète** dans `WorkoutSetAdapter` (partagé par
+  l'onglet Workout et `DayActivity`) : tap court → commentaire, long-press → stats.
+  `AddExerciseWorkoutSetAdapter` (écran de log actif) n'est pas concerné, son tap/
+  long-press ont un usage différent (sélectionner une série à éditer / menu
+  Éditer-Supprimer).
+
+**Statut au 05/09/2026 : livré, validé et commité par Romain** ("c'est validé et
+comité").
+
+## Fonctionnalité 7 — Écarts Prévu/Réalisé (implémentée 06/09/2026, pas encore testée sur l'app)
+
+Sujet annoncé par Romain en fin de session le 05/09/2026 comme prochain chantier.
+FitNotes/verifit ne distingue nulle part "ce qui était prévu" de "ce qui a été fait" -
+une série importée et sa version réellement effectuée sont la même unique valeur.
+Objectif : visualiser l'écart (ex : 50,0 kg × 7 prévu vs 50,0 kg × 6 réalisé) pour ne
+plus avoir à écrire à la main un commentaire du type "échec d'un 7 RM", et pouvoir un
+jour ajuster le script à partir de ces écarts.
+
+Trois points tranchés avec Romain avant de coder (via questions posées le 06/09/2026) :
+
+1. **Prévu** = la valeur écrite par `build_session_import_json` au moment de l'import,
+   figée ensuite.
+2. **Réalisé** = la valeur que Romain modifie ensuite dans l'app - les deux coexistent
+   pour une série importée, la modification n'écrase plus la valeur prévue.
+3. **Affichage** : "badge discret + détail au tap" pendant la séance (option
+   recommandée, retenue) **et** un écran dédié "Écarts" pour l'historique complet -
+   Romain a demandé les deux, pas l'un ou l'autre.
+
+Implémentation :
+
+- `WorkoutSet` (`model/WorkoutSet.java`) gagne `plannedReps`/`plannedWeight` (nullables),
+  séparés de `reps`/`weight` (le "réalisé"). Seul `DataStorage.mergeImportedSession()`
+  les renseigne, au moment de construire chaque `WorkoutSet` importé - toute autre
+  origine (saisie manuelle dans `AddExerciseActivity`, import CSV d'historique, séries
+  déjà sauvegardées avant ce changement) les laisse à `null`, Gson retombant sur cette
+  valeur par défaut pour les anciennes données sérialisées sans ces champs. Vérifié que
+  `AddExerciseActivity.updateSet()` (flux d'édition d'une série) ne modifie que
+  `reps`/`weight` sur l'objet déjà en mémoire, jamais `plannedReps`/`plannedWeight` -
+  aucun risque que la modification du réalisé efface le prévu.
+- `WorkoutSet.hasDiscrepancy()` compare prévu/réalisé (vrai seulement si un prévu existe
+  ET diffère du réalisé actuel).
+- Badge discret (icône `ic_error_outline_24px`, teinte rouge) ajouté au layout partagé
+  `workout_set_row.xml`, visible uniquement si `hasDiscrepancy()` - câblé dans
+  `WorkoutSetAdapter` (onglet Workout + `DayActivity`) et `AddExerciseWorkoutSetAdapter`
+  (onglet Sessions), les deux endroits qui peuvent afficher une série importée. Un tap
+  dessus ouvre `set_discrepancy_dialog.xml` (lecture seule : "Prévu : ... / Réalisé :
+  ...").
+- Nouvel écran `DiscrepancyHistoryActivity`, accessible depuis l'onglet Charts → menu
+  (⋮) → "Ecarts Prevu/Realise" (nouvel item ajouté à `charts_activity_menu.xml`, à côté
+  de "Personal Records" qui suit le même schéma de navigation). Parcourt tous les
+  `WorkoutDay` enregistrés, ne garde que les séries en écart, triées par date
+  décroissante (les dates étant au format `yyyy-MM-dd`, un simple tri de chaînes suffit)
+  - même dialogue de détail au tap sur une ligne.
+
+**Statut au 06/09/2026 : codé et livré sur la machine de Romain, pas encore
+buildé/testé.** Piste évoquée par Romain pour plus tard (pas demandée formellement) :
+exploiter cet historique depuis `workout_engine.py`.
+
+## Incident : bug critique de perte de données à l'Import Session (05/09/2026)
+
+Romain a signalé, après avoir recompilé/réinstallé l'app puis importé le JSON de la
+séance de vendredi, ne plus voir QUE cette séance dans "Sessions" - tout l'historique
+précédent avait disparu de l'app. Signal fort qui a immédiatement pris le pas sur le
+reste du travail en cours ce jour-là.
+
+**Cause** : `DataStorage.mergeImportedSession()` (le code de l'Import Session)
+appelait `setsToEverything()`, qui vide `workoutDays` et le reconstruit ENTIÈREMENT à
+partir de la liste interne `sets` - or `sets` n'est peuplée que par un import CSV
+complet et n'est jamais resynchronisée avec `workoutDays` après un simple démarrage de
+l'app (`loadWorkoutData()` charge directement dans `workoutDays`, sans passer par
+`sets`). Un redémarrage à froid (recompilation + réinstallation) laisse donc `sets`
+vide ; importer une séance juste après reconstruisait `workoutDays` à partir de ce
+`sets` presque vide → tout l'historique disparaissait, et ce state tronqué était
+aussitôt sauvegardé. Bug préexistant (la feature Import Session et son commentaire
+"additive, ne touche jamais l'historique" datent d'avant cette session) - une trace de
+la même fragilité de `sets` était même déjà documentée dans `CalendarPickerDialog.java`
+(patch \#7).
+
+**Correctif** : `mergeImportedSession()` ajoute maintenant directement les séries
+importées au bon `WorkoutDay` (existant ou nouveau) sans jamais reconstruire
+`workoutDays` depuis `sets`. `calculatePersonalRecords()` a été vérifiée comme
+n'itérant que sur `workoutDays`, donc non affectée par cette divergence.
+
+**Confirmé par Romain** après rebuild : "ça fonctionne et j'ai récupéré mes anciens exo
+depuis mon import, y compris la séance de vendredi." Historique intact.
 
 ## Prochain chantier majeur : intégrer le générateur de séances
 
@@ -183,9 +331,14 @@ test — éviter un couplage trop rigide entre les deux projets pour l'instant.
 
 ## Questions ouvertes pour la prochaine session
 
-1. Étapes précises pour retirer verifit\_rs (voir section dédiée) — par où commencer ?
-2. `workout_engine.py` peut\-il produire directement le JSON du format "Import Session" ?
-3. Si le kill de process par Android (pas juste la mise en arrière\-plan) s'avère gênant
+1. **Retour de test attendu sur les Écarts Prévu/Réalisé** (Fonctionnalité 7 ci-dessus) —
+   codé le 06/09/2026, pas encore buildé ni testé par Romain sur l'appareil.
+2. **Timer de repos** (retour Romain 06/09/2026, voir `docs/fitnotes-fork-todo.md`,
+   section "Nouvelles demandes") : ne sonne jamais à la fin, Reset ne fonctionne pas
+   toujours - marqué prioritaire par Romain, mais mis de côté le 06/09/2026 au profit des
+   Écarts Prévu/Réalisé. Root-cause déjà identifiée, pas encore corrigé.
+3. Étapes précises pour retirer verifit\_rs (voir section dédiée) — par où commencer ?
+4. Si le kill de process par Android (pas juste la mise en arrière\-plan) s'avère gênant
    en pratique pour la conservation du jour affiché, ajouter une vraie persistance
    (SharedPreferences) du dernier jour consulté.
 

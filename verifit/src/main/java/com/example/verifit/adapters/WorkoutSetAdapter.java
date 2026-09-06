@@ -58,6 +58,20 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
             (comment != null && !comment.trim().isEmpty()) ? View.VISIBLE : View.GONE
         );
 
+        // Badge discret "Ecart Prevu/Realise" (retour Romain 06/09/2026) : visible
+        // uniquement pour une serie importee dont le realise actuel differe de la
+        // valeur prevue figee a l'import. Un tap dessus - independant du tap/long-press
+        // de la carte - ouvre le detail Prevu/Realise.
+        holder.discrepancyBadge.setVisibility(
+            Workout_Sets.get(position).hasDiscrepancy() ? View.VISIBLE : View.GONE
+        );
+        holder.discrepancyBadge.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showDiscrepancyDialog(holder.getAdapterPosition());
+            }
+        });
+
         // Retour Romain 05/09/2026 : inversion volontaire par rapport au comportement
         // d'origine (tap = stats, long-press = commentaire) - c'est le commentaire que
         // Romain veut voir en un tap rapide, les stats (reps/charge/1RM) l'intéressent
@@ -144,6 +158,52 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
         alertDialog.show();
     }
 
+    // Detail "Prevu / Realise" d'une serie importee dont le realise a change depuis
+    // l'import (retour Romain 06/09/2026, point 3 : "badge discret + detail au tap").
+    // Lecture seule - modifier le realise se fait toujours via l'edition normale de la
+    // serie, pas depuis ce dialogue.
+    public void showDiscrepancyDialog(int position)
+    {
+        if(position < 0 || position >= Workout_Sets.size())
+        {
+            return;
+        }
+
+        WorkoutSet workoutSet = Workout_Sets.get(position);
+        if(!workoutSet.hasDiscrepancy())
+        {
+            return;
+        }
+
+        LayoutInflater inflater = LayoutInflater.from(ct);
+        View view = inflater.inflate(R.layout.set_discrepancy_dialog, null);
+        AlertDialog alertDialog = new AlertDialog.Builder(ct).setView(view).create();
+
+        TextView exerciseName = view.findViewById(R.id.tv_discrepancy_exercise);
+        TextView planned = view.findViewById(R.id.tv_discrepancy_planned);
+        TextView actual = view.findViewById(R.id.tv_discrepancy_actual);
+        MaterialButton closeButton = view.findViewById(R.id.bt_close_discrepancy);
+
+        exerciseName.setText(workoutSet.getExerciseName());
+        planned.setText("Prevu : " + formatSetValue(workoutSet.getPlannedWeight(), workoutSet.getPlannedReps()));
+        actual.setText("Realise : " + formatSetValue(workoutSet.getWeight(), workoutSet.getReps()));
+
+        closeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alertDialog.dismiss();
+            }
+        });
+
+        alertDialog.show();
+    }
+
+    private String formatSetValue(Double weight, Double reps)
+    {
+        int repsRounded = (int) Math.round(reps);
+        return weight + " kg x " + repsRounded + " reps";
+    }
+
     public void showSetDialog(int position)
     {
         // Prepare to show exercise dialog box
@@ -184,6 +244,7 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
         TextView tv_weight;
         CardView cardView;
         ImageView commentIndicator;
+        ImageView discrepancyBadge;
 
 
         public MyViewHolder(@NonNull View itemView) {
@@ -193,6 +254,7 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
             tv_weight = itemView.findViewById(R.id.tv_date);
             cardView = itemView.findViewById(R.id.cardview_set);
             commentIndicator = itemView.findViewById(R.id.set_comment_indicator);
+            discrepancyBadge = itemView.findViewById(R.id.set_discrepancy_badge);
 
         }
     }

@@ -54,6 +54,20 @@ commentaires fidèlement lors d'une future migration de données FitNotes.
 Romain n'a qu'à copier-coller ce message dans `git commit -m "..."` (ou dans la zone de
 message de VSCode) une fois le test validé sur le téléphone.
 
+## Leçon : attention au dépôt/projet actif en cas de travail en parallèle (05/09/2026)
+
+Romain a une fois committé du vrai travail sur le dépôt **Coaching** (script Python
+`workout_engine.py`, export JSON) en utilisant par erreur un message de commit rédigé
+pour un changement **Android** sans rapport - les deux projets étant ouverts en
+parallèle dans VSCode ce jour-là. Repéré à temps (pas encore pushé), corrigé par
+`git commit --amend` avec le bon message. Pas de perte de code, juste un message
+incorrect.
+
+Point de vigilance pour la suite : quand plusieurs dépôts/projets sont ouverts en
+parallèle (Android `verifit` et Coaching notamment), bien vérifier sur quel dépôt on se
+trouve avant de coller un message de commit fourni par Claude - surtout si le message a
+été préparé plus tôt dans la conversation, pour un sujet différent de celui en cours.
+
 ## Partager un build log
 
 Si un build échoue et que tu veux me le faire lire sans copier-coller, double-clique

@@ -9,4 +9,12 @@
         app:iconTint="@color/cardview_light_background">
     </item>
 
+    <!-- Ecran dedie "Ecarts Prevu/Realise" (retour Romain 06/09/2026). Pas de
+         actionViewClass ici, contrairement a l'item ci-dessus - un simple tap doit
+         naviguer vers l'ecran, pas ouvrir une recherche. -->
+    <item
+        android:id="@+id/discrepancies"
+        android:title="Ecarts Prevu/Realise"
+        app:showAsAction="never" />
+
 </menu>

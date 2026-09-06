@@ -56,6 +56,10 @@
             android:label="Personal Records"
             android:parentActivityName=".ui.ChartsActivity" />
         <activity
+            android:name=".ui.DiscrepancyHistoryActivity"
+            android:label="Ecarts Prevu/Realise"
+            android:parentActivityName=".ui.ChartsActivity" />
+        <activity
             android:name=".ui.AddExerciseActivity"
             android:label="Add Exercise" />
         <activity

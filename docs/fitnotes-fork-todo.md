@@ -1,22 +1,101 @@
 # TODO — FitNotes\_Fork
 
-## En cours
+## Codé, en attente de test réel (06/09/2026)
 
-- [ ] **Icône de commentaire cliquable pour la voir** (retour Romain 05/09/2026) : sur
-  l'onglet Workout, l'icône de commentaire sur une série (ajoutée au patch \#6) était
-  visible mais pas cliquable - il fallait deviner qu'un long-press sur toute la carte
-  l'ouvrait. Un tap direct sur l'icône (`WorkoutSetAdapter`) ouvre maintenant le même
-  dialogue voir/éditer.
-  **Manque plus large trouvé en même temps** : sur l'onglet Sessions, ouvrir un exercice
-  d'une séance passée mène à `AddExerciseActivity` (l'onglet porte le nom de l'exercice),
-  dont la liste de séries (`AddExerciseWorkoutSetAdapter`) n'avait ICI aucune icône de
-  commentaire du tout, ni aucun moyen de voir/éditer un commentaire par série - alors que
-  Romain en a besoin sur cet écran-là aussi (comme sur FitNotes). Ajouté : même icône,
-  même dialogue voir/éditer/effacer, réutilisant `workout_set_row.xml` (déjà le bon
-  layout, l'id `set_comment_indicator` existait déjà dedans) et le même mécanisme que
-  `WorkoutSetAdapter`. Pas encore buildé/testé par Romain.
+- [ ] **Écarts Prévu/Réalisé** (sujet confirmé par Romain le 05/09/2026, décisions
+  d'affichage tranchées le 06/09/2026 via questions posées à Romain) : **codé, livré sur
+  l'appareil, pas encore buildé/testé**.
+  Décisions retenues (les 3 points posés le 05/09 + le point 3 tranché le 06/09) :
+  1. **Prévu** = la valeur écrite par `build_session_import_json` au moment de l'import,
+     figée ensuite.
+  2. **Réalisé** = la valeur que Romain modifie ensuite dans l'app - les deux coexistent
+     désormais pour une série importée au lieu que la modif écrase le prévu.
+  3. **Affichage** : "Badge discret + détail au tap" pendant la séance (recommandé,
+     retenu) + **écran dédié "Écarts"** pour l'historique (les deux demandés par
+     Romain, pas juste l'un ou l'autre).
+  Implémentation :
+  - `WorkoutSet` (`model/WorkoutSet.java`) gagne deux champs nullables
+    `plannedReps`/`plannedWeight`, distincts de `reps`/`weight` (le "réalisé", toujours
+    modifiable normalement). Renseignés UNIQUEMENT dans
+    `DataStorage.mergeImportedSession()` au moment de la construction du `WorkoutSet` -
+    restent `null` pour une saisie manuelle, un import CSV d'historique, ou une série
+    déjà sauvegardée avant ce changement (Gson retombe sur `null` pour les champs
+    absents des anciennes données). Vérifié que le flux d'édition d'une série
+    (`AddExerciseActivity.updateSet()`) ne touche que `reps`/`weight` sur l'objet déjà
+    en mémoire - `plannedReps`/`plannedWeight` ne sont donc jamais écrasés par une
+    modification ultérieure.
+  - `WorkoutSet.hasDiscrepancy()` : vrai si la série a un prévu ET que le réalisé actuel
+    en diffère.
+  - Badge discret (icône rouge, `ic_error_outline_24px`) ajouté à `workout_set_row.xml`
+    (layout partagé), affiché uniquement si `hasDiscrepancy()` - dans `WorkoutSetAdapter`
+    (onglet Workout + `DayActivity`) ET `AddExerciseWorkoutSetAdapter` (onglet Sessions).
+    Un tap dessus ouvre un dialogue "Prévu / Réalisé" (lecture seule,
+    `set_discrepancy_dialog.xml`).
+  - Nouvel écran dédié `DiscrepancyHistoryActivity`, accessible depuis l'onglet Charts →
+    menu (⋮) → "Ecarts Prevu/Realise" : liste chaque série en écart, toutes séances
+    confondues, la plus récente en premier, avec le même dialogue de détail au tap.
+  **Reste à faire une fois testé par Romain** : rien de prévu côté code sauf retour
+  négatif ; potentiellement exploiter cet historique plus tard depuis
+  `workout_engine.py` (mentionné par Romain comme piste, pas demandé formellement).
 
-- [ ] **Suppression de plusieurs séries en une fois** (retour Romain 05/09/2026) : dans
+## Nouvelles demandes (06/09/2026)
+
+- [ ] **PRIORITAIRE - Timer de repos : ne sonne jamais, et Reset ne fonctionne pas
+  toujours** (retour Romain 06/09/2026) : "d'une façon générale quand je set un timer,
+  je veux que même téléphone verrouillé, il sonne pour me dire que je peux reprendre ma
+  série. Et je dois pouvoir lui faire confiance sur le fait de sonner."
+  **Root-cause déjà identifiée en lisant `AddExerciseActivity.java`** (pas encore
+  corrigé) :
+  1. `startTimer()` utilise un `CountDownTimer` (`android.os.CountDownTimer`) tout ce
+     qu'il y a de plus basique, attaché au cycle de vie de l'Activity/de l'app. Son
+     `onFinish()` se contente de remettre `TimerRunning = false` et le texte du bouton à
+     "Start" - **aucun son, vibration ou notification n'est déclenché nulle part**. Ce
+     n'est pas "sonne parfois mal" : ça n'a jamais été implémenté, ni dans ce fork ni
+     dans le dépôt de base. Un `CountDownTimer` classique ne tourne de toute façon de
+     façon fiable que tant que l'Activity est au premier plan - téléphone verrouillé ou
+     app en arrière-plan, Android peut throttle/tuer le Handler sous-jacent (Doze mode),
+     donc même en ajoutant juste un son dans `onFinish()`, rien ne garantit qu'il se
+     déclenche à l'heure si le téléphone est verrouillé.
+  2. `resetTimer()` est gardé par `if(TimerRunning)` - le reset ne fait donc RIEN si le
+     timer est en pause ou n'a pas encore démarré (seulement s'il tourne activement au
+     moment du clic). C'est probablement le bug concret que Romain observe : il met le
+     timer en pause, clique Reset, et rien ne se passe car `TimerRunning` est déjà à
+     `false` à ce moment-là.
+  **Pour un vrai "je peux lui faire confiance" (téléphone verrouillé inclus)**, il faudra
+  a minima : corriger la garde de `resetTimer()` (reset doit fonctionner qu'il tourne,
+  soit en pause, à tout moment) ; remplacer le `CountDownTimer` lié à l'Activity par un
+  mécanisme qui survit à l'écran verrouillé/l'app en arrière-plan (`AlarmManager` avec
+  alarme exacte, ou un `Service` en foreground avec notification) ; déclencher un son
+  (+ idéalement vibration/notification à écran verrouillé) à la fin, avec un canal de
+  notification dédié pour que le son soit fiable même en mode Ne pas déranger/silencieux
+  selon les réglages système. Pas encore commencé.
+
+- [ ] **Partager une séance ("Share workout")** (retour Romain 06/09/2026) : fonctionnalité
+  qu'il avait sur FitNotes - génère un rapport texte de la séance affichée, partageable
+  vers d'autres apps (Discord principalement dans son usage actuel) via le sélecteur de
+  partage standard Android, ou copiable en texte brut pour coller où il veut. **Pas
+  prioritaire pour l'instant** ("l'app n'est pas encore prête") mais Romain pense s'en
+  servir assez vite. Pas encore investigué côté implémentation (probablement un
+  `Intent.ACTION_SEND` texte/plain généré à partir des exercices/séries du jour affiché,
+  depuis `DayActivity` et/ou `AddExerciseActivity`).
+
+- [ ] **Générer un programme ("Routine")** (retour Romain 06/09/2026) : équivalent de la
+  fonctionnalité "Routines" de FitNotes - sélectionner un ensemble d'exercices (dans le
+  cas de Romain : organisés en cycles et en jours volume/force), cliquer "Generate
+  workout" et ça pré-remplit le jour avec la séance vierge (structure d'exercices, pas
+  encore de séries loggées). Dans notre cas, Romain imagine que ça déclencherait
+  directement son script `workout_engine.py` pour proposer une séance. Idée
+  d'amélioration évoquée (pas tranchée, "à voir comment faire") : rendre le script plus
+  souple en allant chercher automatiquement dans son tableau de PR les exercices
+  sélectionnés. **Pas prioritaire** ("même si génial") car son script fait déjà ça
+  aujourd'hui "sans intelligence additionnelle" via le flux manuel Import Session
+  existant - ceci ne serait qu'une couche d'automatisation/UX par-dessus un processus qui
+  fonctionne déjà. À rapprocher du sujet Écarts Prévu/Réalisé et de l'intégration
+  `workout_engine.py` déjà livrée (voir `docs/fitnotes-fork-plan.md`).
+
+## Fait / validé
+
+- [x] **Suppression de plusieurs séries en une fois** (retour Romain 05/09/2026) : dans
   `AddExerciseActivity` (l'écran de log d'un exercice), on ne pouvait supprimer qu'une
   série à la fois (long-press → menu popup → Supprimer), fastidieux pour nettoyer
   plusieurs séries d'un coup (ex : import de test à corriger). Ajout d'un mode sélection
@@ -27,7 +106,7 @@
   touché - c'est un ajout, pas un remplacement. **Testé sur l'app par Romain, ça
   fonctionne bien.**
 
-- [ ] **Réorganiser/supprimer plusieurs exercices depuis l'écran du jour** (retour Romain
+- [x] **Réorganiser/supprimer plusieurs exercices depuis l'écran du jour** (retour Romain
   05/09/2026, sur l'écran `DayActivity`, atteint via l'icône calendrier) : même mécanique
   de sélection multiple + suppression que pour les séries, plus une poignée de
   réorganisation par glisser-déposer ("comme FitNotes") pour changer l'ordre des
@@ -45,8 +124,6 @@
   clair). Recolorée en `core_grey_55` (même gris que les autres icônes discrètes de
   l'app). **Réorganisation confirmée fonctionnelle par Romain (05/09/2026)** après ce
   correctif.
-
-## Fait / validé
 
 - [x] **Même sélection multiple + réorganisation sur l'onglet Workout (accueil)** (retour
   Romain 05/09/2026) : Romain a d'abord essayé de réordonner depuis l'onglet
@@ -94,6 +171,32 @@
   préexistant sur cet écran contrairement à `DayActivity`), le tap sur une série repliée
   la déplie d'abord au lieu de naviguer - il faut retaper pour naviguer une fois dépliée.
   **Confirmé fonctionnel par Romain (05/09/2026)** après build : "c'est validé".
+
+- [x] **Icône de commentaire cliquable, puis inversion tap court/appui long** (retour
+  Romain 05/09/2026) : sur l'onglet Workout, l'icône de commentaire sur une série
+  (ajoutée au patch \#6) était visible mais pas cliquable - il fallait deviner qu'un
+  long-press sur toute la carte l'ouvrait.
+  **Manque plus large trouvé en même temps** : sur l'onglet Sessions, ouvrir un exercice
+  d'une séance passée mène à `AddExerciseActivity` (l'onglet porte le nom de l'exercice),
+  dont la liste de séries (`AddExerciseWorkoutSetAdapter`) n'avait ICI aucune icône de
+  commentaire du tout, ni aucun moyen de voir/éditer un commentaire par série - alors que
+  Romain en a besoin sur cet écran-là aussi (comme sur FitNotes). Ajouté : même icône,
+  même dialogue voir/éditer/effacer, réutilisant `workout_set_row.xml` (déjà le bon
+  layout, l'id `set_comment_indicator` existait déjà dedans) et le même mécanisme que
+  `WorkoutSetAdapter`.
+  **Amélioration UX ajoutée dans la foulée (retour Romain après test)** : le tap court
+  ouvrait les stats (reps/charge/volume/1RM) et le long-press le commentaire - dans
+  l'ordre inverse de ce que Romain utilise réellement (c'est le commentaire qui
+  l'intéresse au quotidien, pas les stats). Inversé dans `WorkoutSetAdapter` (partagé par
+  l'onglet Workout et l'écran `DayActivity`, même composant) : tap court → voir/éditer le
+  commentaire, long-press → stats de la série. L'icône de commentaire n'a plus son propre
+  `OnClickListener` séparé (redondant maintenant que le tap sur toute la carte fait la
+  même chose) - elle reste un simple indicateur visuel (visible seulement si la série a
+  un commentaire). `AddExerciseWorkoutSetAdapter` (écran de log actif, atteint aussi
+  depuis Sessions) n'est PAS concerné par cette inversion - son tap sert à sélectionner
+  la série à éditer et son long-press ouvre déjà un menu Éditer/Supprimer, un usage
+  différent.
+  **Confirmé fonctionnel par Romain (05/09/2026)** : "c'est validé et comité".
 
 - [x] **Bug critique de perte de données à l'Import Session — RÉSOLU ET CONFIRMÉ
   (05/09/2026)** : après avoir recompilé/réinstallé l'app puis importé le JSON de la
@@ -148,24 +251,6 @@
   **Confirmé corrigé par Romain.**
 
 ## En attente de décision / à planifier
-
-- [ ] **Écarts Prévu/Réalisé** (retour Romain 05/09/2026 — mis en pause, reprendre en
-  disant "traitons le sujet Écarts Prévu/Réalisé") : FitNotes/verifit ne distingue nulle
-  part "ce qui était prévu" de "ce qui a été fait" - une série importée et sa version
-  réellement effectuée sont la même unique valeur. Objectif : visualiser l'écart (ex :
-  50,0 kg × 7 prévu vs 50,0 kg × 6 réalisé) pour ne plus avoir à écrire à la main un
-  commentaire du type "échec d'un 7 RM", et pouvoir un jour ajuster le script à partir de
-  ces écarts. Touche le modèle de données (`WorkoutSet`), pas juste l'affichage - 3
-  points à trancher avant de coder, déjà posés à Romain :
-  1. Ce qui compte comme "prévu" : la valeur écrite par `build_session_import_json` au
-     moment de l'import, figée ensuite.
-  2. Ce qui compte comme "réalisé" : la valeur que Romain modifie ensuite dans l'app -
-     il faut que les deux coexistent pour une série importée, au lieu que la modif
-     écrase la valeur prévue.
-  3. Où voir l'écart : pendant la séance (série barrée/grisée avec la valeur prévue si
-     modifiée) et/ou dans l'historique.
-  Options de visualisation concrètes pas encore présentées à Romain (à lui montrer dès
-  la reprise du sujet).
 
 - [ ] **Retirer le backend de compte en ligne `verifit_rs`** : décision prise par Romain
   ("feature abandonnée officiellement"), à faire. Périmètre réel : au moins 14 fichiers

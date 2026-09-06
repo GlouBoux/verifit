@@ -993,6 +993,15 @@ public class DataStorage {
                 }
 
                 WorkoutSet workoutSet = new WorkoutSet(date, exerciseName, bodyPart, importedSet.getReps(), importedSet.getWeight(), importedSet.getComment());
+
+                // "Prevu" (Ecarts Prevu/Realise, retour Romain 06/09/2026) : on fige ici
+                // les valeurs telles qu'importees. reps/weight ci-dessus restent le
+                // "realise", modifiable ensuite dans l'app (AddExerciseActivity.updateSet)
+                // sans jamais toucher plannedReps/plannedWeight - les deux coexistent donc
+                // pour une serie importee.
+                workoutSet.setPlannedReps(importedSet.getReps());
+                workoutSet.setPlannedWeight(importedSet.getWeight());
+
                 // Gardée en cohérence avec "sets" au cas où un autre chemin du code s'y
                 // fierait encore, mais ce n'est plus elle qui alimente workoutDays ici.
                 sets.add(workoutSet);

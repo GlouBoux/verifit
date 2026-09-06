@@ -471,6 +471,11 @@ public class ChartsActivity extends AppCompatActivity implements BottomNavigatio
             Intent in = new Intent(this,PersonalRecordsActivity.class);
             startActivity(in);
         }
+        else if(item.getItemId() == R.id.discrepancies)
+        {
+            Intent in = new Intent(this,DiscrepancyHistoryActivity.class);
+            startActivity(in);
+        }
         return super.onOptionsItemSelected(item);
     }
 }
