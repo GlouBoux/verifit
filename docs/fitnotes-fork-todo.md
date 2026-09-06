@@ -2,68 +2,67 @@
 
 ## Codé, en attente de test réel (06/09/2026)
 
-- [ ] **Undo réel sur "Set Deleted" + réordonnement des séries par appui long**
-  (retour Romain 06/09/2026, en testant le point précédent) : deux demandes suite au
-  test du tap = édition sur l'onglet Sessions.
-  1. Le message "Set Deleted" propose un bouton "Dismiss" qui ne faisait que fermer le
-     message, sans annuler la suppression - Romain veut un vrai revert.
-  2. En recréant une série supprimée (test), elle atterrit en fin de liste et Romain ne
-     peut plus la remettre à sa place - aucun réordonnement des séries n'existait sur cet
-     écran. Proposé et retenu : l'appui long lance ce réordonnement (drag & drop), et la
-     boîte de dialogue Éditer/Supprimer qu'il ouvrait jusqu'ici n'a plus lieu d'être
-     (Éditer = le tap simple, Supprimer = le bouton "Delete" du mode édition).
+- [ ] **Timer de repos : ne sonne jamais, et Reset ne fonctionne pas toujours -
+  FONCTIONNEL, sonnerie affinée (06/09/2026)** (retour Romain 06/09/2026) : "d'une façon
+  générale quand je set un timer, je veux que même téléphone verrouillé, il sonne pour
+  me dire que je peux reprendre ma série. Et je dois pouvoir lui faire confiance sur le
+  fait de sonner." **Confirmé par Romain après correctif du crash** : "Ok c'est très
+  bien ça fonctionne."
+  **Root-cause identifiée en lisant `AddExerciseActivity.java`** :
+  1. `startTimer()` utilisait un `CountDownTimer` basique, attaché au cycle de vie de
+     l'Activity/de l'app. Son `onFinish()` se contentait de remettre
+     `TimerRunning = false` et le texte du bouton à "Start" - aucun son, vibration ou
+     notification n'était déclenché nulle part, et un `CountDownTimer` classique ne
+     tourne de toute façon de façon fiable que tant que l'Activity est au premier plan.
+  2. `resetTimer()` était gardé par `if(TimerRunning)` - le reset ne faisait donc RIEN
+     si le timer était en pause ou pas encore démarré (seulement s'il tournait
+     activement au moment du clic).
   **Codé, livré sur l'appareil, pas encore buildé/testé** :
-  - `SnackBarWithMessage` gagne `showSnackbarWithUndo()` : le bouton devient "Undo" et
-    exécute une action au clic (restaurer la série, même objet donc mêmes
-    id/commentaire/valeurs prévues) au lieu de simplement fermer le message. Recrée le
-    jour si c'était sa dernière série. `showSnackbar()` existant inchangé pour tous les
-    autres messages (Set Updated, Set Added, Comment saved...).
-  - Réordonnement par glisser-déposer démarré par appui long sur la ligne (pas de
-    poignée dédiée ici, contrairement aux exercices sur `DayActivity`/l'onglet Workout -
-    le tap étant déjà pris par l'édition). `WorkoutDay.reorderSetsForExercise()` déplace
-    les séries de cet exercice entre elles dans la liste `Sets` du jour, sans perturber
-    l'entrelacement avec les séries des autres exercices du même jour.
-  - Boîte de dialogue Éditer/Supprimer (`showSetPopupMenu`) supprimée.
-  Reste en local uniquement (pas de resynchronisation vers l'API `verifit_rs` en mode
-  compte en ligne pour l'Undo, comme pour les autres mutations ajoutées depuis).
-  **Ajustement (retour Romain 06/09/2026, en testant ce point)** : l'Undo remettait la
-  série en dernière position au lieu de sa place d'origine. `WorkoutDay.insertSetAt()`
-  (nouveau) insère à un index précis au lieu de toujours ajouter en fin de liste comme
-  `addSet()` ; `deleteSetLogic()` capture l'index de la série dans `Sets` juste avant sa
-  suppression et le transmet à `undoDeleteSet()` pour réinsertion au même endroit.
-  Codé, livré sur l'appareil, pas encore buildé/testé.
+  - Nouveau `RestTimerReceiver` (`BroadcastReceiver`) : joue un son + vibration +
+    affiche une notification à la fin du repos, indépendamment du cycle de vie de
+    l'Activity - fonctionne app ouverte, en arrière-plan, ou écran verrouillé. Canal de
+    notification dédié (`rest_timer_channel`, importance haute, son de type alarme).
+  - `AddExerciseActivity.scheduleTimerAlarm()` programme une alarme système au démarrage
+    du timer via `AlarmManager.setAlarmClock()` (plutôt que `setExactAndAllowWhileIdle`) :
+    exempte des restrictions Doze/App Standby, traitée par le système comme une vraie
+    alarme (petite icône de réveil dans la barre de statut tant qu'elle est programmée).
+    `cancelTimerAlarm()` l'annule à la pause/au reset. Le `CountDownTimer` existant ne
+    pilote plus que l'affichage du décompte dans l'Activity.
+  - `resetTimer()` remet maintenant `TimeLeftInMillis`/l'affichage à zéro
+    inconditionnellement (plus seulement si le timer tournait activement) - seul l'arrêt
+    du `CountDownTimer` (`pauseTimer()`) reste conditionné à `TimerRunning`, pour éviter
+    un NPE sur un minuteur jamais créé.
+  - Manifest : permission `VIBRATE`, `RestTimerReceiver` enregistré (`exported=false`).
+  **Crash signalé par Romain au premier test (correctif 06/09/2026)** : cliquer sur
+  "Start" faisait planter toute l'app (écran blanc, retour sur l'écran Workout du jour
+  courant). Cause : `setAlarmClock()` **n'est pas** exempté de la permission
+  `SCHEDULE_EXACT_ALARM` contrairement à ce qui était supposé au premier jet (vérifié sur
+  `developer.android.com`) - non déclarée dans le Manifest, l'appel levait une
+  `SecurityException` non rattrapée qui faisait planter tout le process. Corrigé :
+  - Manifest : `SCHEDULE_EXACT_ALARM` déclarée (permission spéciale auto-accordée à
+    l'installation vu le `targetSdkVersion` 31 de l'app - pas d'écran de permission
+    supplémentaire pour Romain).
+  - `scheduleTimerAlarm()` vérifie `canScheduleExactAlarms()` (Android 12+) avant
+    d'appeler `setAlarmClock()`, et `try/catch(SecurityException)` par sécurité
+    supplémentaire (ex. permission révoquée à la main après coup) - au pire le minuteur
+    reste fiable seulement premier plan plutôt que de crasher toute l'app.
+    `cancelTimerAlarm()` protégée de même par cohérence.
+  **Confirmé fonctionnel par Romain** (crash résolu, sonnerie déclenchée) - reste un
+  ajustement de confort signalé dans la foulée :
+  - **"Je voudrai que la sonnerie ne perturbe pas. Sur fitnotes ça fait un Tuuut et
+    c'est tout. Et c'est bien."** Le premier jet utilisait un son/attribut audio de
+    type ALARME (`TYPE_ALARM`/`USAGE_ALARM`, pensé pour rester audible en mode
+    silencieux) - qui se traduit sur la plupart des téléphones par une sonnerie longue
+    et forte plutôt qu'un simple bip. **Corrigé** : bascule sur le son/attribut de
+    notification standard (`TYPE_NOTIFICATION`/`USAGE_NOTIFICATION_EVENT`, plus proche
+    du "Tuuut" de FitNotes), vibration ramenée à un seul buzz court (200ms), priorité/
+    catégorie de la notification adoucies. Compromis assumé : ne passe plus forcément
+    en mode silencieux/Ne pas déranger. Nouvel id de canal (`rest_timer_channel_v2`,
+    un canal de notification étant immuable une fois créé sur Android 8+) pour que ce
+    changement s'applique même sur le téléphone de Romain qui avait déjà reçu le
+    premier jet. Codé, livré sur l'appareil, **pas encore rebuildé/retesté**.
 
 ## Nouvelles demandes (06/09/2026)
-
-- [ ] **PRIORITAIRE - Timer de repos : ne sonne jamais, et Reset ne fonctionne pas
-  toujours** (retour Romain 06/09/2026) : "d'une façon générale quand je set un timer,
-  je veux que même téléphone verrouillé, il sonne pour me dire que je peux reprendre ma
-  série. Et je dois pouvoir lui faire confiance sur le fait de sonner."
-  **Root-cause déjà identifiée en lisant `AddExerciseActivity.java`** (pas encore
-  corrigé) :
-  1. `startTimer()` utilise un `CountDownTimer` (`android.os.CountDownTimer`) tout ce
-     qu'il y a de plus basique, attaché au cycle de vie de l'Activity/de l'app. Son
-     `onFinish()` se contente de remettre `TimerRunning = false` et le texte du bouton à
-     "Start" - **aucun son, vibration ou notification n'est déclenché nulle part**. Ce
-     n'est pas "sonne parfois mal" : ça n'a jamais été implémenté, ni dans ce fork ni
-     dans le dépôt de base. Un `CountDownTimer` classique ne tourne de toute façon de
-     façon fiable que tant que l'Activity est au premier plan - téléphone verrouillé ou
-     app en arrière-plan, Android peut throttle/tuer le Handler sous-jacent (Doze mode),
-     donc même en ajoutant juste un son dans `onFinish()`, rien ne garantit qu'il se
-     déclenche à l'heure si le téléphone est verrouillé.
-  2. `resetTimer()` est gardé par `if(TimerRunning)` - le reset ne fait donc RIEN si le
-     timer est en pause ou n'a pas encore démarré (seulement s'il tourne activement au
-     moment du clic). C'est probablement le bug concret que Romain observe : il met le
-     timer en pause, clique Reset, et rien ne se passe car `TimerRunning` est déjà à
-     `false` à ce moment-là.
-  **Pour un vrai "je peux lui faire confiance" (téléphone verrouillé inclus)**, il faudra
-  a minima : corriger la garde de `resetTimer()` (reset doit fonctionner qu'il tourne,
-  soit en pause, à tout moment) ; remplacer le `CountDownTimer` lié à l'Activity par un
-  mécanisme qui survit à l'écran verrouillé/l'app en arrière-plan (`AlarmManager` avec
-  alarme exacte, ou un `Service` en foreground avec notification) ; déclencher un son
-  (+ idéalement vibration/notification à écran verrouillé) à la fin, avec un canal de
-  notification dédié pour que le son soit fiable même en mode Ne pas déranger/silencieux
-  selon les réglages système. Pas encore commencé.
 
 - [ ] **Partager une séance ("Share workout")** (retour Romain 06/09/2026) : fonctionnalité
   qu'il avait sur FitNotes - génère un rapport texte de la séance affichée, partageable
@@ -90,6 +89,35 @@
 
 ## Fait / validé
 
+- [x] **Onglet Sessions : Undo réel sur "Set Deleted" + réordonnement des séries par
+  appui long — VALIDÉ ET POUSSÉ (06/09/2026)** (retour Romain 06/09/2026, en testant le
+  point tap = édition ci-dessous) : deux demandes suite à ce test.
+  1. Le message "Set Deleted" proposait un bouton "Dismiss" qui ne faisait que fermer le
+     message, sans annuler la suppression - Romain voulait un vrai revert.
+  2. En recréant une série supprimée (test), elle atterrissait en fin de liste et Romain
+     ne pouvait plus la remettre à sa place - aucun réordonnement des séries n'existait
+     sur cet écran. Proposé et retenu : l'appui long lance ce réordonnement (drag & drop),
+     et la boîte de dialogue Éditer/Supprimer qu'il ouvrait jusqu'ici n'a plus lieu d'être
+     (Éditer = le tap simple, Supprimer = le bouton "Delete" du mode édition).
+  - `SnackBarWithMessage` gagne `showSnackbarWithUndo()` : le bouton devient "Undo" et
+    exécute une action au clic (restaurer la série, même objet donc mêmes
+    id/commentaire/valeurs prévues) au lieu de simplement fermer le message. Recrée le
+    jour si c'était sa dernière série. `showSnackbar()` existant inchangé pour tous les
+    autres messages (Set Updated, Set Added, Comment saved...).
+  - Réordonnement par glisser-déposer démarré par appui long sur la ligne (pas de
+    poignée dédiée ici, contrairement aux exercices sur `DayActivity`/l'onglet Workout -
+    le tap étant déjà pris par l'édition). `WorkoutDay.reorderSetsForExercise()` déplace
+    les séries de cet exercice entre elles dans la liste `Sets` du jour, sans perturber
+    l'entrelacement avec les séries des autres exercices du même jour.
+  - Boîte de dialogue Éditer/Supprimer (`showSetPopupMenu`) supprimée.
+  - **Ajustement (retour Romain 06/09/2026, en testant ce point)** : l'Undo remettait la
+    série en dernière position au lieu de sa place d'origine. `WorkoutDay.insertSetAt()`
+    insère à un index précis au lieu de toujours ajouter en fin de liste comme
+    `addSet()` ; `deleteSetLogic()` capture l'index de la série dans `Sets` juste avant
+    sa suppression et le transmet à `undoDeleteSet()` pour réinsertion au même endroit.
+  Reste en local uniquement (pas de resynchronisation vers l'API `verifit_rs` en mode
+  compte en ligne pour l'Undo, comme pour les autres mutations ajoutées depuis).
+
 - [x] **Onglet Sessions : tap sur une série = édition, bouton "Delete" fonctionnel —
   VALIDÉ ET POUSSÉ (06/09/2026)** (retour Romain 06/09/2026) : "Je valide. Commité,
   pushé." Sur l'écran d'édition d'un exercice
@@ -107,8 +135,8 @@
   - **Effet de bord corrigé au passage** : en mode édition, le bouton du bas affiche
     "Delete" mais ne faisait en réalité QUE vider les champs (jamais de vraie
     suppression) - rendu fonctionnel (option choisie par Romain).
-  En testant ce correctif, Romain a signalé deux points supplémentaires - voir
-  "Codé, en attente de test réel" ci-dessus (Undo réel + réordonnement des séries).
+  En testant ce correctif, Romain a signalé deux points supplémentaires - voir l'entrée
+  Undo + réordonnement ci-dessus.
 
 - [x] **Écarts Prévu/Réalisé — VALIDÉ ET POUSSÉ (06/09/2026)** (sujet confirmé par Romain
   le 05/09/2026, décisions d'affichage tranchées le 06/09/2026 via questions posées à
@@ -295,6 +323,14 @@
   **Confirmé corrigé par Romain.**
 
 ## En attente de décision / à planifier
+
+- [ ] **Idée : simulation "à blanc" d'une vraie séance (test end-to-end)** (retour Romain
+  06/09/2026, à propos du timer de repos - "je ne sais pas s'il faut vraiment le mettre
+  en todo") : dérouler tout le process comme une vraie séance (créer le jour, logger des
+  séries, lancer le timer de repos, éditer/réordonner/supprimer, etc.) sans la faire
+  réellement (pour ne pas perturber l'entraînement de Romain), dans le but de repérer les
+  points de friction éventuels avant qu'ils ne se manifestent en conditions réelles. Pas
+  tranché comme prioritaire, gardé ici comme piste à évaluer.
 
 - [ ] **Retirer le backend de compte en ligne `verifit_rs`** : décision prise par Romain
   ("feature abandonnée officiellement"), à faire. Périmètre réel : au moins 14 fichiers

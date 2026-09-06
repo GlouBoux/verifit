@@ -10,7 +10,9 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -40,6 +42,7 @@ import android.widget.Toast;
 import com.example.verifit.KeyboardHider;
 import com.example.verifit.LoadingDialog;
 import com.example.verifit.MonthXAxisFormatter;
+import com.example.verifit.RestTimerReceiver;
 import com.example.verifit.SnackBarWithMessage;
 import com.example.verifit.adapters.AddExerciseWorkoutSetAdapter;
 import com.example.verifit.adapters.ExerciseHistoryExerciseAdapter;
@@ -102,6 +105,14 @@ public class AddExerciseActivity extends AppCompatActivity {
     public boolean TimerRunning;
     public long TimeLeftInMillis = START_TIME_IN_MILLIS;
 
+    // Retour Romain 06/09/2026 : "meme telephone verrouille, il sonne ... je dois
+    // pouvoir lui faire confiance" - countDownTimer ci-dessus ne pilote plus QUE
+    // l'affichage. La sonnerie fiable vient d'une alarme systeme independante
+    // (scheduleTimerAlarm()/RestTimerReceiver, voir leurs commentaires), qui se
+    // declenche meme app fermee ou ecran verrouille.
+    private AlarmManager alarmManager;
+    private static final int REST_TIMER_REQUEST_CODE = 424242;
+
     // Timer Dialog Components
     public EditText et_seconds;
     public ImageButton minus_seconds;
@@ -143,6 +154,8 @@ public class AddExerciseActivity extends AppCompatActivity {
         minus_weight = findViewById(R.id.minus_weight);
         bt_clear = findViewById(R.id.bt_clear);
         bt_save = findViewById(R.id.bt_login_signup);
+
+        alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
         // Self Explanatory I guess
         initActivity();
@@ -1820,6 +1833,11 @@ public class AddExerciseActivity extends AppCompatActivity {
             @Override
             public void onFinish()
             {
+                // Ce onFinish() ne pilote que l'affichage (bouton, texte) - la sonnerie
+                // fiable vient de l'alarme systeme programmee ci-dessous par
+                // scheduleTimerAlarm(), qui se declenche independamment (voir son
+                // commentaire), meme si ce CountDownTimer a ete throttle/tue entre
+                // temps.
                 TimerRunning = false;
                 bt_start.setText("Start");
             }
@@ -1828,6 +1846,90 @@ public class AddExerciseActivity extends AppCompatActivity {
         TimerRunning = true;
         bt_start.setText("Pause");
 
+        scheduleTimerAlarm();
+    }
+
+    // Retour Romain 06/09/2026 : "meme telephone verrouille, il sonne ... je dois
+    // pouvoir lui faire confiance sur le fait de sonner". Programme une alarme systeme
+    // independante du CountDownTimer/du cycle de vie de l'Activity, recue par
+    // RestTimerReceiver (son + vibration + notification) a l'instant ou le repos se
+    // termine. setAlarmClock() plutot que setExactAndAllowWhileIdle() : exempte des
+    // restrictions Doze/App Standby ET de la permission SCHEDULE_EXACT_ALARM
+    // (Android 12+) sans demarche supplementaire, car traite par le systeme comme une
+    // vraie alarme (petite icone de reveil dans la barre de statut tant qu'elle est
+    // programmee - comportement voulu, gage de fiabilite visible).
+    private void scheduleTimerAlarm()
+    {
+        if (alarmManager == null)
+        {
+            return;
+        }
+
+        // Correctif 06/09/2026 (crash signale par Romain au demarrage du timer) :
+        // setAlarmClock() leve une SecurityException si la permission SCHEDULE_EXACT_ALARM
+        // n'est pas accordee (declaree dans le Manifest depuis ce correctif, normalement
+        // auto-accordee vu targetSdkVersion 31 - voir le commentaire du Manifest) - non
+        // rattrapee, cette exception faisait planter TOUTE l'app. canScheduleExactAlarms()
+        // n'existe qu'a partir d'Android 12 (S) ; en dessous, aucune permission requise.
+        // Le try/catch est une securite supplementaire (ex. permission revoquee a la main
+        // par l'utilisateur apres coup, comportement specifique a certains fabricants...) :
+        // au pire, le minuteur reste fiable uniquement pendant que l'app est au premier
+        // plan (CountDownTimer, comportement d'avant ce chantier), plutot que de crasher.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms())
+        {
+            return;
+        }
+
+        try
+        {
+            long triggerAtMillis = System.currentTimeMillis() + TimeLeftInMillis;
+
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            {
+                flags |= PendingIntent.FLAG_IMMUTABLE;
+            }
+            PendingIntent showIntent = PendingIntent.getActivity(
+                    this, REST_TIMER_REQUEST_CODE, new Intent(this, MainActivity.class), flags);
+
+            alarmManager.setAlarmClock(
+                    new AlarmManager.AlarmClockInfo(triggerAtMillis, showIntent),
+                    getTimerAlarmPendingIntent());
+        }
+        catch (SecurityException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    // Annule l'alarme programmee par scheduleTimerAlarm() (pause ou reset) - sans effet
+    // si aucune n'est en attente (timer jamais demarre, ou deja sonnee).
+    private void cancelTimerAlarm()
+    {
+        if (alarmManager == null)
+        {
+            return;
+        }
+
+        try
+        {
+            alarmManager.cancel(getTimerAlarmPendingIntent());
+        }
+        catch (SecurityException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    private PendingIntent getTimerAlarmPendingIntent()
+    {
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        return PendingIntent.getBroadcast(
+                this, REST_TIMER_REQUEST_CODE, new Intent(this, RestTimerReceiver.class), flags);
     }
 
     public void loadSeconds()
@@ -1864,19 +1966,32 @@ public class AddExerciseActivity extends AppCompatActivity {
     public void pauseTimer()
     {
         countDownTimer.cancel();
+        cancelTimerAlarm();
         TimerRunning = false;
         bt_start.setText("Start");
     }
 
+    // Retour Romain 06/09/2026 : "je dois pouvoir lui faire confiance" - Reset ne
+    // faisait rien tant que le timer n'etait pas activement en train de tourner
+    // (`if(TimerRunning)` uniquement) : en pause ou jamais demarre, cliquer Reset
+    // n'avait aucun effet visible. TimeLeftInMillis/le texte affiche sont maintenant
+    // toujours remis a zero ; seul l'arret du CountDownTimer (pauseTimer(), qui
+    // appellerait countDownTimer.cancel() sur un objet potentiellement jamais cree)
+    // reste conditionne a TimerRunning - l'alarme programmee est annulee dans tous les
+    // cas (cancelTimerAlarm() est un no-op sans effet si aucune n'est en attente).
     public void resetTimer()
     {
         if(TimerRunning)
         {
             pauseTimer();
-            TimeLeftInMillis = START_TIME_IN_MILLIS;
-            updateCountDownText();
+        }
+        else
+        {
+            cancelTimerAlarm();
         }
 
+        TimeLeftInMillis = START_TIME_IN_MILLIS;
+        updateCountDownText();
     }
 
     public void updateCountDownText()

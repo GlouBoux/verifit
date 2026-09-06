@@ -6,6 +6,20 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Retour Romain 06/09/2026 : minuteur de repos fiable meme telephone verrouille.
+         Correctif 06/09/2026 (crash au demarrage du timer) : contrairement a ce qui
+         etait suppose au premier jet, setAlarmClock() N'EST PAS exempte de
+         SCHEDULE_EXACT_ALARM - sans cette permission declaree, l'appel levait une
+         SecurityException non rattrapee qui faisait planter toute l'app. Permission
+         "speciale" (Alarmes et rappels) auto-accordee a l'installation pour une app
+         dont le targetSdkVersion est <= 31 (cas present), donc pas d'ecran de
+         permission supplementaire pour Romain. VIBRATE pour la vibration de la
+         notification de fin de repos (RestTimerReceiver). Pas besoin de
+         POST_NOTIFICATIONS : targetSdkVersion 31 accorde les notifications a
+         l'installation (seuil de cette exigence : 33). -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -31,6 +45,13 @@
             android:parentActivityName=".ui.SettingsActivity"/>
 
         <service android:name=".BackupService" />
+
+        <!-- Retour Romain 06/09/2026 : recoit l'alarme systeme programmee par
+             AddExerciseActivity.scheduleTimerAlarm() a la fin du minuteur de repos -
+             son + vibration + notification, meme app fermee ou telephone verrouille.
+             exported=false : ne peut etre declenche que par l'app elle-meme via son
+             PendingIntent, jamais par une autre app. -->
+        <receiver android:name=".RestTimerReceiver" android:exported="false" />
         <activity
             android:name=".ui.ChartsActivity"
             android:label="Charts" />

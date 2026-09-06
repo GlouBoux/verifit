@@ -324,7 +324,7 @@ une série avec les valeurs de celle qu'on vient d'effacer.
 pushé."). En testant, Romain a signalé deux points supplémentaires - voir
 Fonctionnalité 9 ci-dessous.
 
-## Fonctionnalité 9 — Undo sur suppression de série + réordonnement par appui long (implémentée 06/09/2026, pas encore testée)
+## Fonctionnalité 9 — Undo sur suppression de série + réordonnement par appui long (implémentée et validée le 06/09/2026)
 
 En validant la Fonctionnalité 8, Romain a testé le bouton "Delete" et le message "Set
 Deleted" qui l'accompagne, et signalé deux points :
@@ -373,8 +373,128 @@ Non fait délibérément, comme pour les autres mutations locales ajoutées depu
 (commentaires, Écarts Prévu/Réalisé) : pas de resynchronisation de l'Undo vers l'API en
 ligne `verifit_rs` en mode compte - de toute façon vouée à disparaître.
 
-**Statut au 06/09/2026 : codé et livré sur la machine de Romain, pas encore
-buildé/testé.**
+**Ajustement (retour Romain 06/09/2026, en testant ce point)** : l'Undo restituait bien
+le même objet (id/commentaire/valeurs prévues intacts) mais le réinsérait toujours en
+fin de `Sets` via `addSet()`, au lieu de sa position d'origine parmi les séries de son
+exercice. `WorkoutDay.insertSetAt(index, set)` (nouveau) insère à un index précis, bornée
+aux limites actuelles de la liste (undo tardif après d'autres changements). Le point
+d'insertion est capturé par `deleteSetLogic()` (indexOf de la série dans `Sets`, juste
+avant l'appel à `removeSet()`) et transmis à `undoDeleteSet()`.
+
+**Statut au 06/09/2026 : livré, validé et poussé par Romain** ("validé et pushé.").
+
+## Fonctionnalité 10 — Timer de repos fiable (implémentée et fonctionnelle le 06/09/2026, sonnerie affinée)
+
+Signalé "PRIORITAIRE" par Romain le 06/09/2026 mais mis de côté à plusieurs reprises au
+profit d'autres demandes ce jour-là : "d'une façon générale quand je set un timer, je
+veux que même téléphone verrouillé, il sonne pour me dire que je peux reprendre ma
+série. Et je dois pouvoir lui faire confiance sur le fait de sonner." Deux problèmes
+distincts identifiés en lisant `AddExerciseActivity.java` :
+
+1. Le `CountDownTimer` (`android.os.CountDownTimer`) utilisé pour le minuteur ne
+   déclenchait aucun son/vibration/notification dans son `onFinish()` - jamais
+   implémenté, ni dans ce fork ni dans le dépôt de base. De plus, un `CountDownTimer`
+   classique est un simple `Handler` attaché au cycle de vie de l'Activity : Android
+   peut le throttle ou le tuer (Doze, arrière-plan, kill de process), donc même en lui
+   ajoutant un son, rien ne garantirait qu'il se déclenche à l'heure écran verrouillé.
+2. `resetTimer()` était entièrement gardé par `if(TimerRunning)` : le reset ne faisait
+   RIEN si le timer était en pause ou pas encore démarré.
+
+Implémentation :
+
+- Nouveau `RestTimerReceiver` (`BroadcastReceiver`, package `com.example.verifit`) :
+  joue un son + vibration + affiche une notification (canal dédié
+  `rest_timer_channel`, importance haute, son de type `TYPE_ALARM` avec les
+  `AudioAttributes` correspondants) à la fin du repos. Totalement indépendant du cycle
+  de vie de l'Activity - se déclenche que l'app soit ouverte, en arrière-plan, ou
+  l'écran verrouillé.
+- `AddExerciseActivity.scheduleTimerAlarm()` programme, au démarrage du timer, une
+  alarme système via `AlarmManager.setAlarmClock()` plutôt que
+  `setExactAndAllowWhileIdle()` : `setAlarmClock()` est traité par le système comme une
+  vraie alarme (type "réveil"), ce qui l'exempte des restrictions Doze/App Standby -
+  au prix d'une petite icône de réveil dans la barre de statut tant qu'elle est
+  programmée (comportement voulu : gage de fiabilité visible). `cancelTimerAlarm()`
+  annule cette alarme à la pause ou au reset (no-op sans effet si aucune n'est en
+  attente). `PendingIntent` construits avec `FLAG_IMMUTABLE` à partir d'Android 6
+  (requis à partir d'Android 12). Le `CountDownTimer` existant est conservé tel quel,
+  mais ne pilote plus QUE l'affichage du décompte dans l'Activity - la fiabilité de la
+  sonnerie vient entièrement de l'alarme système, désormais découplée du cycle de vie
+  de l'Activity.
+- `resetTimer()` remet maintenant `TimeLeftInMillis`/le texte affiché à zéro de façon
+  inconditionnelle. Seul l'arrêt effectif du `CountDownTimer` (via `pauseTimer()`, qui
+  appelle `countDownTimer.cancel()`) reste conditionné à `TimerRunning`, pour éviter un
+  NPE si le timer n'a jamais été démarré (`countDownTimer` alors `null`).
+- `AndroidManifest.xml` : permission `VIBRATE` ajoutée, `RestTimerReceiver` enregistré
+  (`exported=false` - ne peut être déclenché que par l'app elle-même via son
+  `PendingIntent`). Pas de permission `POST_NOTIFICATIONS` nécessaire : le
+  `targetSdkVersion` du module (31) est sous le seuil (33) à partir duquel Android exige
+  cette permission runtime pour les notifications.
+
+Limite assumée : si le process de l'Activity est tué pendant que le timer tourne
+(champs `countDownTimer`/`TimerRunning`/`TimeLeftInMillis` non persistés), rouvrir
+`AddExerciseActivity` recrée une instance avec des valeurs par défaut, sans lien avec
+l'alarme système déjà programmée - mais cette dernière reste indépendante du cycle de
+vie de l'Activity et sonnera de toute façon à l'heure prévue, ce qui couvre le besoin
+exprimé par Romain (fiabilité de la sonnerie, pas forcément cohérence de l'affichage
+dans ce cas limite).
+
+**Crash signalé par Romain au premier test, corrigé le 06/09/2026** : cliquer sur
+"Start" faisait planter toute l'app (écran blanc, retour sur l'écran Workout du jour
+courant plutôt que celui d'où il était parti - signe d'un kill de process complet, pas
+juste d'une Activity). Cause identifiée via recherche documentaire (`developer.android.com`,
+page "Schedule exact alarms are denied by default") : contrairement à ce qui était
+supposé lors de la première implémentation, `setAlarmClock()` **n'est pas** exempté de
+la permission `SCHEDULE_EXACT_ALARM` - seule la variante `OnAlarmListener` de ces API
+en est dispensée. La permission n'étant pas déclarée dans le Manifest, l'appel levait
+une `SecurityException` non rattrapée qui faisait planter tout le process au premier
+appel de `scheduleTimerAlarm()`.
+
+Corrigé :
+
+- `AndroidManifest.xml` déclare `android.permission.SCHEDULE_EXACT_ALARM` - permission
+  "spéciale" (catégorie Alarmes et rappels), auto-accordée à l'installation sans écran
+  de permission pour les apps dont le `targetSdkVersion` est ≤ 31 (cas de ce module,
+  confirmé documentairement pour Android 14 : le refus par défaut ne s'applique qu'aux
+  apps ciblant l'API 33+).
+- `scheduleTimerAlarm()` vérifie `alarmManager.canScheduleExactAlarms()` (Android 12+
+  uniquement, la méthode n'existe pas en dessous) avant d'appeler `setAlarmClock()`, et
+  englobe l'appel dans un `try/catch(SecurityException)` par sécurité supplémentaire
+  (permission révoquée à la main par l'utilisateur après coup, comportement propre à
+  certains fabricants...) : dans le pire cas, le minuteur reste fiable uniquement
+  premier plan (comportement d'avant ce chantier), plutôt que de faire planter toute
+  l'app. `cancelTimerAlarm()` protégée de la même façon par cohérence.
+
+**Confirmé fonctionnel par Romain après ce correctif** : "Ok c'est très bien ça
+fonctionne." Signalé dans la foulée, un ajustement de confort plutôt qu'un bug :
+
+**"Je voudrai que la sonnerie ne perturbe pas. Sur fitnotes ça fait un Tuuut et c'est
+tout. Et c'est bien."** Le premier jet utilisait volontairement un son et un attribut
+audio de type ALARME (`RingtoneManager.TYPE_ALARM`/`AudioAttributes.USAGE_ALARM`),
+pensés pour rester audibles même en mode silencieux/Ne pas déranger - mais qui se
+traduisent sur la plupart des téléphones par une sonnerie d'alarme longue et forte,
+loin du bref "Tuuut" de FitNotes.
+
+Corrigé :
+
+- `RestTimerReceiver` bascule sur le son et l'attribut audio de notification standard
+  (`TYPE_NOTIFICATION`/`USAGE_NOTIFICATION_EVENT`) plutôt que ceux d'alarme - compromis
+  assumé : la notification ne passera plus forcément en mode silencieux/Ne pas
+  déranger, en échange d'un signal beaucoup plus discret, conforme à ce que Romain a
+  validé sur FitNotes.
+- Vibration ramenée à un seul buzz court (200 ms) au lieu du double-buzz plus long
+  (500/250/500 ms) du premier jet.
+- Priorité et catégorie de la notification adoucies (`PRIORITY_DEFAULT`/
+  `CATEGORY_REMINDER` au lieu de `PRIORITY_HIGH`/`CATEGORY_ALARM`).
+- Nouvel identifiant de canal de notification (`rest_timer_channel_v2`) : un canal est
+  immuable une fois créé sur Android 8+ (son/vibration ne peuvent plus être changés
+  après coup) - sans ce changement d'id, le téléphone de Romain aurait gardé
+  indéfiniment le son/la vibration d'alarme du premier jet malgré la mise à jour du
+  code.
+
+**Statut au 06/09/2026 : fonctionnalité principale confirmée par Romain, ajustement de
+la sonnerie codé et livré sur sa machine, pas encore rebuildé/retesté** (pas de SDK
+Android côté Claude pour compiler - vérifié uniquement par lecture de code et
+équilibrage accolades/parenthèses).
 
 ## Incident : bug critique de perte de données à l'Import Session (05/09/2026)
 
@@ -414,14 +534,14 @@ test — éviter un couplage trop rigide entre les deux projets pour l'instant.
 
 ## Questions ouvertes pour la prochaine session
 
-1. **Retour de test attendu sur l'Undo + réordonnement des séries (Fonctionnalité 9
-   ci-dessus)** — codé le 06/09/2026, pas encore buildé ni testé par Romain sur
-   l'appareil.
-2. **Timer de repos** (retour Romain 06/09/2026, voir `docs/fitnotes-fork-todo.md`,
-   section "Nouvelles demandes") : ne sonne jamais à la fin, Reset ne fonctionne pas
-   toujours - marqué prioritaire par Romain, mais mis de côté le 06/09/2026 au profit des
-   Écarts Prévu/Réalisé puis du correctif Sessions ci-dessus. Root-cause déjà identifiée,
-   pas encore corrigé.
+1. **Retour de test attendu sur la sonnerie affinée du timer de repos (Fonctionnalité
+   10 ci-dessus)** — fonctionnalité principale confirmée par Romain ; l'ajustement du
+   son (bref "Tuuut" au lieu d'une alarme longue) est codé le 06/09/2026 mais pas
+   encore buildé ni testé sur l'appareil.
+2. **Idée évoquée par Romain (06/09/2026, pas tranchée)** : une simulation "à blanc"
+   d'une vraie séance (test end-to-end manuel, sans faire réellement la séance) pour
+   repérer les points de friction avant qu'ils ne se manifestent en conditions réelles -
+   voir `docs/fitnotes-fork-todo.md`, section "En attente de décision / à planifier".
 3. Étapes précises pour retirer verifit\_rs (voir section dédiée) — par où commencer ?
 4. Si le kill de process par Android (pas juste la mise en arrière\-plan) s'avère gênant
    en pratique pour la conservation du jour affiché, ajouter une vraie persistance
