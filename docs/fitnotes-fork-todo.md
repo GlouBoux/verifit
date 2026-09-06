@@ -149,35 +149,23 @@
   **VALIDÉ, COMMITÉ ET POUSSÉ PAR ROMAIN** : "ok. validé, comité, pushé." Fonctionnalité
   10 (timer de repos) entièrement close.
 
-- [ ] **Barre de minuteur persistante sur l'écran de saisie - CODÉ, PAS ENCORE TESTÉ
-  (06/09/2026)** (retour Romain 06/09/2026, après validation de "Share workout") : "il
-  faudrait que le timer de workout soit visible sur l'interface du workout en cours avec
-  la possibilité de le déclencher, l'arrêter, le reset. ça m'a traumatisé sur fitnotes
-  avec le timer qui continuait parce que je n'avais pas coché une série comme étant
-  marqué et ou arrêté le workout." Cause du traumatisme identifiée par lecture de code :
-  avant ce chantier, Start/Pause/Reset (Fonctionnalité 10) n'existaient QUE dans la boîte
-  de dialogue "Timer" ouverte depuis le menu - une fois cette boîte fermée, le minuteur
-  continuait de tourner en arrière-plan sans plus aucun retour visuel à l'écran.
-  **Codé, livré sur l'appareil, pas encore rebuildé/testé** :
-  - Nouvelle barre toujours affichée en haut de `AddExerciseActivity` (icône alarme,
-    décompte `MM:SS`, bouton Start/Pause, bouton Reset) - le réglage fin (durée exacte,
-    volume, durée du bip) reste dans la boîte de dialogue "Timer" du menu, inchangée.
-  - `AddExerciseActivity` : les vues de la boîte de dialogue (`et_seconds`, `bt_start`)
-    restent `null` tant que cette boîte n'a jamais été ouverte de la session - toutes les
-    méthodes partagées du minuteur (`startTimer()`, `pauseTimer()`,
-    `updateCountDownText()`) sont désormais protégées par une vérification de nullité
-    avant de les utiliser, pour permettre à la nouvelle barre de piloter le minuteur sans
-    jamais ouvrir cette boîte.
-  - Nouvelle `loadTimerDurationFromPrefs()` (extraite de `loadSeconds()`) charge la durée
-    configurée (`SharedPreferences`) dès `onCreate()`, pour que la barre utilise la vraie
-    durée réglée même si la boîte de dialogue n'a jamais été ouverte cette session.
-  - Nouvelle `updateTimerButtonsLabel()` garde le bouton de la boîte de dialogue et celui
-    de la nouvelle barre synchronisés dans les deux sens (démarré depuis la barre -> la
-    boîte de dialogue le reflète si rouverte, et inversement).
-  Vérifié côté Claude (équilibre accolades/parenthèses, XML bien formé). **Pas encore
-  testé/rebuild par Romain** - en particulier : l'affichage de la barre à l'écran (pas
-  d'environnement de build/émulateur côté Claude), et la synchronisation Start/Pause
-  entre la barre et la boîte de dialogue "Timer" du menu.
+- [x] **Barre de minuteur de REPOS persistante sur l'écran de saisie - CONSTRUITE PUIS
+  RETIRÉE, MALENTENDU (06/09/2026)** : suite au retour "il faudrait que le timer de
+  workout soit visible [...] ça m'a traumatisé sur fitnotes", une barre persistante
+  (icône alarme, `MM:SS`, Start/Pause, Reset) avait été construite pour le minuteur de
+  REPOS entre les séries (Fonctionnalité 10). **Romain a clarifié qu'il parlait en
+  réalité du chrono de la SÉANCE ENTIÈRE** (voir item "Chrono de la séance entière"
+  plus haut) : "on ne s'est pas compris [...] je voulais parler du timer interne de
+  toute la séance [...] celle qui sera envoyé dans le rapport de séance". Cette barre
+  de repos étant donc un pur artefact du malentendu, Romain a demandé son retrait :
+  "enlève l'écran avec le start refresh, c'est l'erreur d'incompréhension sur le timer
+  qui est resté. Je ne veux voir que le timer icône course à pied." **Retirée** :
+  `activity_add_exercise.xml` ne contient plus que la barre du chrono de session
+  (icône course à pied) ; `AddExerciseActivity` a perdu les champs/listeners/méthodes
+  spécifiques à cette barre de repos (`tv_inline_timer`, `bt_inline_timer_toggle`,
+  `bt_inline_timer_reset`). Le minuteur de repos lui-même (Fonctionnalité 10) est
+  intact et reste utilisable comme avant via la boîte de dialogue "Timer" du menu -
+  seule la barre persistante ajoutée par erreur a disparu.
 
 - [ ] **Chrono de la séance entière, contrôlable (Start auto / Stop-Resume manuel) -
   CODÉ, PAS ENCORE TESTÉ (06/09/2026)** (retour Romain 06/09/2026, après un

@@ -133,16 +133,6 @@ public class AddExerciseActivity extends AppCompatActivity {
     // setupTimer()/loadDuration()/RestTimerReceiver.DURATION_PREF_KEY.
     public SeekBar sb_beep_duration;
 
-    // Barre de minuteur persistante (retour Romain 06/09/2026, voir commentaire dans
-    // activity_add_exercise.xml) : Start/Pause + Reset toujours visibles sur cet ecran,
-    // sans passer par le dialogue "Timer" du menu. et_seconds/bt_start (ci-dessus)
-    // restent null tant que ce dialogue n'a jamais ete ouvert cette session - toute
-    // methode partagee (startTimer(), pauseTimer(), updateCountDownText()...) doit donc
-    // rester garde-foue (verification de nullite) avant de les utiliser.
-    private TextView tv_inline_timer;
-    private MaterialButton bt_inline_timer_toggle;
-    private ImageButton bt_inline_timer_reset;
-
     // Chrono de la SEANCE entiere (retour Romain 06/09/2026, distinct du minuteur de
     // repos ci-dessus) - voir refreshSessionTimerBar()/toggleSessionTimer() plus bas et
     // le commentaire sur WorkoutDay.SessionStartTimestamp.
@@ -186,44 +176,6 @@ public class AddExerciseActivity extends AppCompatActivity {
         bt_save = findViewById(R.id.bt_login_signup);
 
         alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-
-        // Barre de minuteur persistante (retour Romain 06/09/2026) : chargement de la
-        // duree configuree (SharedPreferences) des l'ouverture de l'ecran, sans attendre
-        // que le dialogue "Timer" du menu ait jamais ete ouvert - sinon Start/Pause/Reset
-        // depuis cette barre utiliseraient la valeur par defaut codee en dur (3 minutes).
-        loadTimerDurationFromPrefs();
-
-        tv_inline_timer = findViewById(R.id.tv_inline_timer);
-        bt_inline_timer_toggle = findViewById(R.id.bt_inline_timer_toggle);
-        bt_inline_timer_reset = findViewById(R.id.bt_inline_timer_reset);
-
-        updateCountDownText();
-        updateTimerButtonsLabel();
-
-        bt_inline_timer_toggle.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View view)
-            {
-                if(TimerRunning)
-                {
-                    pauseTimer();
-                }
-                else
-                {
-                    startTimer();
-                }
-            }
-        });
-
-        bt_inline_timer_reset.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View view)
-            {
-                resetTimer();
-            }
-        });
 
         // Chrono de la seance entiere (retour Romain 06/09/2026) - demarrage automatique
         // a la premiere serie loggee (voir startOrResumeSessionTimer()), affichage et
@@ -2107,22 +2059,13 @@ public class AddExerciseActivity extends AppCompatActivity {
         scheduleTimerAlarm();
     }
 
-    // Retour Romain 06/09/2026 (barre de minuteur persistante) : bt_start (bouton du
-    // dialogue "Timer" du menu) reste null tant que ce dialogue n'a jamais ete ouvert
-    // cette session - toujours verifier avant de l'utiliser. bt_inline_timer_toggle (barre
-    // persistante) est lie des onCreate() et ne devrait jamais etre null, mais on le
-    // verifie quand meme par coherence/robustesse si jamais cette methode est appelee
-    // trop tot.
+    // bt_start (bouton du dialogue "Timer" du menu) reste null tant que ce dialogue n'a
+    // jamais ete ouvert cette session - toujours verifier avant de l'utiliser.
     private void updateTimerButtonsLabel()
     {
-        String label = TimerRunning ? "Pause" : "Start";
         if (bt_start != null)
         {
-            bt_start.setText(label);
-        }
-        if (bt_inline_timer_toggle != null)
-        {
-            bt_inline_timer_toggle.setText(label);
+            bt_start.setText(TimerRunning ? "Pause" : "Start");
         }
     }
 
@@ -2335,19 +2278,9 @@ public class AddExerciseActivity extends AppCompatActivity {
         int seconds = (int) TimeLeftInMillis / 1000;
         int minutes = (int) seconds / 60;
 
-        // et_seconds (dialogue "Timer" du menu) reste null tant que ce dialogue n'a
-        // jamais ete ouvert cette session - cf. barre de minuteur persistante ci-dessus,
-        // retour Romain 06/09/2026.
         if (et_seconds != null)
         {
             et_seconds.setText(String.valueOf(seconds));
-        }
-
-        if (tv_inline_timer != null)
-        {
-            int displayMinutes = seconds / 60;
-            int displaySeconds = seconds % 60;
-            tv_inline_timer.setText(String.format(Locale.getDefault(), "%02d:%02d", displayMinutes, displaySeconds));
         }
     }
 
