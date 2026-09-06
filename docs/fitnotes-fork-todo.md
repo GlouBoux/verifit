@@ -122,7 +122,7 @@
   **VALIDÉ, COMMITÉ ET POUSSÉ PAR ROMAIN** : "ok. validé, comité, pushé." Fonctionnalité
   10 (timer de repos) entièrement close.
 
-- [ ] **Historique des PR par nombre de reps - v2 CODÉE, PAS ENCORE TESTÉE (06/09/2026)**
+- [x] **Historique des PR par nombre de reps - v2 VALIDÉE, COMMITÉE ET POUSSÉE PAR ROMAIN (06/09/2026)**
   (retour Romain, à propos de la définition exacte d'un PR pour l'export de séance) :
   "Un PR c'est un record (Personal Record) pour ce rep range (reps) pour ce poids
   (kgs). Ici mon record pour 43 reps = 47.5 (avant c'était moins du coup). Fitnotes
@@ -233,21 +233,33 @@
   ...
   ```
   Deux points à éclaircir avant de pouvoir générer le rapport, résolus avec Romain :
-  1. **Ligne "Time" (heure de début/fin + durée)** : Verifit ne stocke aujourd'hui
-     aucune heure par série (juste la date du jour). **Décision de Romain : ajouter
-     l'horodatage.** On enregistrera l'heure de création de chaque série (nouveau champ
-     sur `WorkoutSet`, valeur `null` pour toutes les séries déjà enregistrées - même
-     pattern que `plannedReps`/`plannedWeight`). Sert aussi à débloquer, plus tard, le
-     calcul du repos réel entre 2 séries consécutives (voir plus haut). **Pas encore
-     codé.**
+  1. **Ligne "Time" (heure de début/fin + durée) - HORODATAGE CODÉ, PAS ENCORE TESTÉ
+     (06/09/2026)** : Verifit ne stockait jusqu'ici aucune heure par série (juste la
+     date du jour). **Décision de Romain : ajouter l'horodatage.** Nouveau champ
+     `WorkoutSet.timestamp` (epoch millis, `Long` nullable - même pattern que
+     `plannedReps`/`plannedWeight`, `null` pour toutes les séries déjà enregistrées).
+     Renseigné uniquement lors de la validation manuelle d'une **nouvelle** série
+     (`AddExerciseActivity.clickSave()`, branche "Save Functionality" -
+     `System.currentTimeMillis()`) - jamais touché lors d'une modification d'une série
+     existante (branche "Update Functionality", qui ne touche que reps/weight, donc
+     l'horodatage reste celui de la création initiale), jamais renseigné par les
+     imports (CSV historique via `csvToSets()`, ou séance générée via
+     `mergeImportedSession()`/`ImportedSet` - aucune heure réelle disponible dans ces
+     deux cas). Sert aussi à débloquer, plus tard, le calcul du repos réel entre 2
+     séries consécutives (voir plus haut). Vérifié côté Claude (équilibre
+     accolades/parenthèses) - **pas encore testé/rebuild par Romain.** Reste à écrire
+     le générateur de rapport qui utilisera ce champ pour la ligne "Time" (premier
+     timestamp du jour → dernier, avec calcul de durée ; séries sans timestamp -
+     anciennes ou importées - à exclure de ce calcul plutôt que de planter ou fausser
+     l'heure de début).
   2. **Tag `[PR]` par série** : voir l'item "Historique des PR par nombre de reps"
      ci-dessus, maintenant codé (`DataStorage.getRepRangePRSets()`) - reste à
      l'utiliser dans le générateur de rapport.
-  Reste à faire : ajouter l'horodatage sur `WorkoutSet` (point 1 ci-dessus), écrire le
-  générateur de rapport texte (regrouper les séries du jour par exercice dans l'ordre
-  d'apparition, combiner `[PR]` et commentaire de série quand les deux sont présents -
-  `[PR]` en premier d'après l'exemple), et ajouter le déclencheur (probablement un
-  `Intent.ACTION_SEND` texte/plain + une option copier-coller, depuis `DayActivity`).
+  Reste à faire : écrire le générateur de rapport texte (regrouper les séries du jour
+  par exercice dans l'ordre d'apparition, combiner `[PR]` et commentaire de série
+  quand les deux sont présents - `[PR]` en premier d'après l'exemple), et ajouter le
+  déclencheur (probablement un `Intent.ACTION_SEND` texte/plain + une option
+  copier-coller, depuis `DayActivity`).
   Point encore ouvert, pas bloquant : reproduire tel quel le format de date FitNotes
   ("vendredi 4th septembre 2026", mélange bizarre d'ordinal anglais et de mois
   français - probablement un bug de locale côté FitNotes) ou utiliser un format

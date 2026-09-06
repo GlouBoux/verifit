@@ -219,6 +219,11 @@ public class AddExerciseActivity extends AppCompatActivity {
                 // Create New Set Object
                 WorkoutSet workoutSet = new WorkoutSet(MainActivity.dateSelected,exercise_name, MainActivity.dataStorage.getExerciseCategory(exercise_name),reps,weight);
 
+                // Horodatage du moment de la validation (retour Romain 06/09/2026,
+                // pour la ligne "Time" de l'export de seance) - uniquement pour une
+                // NOUVELLE serie, jamais lors d'une modification (cf. WorkoutSet.java).
+                workoutSet.setTimestamp(System.currentTimeMillis());
+
                 // Ignore wrong input
                 if(reps == 0 || weight == 0 || reps < 0 || weight < 0)
                 {

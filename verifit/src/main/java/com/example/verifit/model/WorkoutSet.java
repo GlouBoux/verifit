@@ -24,6 +24,17 @@ public class WorkoutSet {
     private Double plannedReps;
     private Double plannedWeight;
 
+    // Horodatage (epoch millis) du moment ou cette serie a ete VALIDEE dans l'app
+    // (retour Romain 06/09/2026, pour la ligne "Time: HH:mm - HH:mm" de l'export de
+    // seance - cf. docs/fitnotes-fork-plan.md "Partager une seance"). Renseigne
+    // UNIQUEMENT lors d'une saisie manuelle d'une NOUVELLE serie (voir
+    // AddExerciseActivity.clickSave()) - jamais lors d'une modification d'une serie
+    // existante (l'horodatage reste celui de la creation initiale), jamais lors d'un
+    // import CSV d'historique ni d'un import de seance generee (aucune heure reelle
+    // disponible dans ces cas). Reste null pour toute serie deja sauvegardee avant
+    // l'ajout de ce champ - Gson retombe sur cette valeur par defaut.
+    private Long timestamp;
+
 
     public WorkoutSet()
     {
@@ -76,6 +87,7 @@ public class WorkoutSet {
     public void setUser_id(int user_id) {this.user_id = user_id;}
     public void setPlannedReps(Double PlannedReps) {this.plannedReps = PlannedReps;}
     public void setPlannedWeight(Double PlannedWeight) {this.plannedWeight = PlannedWeight;}
+    public void setTimestamp(Long Timestamp) {this.timestamp = Timestamp;}
 
 
     // Getters
@@ -104,6 +116,15 @@ public class WorkoutSet {
     public int getId() {return id;}
     public Double getPlannedReps() {return this.plannedReps;}
     public Double getPlannedWeight() {return this.plannedWeight;}
+    public Long getTimestamp() {return this.timestamp;}
+
+    // Vrai si cette serie a un horodatage reel connu (saisie manuelle depuis l'ajout de
+    // ce champ) - faux pour tout ce qui a ete importe (CSV historique ou seance
+    // generee) ou sauvegarde avant l'ajout du champ.
+    public boolean hasTimestamp()
+    {
+        return this.timestamp != null;
+    }
 
 
     // Other
