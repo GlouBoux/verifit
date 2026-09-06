@@ -722,20 +722,21 @@ test — éviter un couplage trop rigide entre les deux projets pour l'instant.
 3. **Simulation "à blanc" d'une vraie séance (test end-to-end) - Romain a annoncé le
    06/09/2026 vouloir s'y mettre** (résultat/points de friction attendus à la prochaine
    session) - voir `docs/fitnotes-fork-todo.md`, section "Codé, en attente de test réel".
-4. **Export/partage de séance ("Share workout") - template reçu, en cours (06/09/2026)** :
+4. **Export/partage de séance ("Share workout") - codé, pas encore testé (06/09/2026)** :
    Romain a fourni un exemple réel de rapport FitNotes. Deux points bloquants
    identifiés en l'étudiant, tous deux résolus avec Romain : (a) la ligne "Time" exige
    un horodatage par série que Verifit ne trackait pas - décision de Romain : l'ajouter
-   - **codé** le 06/09/2026 (`WorkoutSet.timestamp`, epoch millis nullable, renseigné
-   uniquement à la validation manuelle d'une nouvelle série, pas encore
-   testé/rebuild) ; (b) le tag `[PR]` par série exige un historique de records **par
-   nombre de reps précis**, que Verifit ne trackait pas non plus (confirmé comme un
-   manque important par Romain) - **codé** le 06/09/2026, voir Fonctionnalité
-   "Historique des PR par nombre de reps" ci-dessous. Reste : écrire le générateur de
-   rapport texte lui-même (utilisant `getRepRangePRSets()` et `WorkoutSet.timestamp`)
-   et son déclencheur de partage - voir `docs/fitnotes-fork-todo.md`, section
-   "Nouvelles demandes", item "Partager une séance", pour le détail complet et le
-   format exact attendu.
+   - **codé et validé par Romain** (`WorkoutSet.timestamp`, epoch millis nullable,
+   renseigné uniquement à la validation manuelle d'une nouvelle série) ; (b) le tag
+   `[PR]` par série exige un historique de records **par nombre de reps précis**, que
+   Verifit ne trackait pas non plus (confirmé comme un manque important par Romain) -
+   **codé**, voir Fonctionnalité "Historique des PR par nombre de reps" ci-dessous.
+   Le générateur de rapport lui-même (`WorkoutReportGenerator`) et son déclencheur de
+   partage (menu "Share workout" dans `DayActivity`, `Intent.ACTION_SEND`) sont
+   maintenant **codés** - voir `docs/fitnotes-fork-todo.md`, section "Nouvelles
+   demandes", item "Partager une séance", pour le détail complet, y compris les deux
+   points laissés à l'appréciation de Claude (format de date, minutes non paddées).
+   **Pas encore testé/rebuild par Romain.**
 5. Étapes précises pour retirer verifit\_rs (voir section dédiée) — par où commencer ?
 6. Si le kill de process par Android (pas juste la mise en arrière\-plan) s'avère gênant
    en pratique pour la conservation du jour affiché, ajouter une vraie persistance

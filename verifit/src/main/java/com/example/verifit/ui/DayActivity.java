@@ -25,6 +25,7 @@ import android.widget.Toast;
 import com.example.verifit.DataStorage;
 import com.example.verifit.LoadingDialog;
 import com.example.verifit.SessionImporter;
+import com.example.verifit.WorkoutReportGenerator;
 import com.example.verifit.adapters.DayExerciseAdapter;
 import com.example.verifit.R;
 import com.example.verifit.model.WorkoutDay;
@@ -426,7 +427,35 @@ public class DayActivity extends AppCompatActivity {
             startSelectionMode();
             return true;
         }
+        else if(item.getItemId() == R.id.share_workout)
+        {
+            shareWorkout();
+            return true;
+        }
         return super.onOptionsItemSelected(item);
+    }
+
+    // "Share workout" (retour Romain 06/09/2026, fonctionnalite qu'il avait sur
+    // FitNotes) : genere le rapport texte de la seance affichee
+    // (WorkoutReportGenerator) et ouvre le selecteur de partage standard Android -
+    // usage principal de Romain : partager vers Discord. Le selecteur systeme
+    // (Android 10+) propose aussi une action "Copier" integree.
+    private void shareWorkout()
+    {
+        int day_position = MainActivity.dataStorage.getDayPosition(date_clicked);
+        if (day_position < 0)
+        {
+            Toast.makeText(this, "No Logged Exercises", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
+        String report = WorkoutReportGenerator.generateReport(day);
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, report);
+        startActivity(Intent.createChooser(shareIntent, "Share workout"));
     }
 
     // Opens the system file picker so the user can pick a JSON file describing a

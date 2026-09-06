@@ -2,8 +2,8 @@
 
 ## Codé, en attente de test réel (06/09/2026)
 
-- [ ] **Bug : crash en supprimant la dernière série d'un exercice/jour - CORRIGÉ, PAS
-  ENCORE TESTÉ (06/09/2026)** (retour Romain 06/09/2026) : "quand je suis sur un
+- [x] **Bug : crash en supprimant la dernière série d'un exercice/jour - VALIDÉ,
+  COMMITÉ ET POUSSÉ PAR ROMAIN (06/09/2026)** (retour Romain 06/09/2026) : "quand je suis sur un
   workout donné, si je supprime la dernière ligne du dernier exercice ça fait planter
   l'app (pas violemment mais j'ai du relancer car il n'y avait plus rien de visible sur
   l'app)". Repro exacte : ouvrir un exercice d'un jour donné (icône crayon depuis
@@ -26,7 +26,8 @@
   `DataStorage`. `WorkoutDay.removeSet()` elle-même a été mise à jour pour déléguer à
   `removeSets()` plutôt que de garder son assert dangereux - elle n'a d'ailleurs plus
   aucun appelant dans le code après ce correctif. Vérifié côté Claude (équilibre
-  accolades/parenthèses). **Pas encore testé/rebuild par Romain.**
+  accolades/parenthèses). **Confirmé par Romain : "Ok ça fonctionne. validé, comité,
+  pushé."**
 
 - [x] **Timer de repos : ne sonne jamais, et Reset ne fonctionne pas toujours -
   VALIDÉ, COMMITÉ ET POUSSÉ PAR ROMAIN (06/09/2026)** (retour Romain 06/09/2026) : "d'une façon
@@ -242,12 +243,11 @@
      rejoindre le sujet Écarts Prévu/Réalisé (donnée supplémentaire par série) ou une
      vue dédiée. Utilité évoquée : détecter un repos insuffisant entre les séries.
 
-- [ ] **Partager une séance ("Share workout") - TEMPLATE REÇU, EN COURS (06/09/2026)** :
+- [ ] **Partager une séance ("Share workout") - CODÉ, PAS ENCORE TESTÉ (06/09/2026)** :
   fonctionnalité que Romain avait sur FitNotes - génère un rapport texte de la séance
   affichée, partageable vers d'autres apps (Discord principalement dans son usage
-  actuel) via le sélecteur de partage standard Android, ou copiable en texte brut.
-  Romain a fourni un exemple réel (sa séance du 04/09/2026), à reproduire à l'identique
-  puis enrichir. Format observé :
+  actuel) via le sélecteur de partage standard Android. Romain a fourni un exemple réel
+  (sa séance du 04/09/2026), reproduit à l'identique. Format observé :
   ```
   FitNotes Workout - vendredi 4th septembre 2026
   Time: 17:43 – 22:15 (4h 31m)
@@ -258,39 +258,39 @@
   ** Exercice suivant **
   ...
   ```
-  Deux points à éclaircir avant de pouvoir générer le rapport, résolus avec Romain :
-  1. **Ligne "Time" (heure de début/fin + durée) - HORODATAGE CODÉ, PAS ENCORE TESTÉ
-     (06/09/2026)** : Verifit ne stockait jusqu'ici aucune heure par série (juste la
-     date du jour). **Décision de Romain : ajouter l'horodatage.** Nouveau champ
-     `WorkoutSet.timestamp` (epoch millis, `Long` nullable - même pattern que
-     `plannedReps`/`plannedWeight`, `null` pour toutes les séries déjà enregistrées).
-     Renseigné uniquement lors de la validation manuelle d'une **nouvelle** série
-     (`AddExerciseActivity.clickSave()`, branche "Save Functionality" -
-     `System.currentTimeMillis()`) - jamais touché lors d'une modification d'une série
-     existante (branche "Update Functionality", qui ne touche que reps/weight, donc
-     l'horodatage reste celui de la création initiale), jamais renseigné par les
-     imports (CSV historique via `csvToSets()`, ou séance générée via
-     `mergeImportedSession()`/`ImportedSet` - aucune heure réelle disponible dans ces
-     deux cas). Sert aussi à débloquer, plus tard, le calcul du repos réel entre 2
-     séries consécutives (voir plus haut). Vérifié côté Claude (équilibre
-     accolades/parenthèses) - **pas encore testé/rebuild par Romain.** Reste à écrire
-     le générateur de rapport qui utilisera ce champ pour la ligne "Time" (premier
-     timestamp du jour → dernier, avec calcul de durée ; séries sans timestamp -
-     anciennes ou importées - à exclure de ce calcul plutôt que de planter ou fausser
-     l'heure de début).
-  2. **Tag `[PR]` par série** : voir l'item "Historique des PR par nombre de reps"
-     ci-dessus, maintenant codé (`DataStorage.getRepRangePRSets()`) - reste à
-     l'utiliser dans le générateur de rapport.
-  Reste à faire : écrire le générateur de rapport texte (regrouper les séries du jour
-  par exercice dans l'ordre d'apparition, combiner `[PR]` et commentaire de série
-  quand les deux sont présents - `[PR]` en premier d'après l'exemple), et ajouter le
-  déclencheur (probablement un `Intent.ACTION_SEND` texte/plain + une option
-  copier-coller, depuis `DayActivity`).
-  Point encore ouvert, pas bloquant : reproduire tel quel le format de date FitNotes
-  ("vendredi 4th septembre 2026", mélange bizarre d'ordinal anglais et de mois
-  français - probablement un bug de locale côté FitNotes) ou utiliser un format
-  français propre ("vendredi 4 septembre 2026") - à trancher avec Romain, ou décision
-  prise par Claude si Romain ne se prononce pas (format propre par défaut).
+  Deux points bloquants résolus avec Romain avant de pouvoir générer le rapport :
+  1. **Ligne "Time"** : nouveau champ `WorkoutSet.timestamp`, codé et validé par Romain
+     ("Ok ça fonctionne. validé, comité, pushé.") - voir plus bas, item clos.
+  2. **Tag `[PR]` par série** : `DataStorage.getRepRangePRSets()`, voir l'item
+     "Historique des PR par nombre de reps" ci-dessus.
+  Nouvelle classe `WorkoutReportGenerator` (package `com.example.verifit`) :
+  - En-tête `"FitNotes Workout - <date>"` : date formatée en français propre
+    ("vendredi 4 septembre 2026", première lettre en majuscule) plutôt que le format
+    bizarre observé côté FitNotes ("vendredi 4th septembre 2026", mélange d'ordinal
+    anglais et de mois français, probablement un bug de locale FitNotes) - Romain ne
+    s'étant pas prononcé sur ce point, décision prise par Claude comme convenu.
+  - Ligne `"Time: HH:mm – HH:mm (XhYm)"` (avec le vrai tiret cadratin – du template) :
+    calculée à partir du plus petit et du plus grand `WorkoutSet.timestamp` du jour -
+    **omise entièrement** si aucune série du jour n'a d'horodatage connu (séries
+    anciennes ou importées) plutôt que d'afficher une heure fausse. Minutes de la durée
+    non paddées à 2 chiffres (`"4h 5m"`, pas `"4h 05m"` - c'est une durée, pas une heure
+    d'horloge) - à ajuster si Romain préfère le padding.
+  - Une section `"** Nom **"` par exercice, dans l'ordre d'apparition du jour
+    (`WorkoutDay.getExercises()`, qui respecte déjà `ExerciseOrder` - même ordre que
+    l'écran `DayActivity`).
+  - Une ligne `"- <poids> kgs x <reps> reps"` par série, avec annotation entre crochets
+    quand pertinente : `"[PR]"`, `"[<commentaire>]"`, ou `"[PR. <commentaire>]"` quand
+    les deux sont présents (PR en premier, comme dans l'exemple de Romain).
+  Déclencheur : nouvel item de menu "Share workout" dans `DayActivity`
+  (`day_activity_menu.xml`, icône déjà présente `ic_share_24px`) - ouvre le sélecteur de
+  partage standard Android (`Intent.ACTION_SEND`, `text/plain`). Le sélecteur système
+  (Android 10+) propose aussi une action "Copier" intégrée, ce qui couvre le besoin
+  "copiable en texte brut" sans bouton dédié supplémentaire côté app - à ajouter
+  explicitement si Romain le souhaite quand même après avoir testé.
+  Vérifié côté Claude (équilibre accolades/parenthèses, XML bien formé). **Pas encore
+  testé/rebuild par Romain** - en particulier : le rendu réel du tiret cadratin et des
+  caractères accentués dans le sélecteur de partage/Discord, et le cas d'une séance
+  sans aucune série horodatée (ligne "Time" absente).
 
 - [ ] **Générer un programme ("Routine")** (retour Romain 06/09/2026) : équivalent de la
   fonctionnalité "Routines" de FitNotes - sélectionner un ensemble d'exercices (dans le

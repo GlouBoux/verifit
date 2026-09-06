@@ -23,4 +23,18 @@
         app:iconTint="@color/cardview_light_background">
     </item>
 
+    <!-- Retour Romain 06/09/2026 ("Share workout") : genere le rapport texte de la
+         seance affichee et ouvre le selecteur de partage standard Android (voir
+         DayActivity.shareWorkout()/WorkoutReportGenerator) - usage principal de Romain :
+         partager vers Discord. Le selecteur systeme (Android 10+) propose aussi une
+         action "Copier" integree, ce qui couvre le besoin "copiable en texte brut"
+         sans bouton dedie supplementaire. -->
+    <item
+        android:id="@+id/share_workout"
+        android:icon="@drawable/ic_share_24px"
+        android:title="Share workout"
+        app:showAsAction="ifRoom"
+        app:iconTint="@color/cardview_light_background">
+    </item>
+
 </menu>
