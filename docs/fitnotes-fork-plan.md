@@ -851,8 +851,14 @@ des 3 points (et donc mangerait un peu de place sur le nom d'exo et c'est ok)."
   appelle `invalidateOptionsMenu()` - la barre se met à jour immédiatement, sans avoir
   à rouvrir l'écran.
 
+**Confirmé par Romain** : "validé comité pushé." Ajustement demandé dans la foulée :
+"met toolbar settings en premier dans la liste par contre (c'est le plus pertinent à
+avoir tout de suite je pense)" - l'item "Toolbar Settings" replacé en tête de
+`add_exercise_activity_menu.xml` (l'ordre des `<item>` dans le XML fixe l'ordre
+d'affichage dans le menu overflow "..."), changement purement cosmétique.
+
 **Statut au 07/09/2026 : codé, livré, vérifié côté Claude (équilibre accolades/
-parenthèses, XML bien formé des deux fichiers touchés) - pas encore rebuildé/retesté
+parenthèses, XML bien formé des fichiers touchés) - pas encore rebuildé/retesté
 par Romain.**
 
 ## Incident : bug critique de perte de données à l'Import Session (05/09/2026)

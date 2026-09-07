@@ -17,12 +17,24 @@
      (et donc mangerait un peu de place sur le nom d'exo et c'est ok)." Le
      app:showAsAction="never" statique ci-dessous n'est donc plus que la valeur PAR
      DEFAUT : AddExerciseActivity.onCreateOptionsMenu() l'ecrase a l'ouverture du menu
-     selon le choix de Romain (reglage "Toolbar Settings" tout en bas de ce fichier,
+     selon le choix de Romain (reglage "Toolbar Settings" tout en haut de ce fichier,
      voir showToolbarSettingsDialog()) - un item "epingle" redevient "always", les
      autres restent "never". -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- Retour Romain 07/09/2026 : "met toolbar settings en premier dans la liste
+         [...] c'est le plus pertinent a avoir tout de suite" - place en tete de
+         l'overflow (l'ordre des <item> ci-dessous determine l'ordre d'affichage dans
+         le menu "..."). Reste toujours lui-meme dans l'overflow (jamais epinglable) -
+         ouvre AddExerciseActivity.showToolbarSettingsDialog(). -->
+    <item
+        android:id="@+id/toolbar_settings"
+        android:icon="@drawable/ic_view_compact_24px"
+        android:title="Toolbar Settings"
+        app:showAsAction="never"
+        app:iconTint="@color/cardview_light_background">
+    </item>
 
     <item
         android:id="@+id/history"
@@ -85,19 +97,6 @@
         app:iconTint="@color/cardview_light_background">
 
     </item>
-
-    <!-- Retour Romain 07/09/2026 : reglage permettant d'epingler certains des 6 items
-         ci-dessus a cote du menu "..." plutot que de tous les laisser dans l'overflow
-         (voir commentaire en tete de fichier). Reste toujours lui-meme dans l'overflow
-         (jamais epinglable) - ouvre AddExerciseActivity.showToolbarSettingsDialog(). -->
-    <item
-        android:id="@+id/toolbar_settings"
-        android:icon="@drawable/ic_view_compact_24px"
-        android:title="Toolbar Settings"
-        app:showAsAction="never"
-        app:iconTint="@color/cardview_light_background">
-    </item>
-
 
 
 

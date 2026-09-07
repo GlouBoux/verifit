@@ -48,7 +48,13 @@
   - Chaque case à cocher appelle `invalidateOptionsMenu()` au changement - effet
     visible immédiatement, sans avoir à rouvrir l'écran.
   Vérifié côté Claude (équilibre accolades/parenthèses du fichier Java, XML bien formé
-  des deux fichiers). **Pas encore rebuildé/retesté par Romain.**
+  des deux fichiers).
+  **Retour Romain (validé/commité/poussé) : "met toolbar settings en premier dans la
+  liste par contre (c'est le plus pertinent à avoir tout de suite je pense)".**
+  Corrigé : l'item "Toolbar Settings" est maintenant le premier de
+  `add_exercise_activity_menu.xml` (l'ordre des `<item>` dans le XML fixe l'ordre
+  d'affichage dans le menu overflow "...") - purement cosmétique, aucun changement
+  Java. **Pas encore rebuildé/retesté par Romain.**
 
 - [x] **Bug : crash en supprimant la dernière série d'un exercice/jour - VALIDÉ,
   COMMITÉ ET POUSSÉ PAR ROMAIN (06/09/2026)** (retour Romain 06/09/2026) : "quand je suis sur un
