@@ -126,6 +126,49 @@ causé par un ordre de colonnes CSV incompatible avec un bug de nommage compensa
 `DataStorage.csvToSets()`. Corrigé côté script de conversion (alignement sur l'ordre
 natif de verifit) — **confirmé par Romain : le ré\-import fonctionne correctement.**
 
+### Synchronisation delta (06-07/09/2026) : séance du vendredi 04/09
+
+Romain a continué à logger dans FitNotes pendant la phase de test de Vérifit (dont sa
+séance du vendredi 04/09, utilisée comme exemple réel pour valider "Share workout" - voir
+`docs/fitnotes-fork-todo.md`) et a fourni un nouveau backup
+(`FitNotes_Backup_2026_09_07_24_09_43.fitnotes`) pour la resynchroniser avant de basculer
+définitivement sur Vérifit.
+
+Point important identifié en lisant `DataStorage.readFile()`/`csvToSets()` : l'import CSV
+de Vérifit est un **remplacement complet**, pas un ajout (`sets.clear()` puis reconstruit
+tout depuis le CSV - l'app affiche d'ailleurs elle-même l'avertissement "This will
+overwrite all saved data" avant de continuer). Un import du seul delta (juste la séance de
+vendredi) aurait donc effacé les 3784 séries déjà importées le 04/09. Confirmé avec Romain
+qu'aucune vraie série n'avait été loggée directement dans Vérifit entre-temps (seulement
+des séries de test créées/supprimées pendant le développement) - un nouveau CSV **combiné**
+a donc été généré : les 3784 lignes de l'ancien CSV (identiques, jusqu'au 31/08 inclus) +
+43 nouvelles lignes extraites du nouveau backup pour le 04/09 (9 exercices, 8 séries
+commentées, aucune exclue) - `verifit_import_combined_2026-09-04.csv`, 3827 séries au
+total, prêt à être importé via Réglages → Import CSV (même flux que le 04/09, en confirmant
+l'avertissement d'écrasement). **Confirmé par Romain : l'import fonctionne.**
+
+### Script réutilisable de conversion (07/09/2026)
+
+Pour éviter à Romain de redemander cette conversion à chaque fois, généralisation du
+script de conversion en un outil autonome qu'il garde en local :
+`scripts/convert_fitnotes_to_verifit_csv.py`. Reprend fidèlement toute la logique déjà
+validée (`sanitize()`, `fmt_num()`, l'ordre de colonnes Weight-avant-Reps qui compense le
+bug de nommage de `DataStorage.csvToSets()`, le filtre `is_complete=1 et unit=0`, le
+rattachement des commentaires via `Comment.owner_type_id=1`/`training_log._id`).
+
+Choix de conception clé, dicté par le point ci-dessus (l'import CSV Vérifit est un
+remplacement complet, pas un ajout) : le script convertit par défaut **tout** l'historique
+du backup à chaque exécution, jamais un delta seul - c'est ce qui le rend sûr à relancer
+autant de fois que voulu sans que Romain ait à suivre une date de coupure. Une option
+`--since AAAA-MM-JJ` existe pour un usage avancé (fusion manuelle d'un delta avec un CSV
+existant, comme fait ponctuellement ci-dessus) mais le script avertit explicitement (dans
+sa docstring et à l'écran) de ne jamais importer son résultat directement dans Vérifit.
+
+Usage : `python scripts\convert_fitnotes_to_verifit_csv.py MonBackup.fitnotes` (génère le
+CSV à côté du backup) - le fichier `.csv` obtenu doit ensuite être transféré sur le
+téléphone puis importé via Réglages → Import CSV, en confirmant l'avertissement
+d'écrasement.
+
 ## Chantier : retirer le backend en ligne verifit\_rs (décidé le 05/09/2026)
 
 Romain confirme : à retirer, cette fonctionnalité est de toute façon abandonnée

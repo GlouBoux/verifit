@@ -626,6 +626,19 @@
   fichiers) avec le message destiné à un commit Android sans rapport. Pas encore pushé
   au moment du signalement → corrigé par `git commit --amend` avec le bon message.
   **Confirmé corrigé par Romain.**
+- [x] **Synchronisation FitNotes → Vérifit avant transition définitive (06-07/09/2026)** :
+  import d'un backup FitNotes réel (SQLite) en CSV compatible Vérifit - 3784 séries de
+  l'historique complet, puis un CSV combiné (\+43 séries pour rattraper la séance du
+  vendredi 04/09) une fois découvert que l'import CSV de Vérifit remplace entièrement les
+  données (pas un ajout). **Confirmé par Romain : l'import fonctionne.** Voir
+  `docs/fitnotes-fork-plan.md` pour le détail technique.
+- [x] **Script de conversion FitNotes → Vérifit réutilisable en local (07/09/2026)**
+  (retour Romain : "pour éviter que je te demande ça à chaque fois est ce que tu peux me
+  faire un script que je garderai en local") : `scripts/convert_fitnotes_to_verifit_csv.py`,
+  reprend la logique de conversion déjà validée, convertit par défaut tout l'historique du
+  backup à chaque exécution (jamais un delta seul, puisque l'import Vérifit remplace tout -
+  voir ci-dessus) pour rester sûr à relancer à volonté. Option `--since` pour usage avancé
+  uniquement, avec avertissement explicite de ne pas l'importer telle quelle.
 
 ## En attente de décision / à planifier
 
