@@ -753,6 +753,45 @@ Par ailleurs, le rapport "Share workout" lui-même (Fonctionnalité déjà valid
 plus haut) a été reconfirmé correct sur cette même vraie séance (10 exercices, tags
 `[PR]` et commentaires par série corrects) - aucun bug relevé.
 
+## Fonctionnalité 13 — Épuration de l'IHM : barre de chrono, boutons conditionnels, surbrillance (07/09/2026)
+
+Suite directe de la Fonctionnalité 12 ci-dessus, une fois le dialogue "Workout Time"
+validé par Romain. Trois demandes distinctes en une fois :
+
+1. **Barre de chrono allégée** : icône course à pied et bouton Stop/Resume retirés de
+   la barre persistante (`session_timer_bar`) - ne reste que le décompte, centré,
+   comme sur FitNotes. Le tap sur la barre ouvre le dialogue "Workout Time" (seul
+   contrôle Stop/Resume restant).
+2. **Save/Update et Clear/Delete masqués tant que Weight et Reps ne sont pas
+   renseignés** : un `TextWatcher` commun sur les deux champs pilote leur visibilité
+   (`View.GONE`, le `RecyclerView` remonte combler l'espace) - couvre automatiquement
+   tout `setText()` programmatique (+/-, Clear, Delete, pré-remplissage d'édition).
+3. **Question ouverte de Romain** ("comment gérer les boutons quand je clique sur une
+   série déjà loggée, je n'ai pas d'idée") : proposition de Claude retenue - un retap
+   sur la ligne déjà sélectionnée désélectionne (`AddExerciseActivity.cancelEditSet()`)
+   plutôt que d'obliger à Update/Delete pour sortir du mode édition.
+4. **Surbrillance de la ligne en cours d'édition** (`AddExerciseWorkoutSetAdapter`,
+   nouvelle couleur `row_highlight`) - répond à "je ne sais pas sur quelle ligne je me
+   trouve", et se combine avec le retap ci-dessus pour une boucle complète
+   sélection/désélection visuellement claire.
+
+Romain a aussi demandé confirmation que la fonctionnalité "série loggée vs série
+réalisée" n'avait pas été abandonnée - clarifié : c'est la Fonctionnalité 7 "Écarts
+Prévu/Réalisé" (voir plus haut), déjà livrée et validée le 06/09/2026, toujours en
+place. La surbrillance de ligne ajoutée ici est complémentaire, pas un remplacement.
+
+**Bug trouvé au premier test réel et corrigé** : la surbrillance ("point 4")
+disparaissait après une fraction de seconde. Cause identifiée : `cardview_set` est
+coloré via `android:backgroundTint` dans le layout (pas `app:cardBackgroundColor`) -
+le premier essai appelait `CardView.setCardBackgroundColor()`, une API différente qui
+reste recouverte par ce `backgroundTint` statique dès qu'Android réévalue l'état du
+drawable. Corrigé en passant par `ViewCompat.setBackgroundTintList()` (compat-safe
+pour le `minSdk 16` du projet, `View.setBackgroundTintList()` natif exigeant l'API 21)
+- même mécanisme que le XML, plus de concurrence entre deux systèmes de coloration.
+
+**Statut au 07/09/2026 : codé, correctif livré, vérifié côté Claude (équilibre
+accolades/parenthèses, XML bien formé) - pas encore retesté par Romain.**
+
 ## Incident : bug critique de perte de données à l'Import Session (05/09/2026)
 
 Romain a signalé, après avoir recompilé/réinstallé l'app puis importé le JSON de la

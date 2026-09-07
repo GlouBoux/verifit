@@ -2,6 +2,7 @@ package com.example.verifit.adapters;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,6 +13,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.verifit.R;
@@ -177,6 +180,28 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
             }
         });
 
+        // Surbrillance de la ligne actuellement en edition (retour Romain 07/09/2026,
+        // "je ne sais pas sur quelle ligne je me trouve et je dois regarder weight and
+        // reps value pour le savoir") - meme condition que le retap ci-dessous : cette
+        // position est celle chargee dans les champs du haut.
+        //
+        // Bug corrige (retour Romain, "la surbrillance ne reste qu'une fraction de
+        // seconde") : cardview_set colore normalement via android:backgroundTint dans
+        // workout_set_row.xml, pas via app:cardBackgroundColor - un premier essai
+        // utilisait setCardBackgroundColor(), une API DIFFERENTE qui modifie le
+        // remplissage interne de la CardView mais est ensuite recouverte/ecrasee par ce
+        // backgroundTint statique des qu'Android reevalue l'etat du drawable (relachement
+        // du tap, fin du ripple...) - d'ou le flash suivi d'un retour a la couleur
+        // normale. Corrige en passant par setBackgroundTintList(), le meme mecanisme que
+        // le XML, pour qu'il n'y ait plus deux systemes de coloration en concurrence -
+        // via ViewCompat (pas View.setBackgroundTintList() directement, natif API 21
+        // seulement) pour rester compatible avec le minSdk 16 du projet.
+        boolean isBeingEdited = !selectionMode
+                && AddExerciseActivity.isEditMode
+                && AddExerciseActivity.Clicked_Set == position;
+        ViewCompat.setBackgroundTintList(holder.cardView, ColorStateList.valueOf(ContextCompat.getColor(
+                ct, isBeingEdited ? R.color.row_highlight : R.color.custom_row)));
+
         // Retour Romain 06/09/2026 ("comme sur FitNotes") : en dehors du mode selection,
         // un tap simple selectionne directement la serie pour edition - remplit les
         // champs du haut avec ses valeurs et fait passer le bouton du bas de "Save" a
@@ -185,6 +210,13 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         // qui pre-remplissait bien les champs mais SANS passer isEditMode a true : cliquer
         // "Save" ensuite creait une nouvelle serie en double au lieu de mettre a jour
         // celle-ci - d'ou l'impression que "le tap ne fait rien" d'utile.
+        //
+        // Retour Romain 07/09/2026 ("il faudrait une solution pour gerer les boutons et
+        // qu'ils ne s'affichent pas / ne restent pas") : un retap sur la ligne DEJA
+        // selectionnee desselectionne desormais (AddExerciseActivity.cancelEditSet()) -
+        // plutot que d'obliger a passer par Update ou Delete pour sortir du mode
+        // edition. Taper une AUTRE serie pendant qu'une edition est en cours bascule
+        // directement dessus, sans etape de desselection intermediaire.
         holder.cardView.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -192,6 +224,10 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
                 if (selectionMode)
                 {
                     toggleSelection(holder.getAdapterPosition());
+                }
+                else if (AddExerciseActivity.isEditMode && AddExerciseActivity.Clicked_Set == holder.getAdapterPosition())
+                {
+                    AddExerciseActivity.cancelEditSet();
                 }
                 else
                 {

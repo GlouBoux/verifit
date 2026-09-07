@@ -11,7 +11,10 @@
     <!-- Retour Romain 06/09/2026 : chrono de la SEANCE entiere - meme barre que sur
          AddExerciseActivity (voir ce layout pour le detail du commentaire), affichee
          aussi ici car c'est l'autre ecran ou Romain regarde sa seance en cours. Voir
-         DayActivity.refreshSessionTimerBar()/toggleSessionTimer(). -->
+         DayActivity.refreshSessionTimerBar()/showWorkoutTimeDialog().
+         Retour Romain 07/09/2026 : icone course a pied et bouton Stop/Resume retires
+         (voir activity_add_exercise.xml pour le detail) - un tap ouvre le dialogue
+         "Workout Time", decompte seul et centre sur la barre elle-meme. -->
     <LinearLayout
         android:id="@+id/session_timer_bar"
         android:layout_width="0dp"
@@ -20,40 +23,22 @@
         android:layout_marginTop="10dp"
         android:layout_marginEnd="10dp"
         android:background="@color/core_grey_10"
-        android:gravity="center_vertical"
+        android:gravity="center"
         android:orientation="horizontal"
         android:padding="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginEnd="8dp"
-            app:srcCompat="@drawable/ic_run_circle_24px"
-            app:tint="@color/colorPrimary" />
-
         <TextView
             android:id="@+id/tv_session_timer"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:gravity="center"
             android:textColor="@color/core_black"
             android:textSize="22sp"
             android:textStyle="bold"
             tools:text="00:00:00" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/bt_session_timer_toggle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minWidth="0dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:text="Stop"
-            android:textAllCaps="false"
-            app:cornerRadius="10dp" />
 
     </LinearLayout>
 

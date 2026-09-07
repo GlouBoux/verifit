@@ -80,7 +80,6 @@ public class DayActivity extends AppCompatActivity {
     // d'ensemble des exercices du jour) est l'autre endroit ou Romain regarde sa
     // seance en cours, pas seulement pendant la saisie d'une serie.
     private TextView tv_session_timer;
-    private MaterialButton bt_session_timer_toggle;
     private SessionTimerTicker sessionTimerTicker;
 
     // Chrono dedie a la Duration DANS le dialogue "Workout Time" (retour Romain
@@ -139,23 +138,12 @@ public class DayActivity extends AppCompatActivity {
         // Chrono de session (retour Romain 06/09/2026) - l'etat reel n'est connu qu'une
         // fois date_clicked lu plus bas ; le rafraichissement initial se fait donc dans
         // onResume() (appele juste apres onCreate()), pas ici.
+        // Retour Romain 07/09/2026 : la barre n'a plus son propre bouton Stop/Resume
+        // (voir activity_day.xml) - un tap ouvre directement le dialogue "Workout Time"
+        // ci-dessous, seul endroit desormais pour Stop/Resume.
         tv_session_timer = findViewById(R.id.tv_session_timer);
-        bt_session_timer_toggle = findViewById(R.id.bt_session_timer_toggle);
         sessionTimerTicker = new SessionTimerTicker(tv_session_timer);
 
-        bt_session_timer_toggle.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View view)
-            {
-                toggleSessionTimer();
-            }
-        });
-
-        // Dialogue complet "Workout Time" (retour Romain 07/09/2026) - meme principe
-        // que sur AddExerciseActivity (voir ce fichier pour le detail du choix) : le
-        // bouton Start/Stop/Resume garde son action rapide, taper ailleurs sur la
-        // barre ouvre le dialogue complet.
         LinearLayout session_timer_bar = findViewById(R.id.session_timer_bar);
         session_timer_bar.setOnClickListener(new View.OnClickListener()
         {
@@ -541,21 +529,12 @@ public class DayActivity extends AppCompatActivity {
         WorkoutDay day = (position >= 0) ? MainActivity.dataStorage.getWorkoutDays().get(position) : null;
 
         sessionTimerTicker.setWorkoutDay(day);
-        updateSessionTimerButtonLabel(day);
     }
 
-    private void updateSessionTimerButtonLabel(WorkoutDay day)
-    {
-        // Meme correctif que AddExerciseActivity.updateSessionTimerButtonLabel() (retour
-        // Romain 07/09/2026) : demarrage manuel possible meme sans serie loggee depuis cet
-        // ecran (ex. seance importee). Seul cas desactive : aucun WorkoutDay pour ce jour.
-        boolean hasStarted = day != null && day.getSessionStartTimestamp() != null;
-        bt_session_timer_toggle.setEnabled(day != null);
-        bt_session_timer_toggle.setText(!hasStarted ? "Start" : (day.isSessionTimerRunning() ? "Stop" : "Resume"));
-    }
-
-    // Bouton Start/Stop/Resume du chrono de session, depuis la vue d'ensemble du jour -
-    // meme logique que AddExerciseActivity.toggleSessionTimer().
+    // Start/Stop/Resume du chrono de session, depuis la vue d'ensemble du jour - meme
+    // logique que AddExerciseActivity.toggleSessionTimer(). N'est plus appelee que par
+    // le bouton du dialogue "Workout Time" (retour Romain 07/09/2026, la barre a perdu
+    // son propre bouton Stop/Resume).
     private void toggleSessionTimer()
     {
         int position = MainActivity.dataStorage.getDayPosition(date_clicked);
@@ -582,7 +561,6 @@ public class DayActivity extends AppCompatActivity {
         MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
 
         sessionTimerTicker.setWorkoutDay(day);
-        updateSessionTimerButtonLabel(day);
     }
 
     // "Auto Start" (retour Romain 07/09/2026, reglage du dialogue Workout Time
@@ -722,7 +700,6 @@ public class DayActivity extends AppCompatActivity {
                     MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
 
                     sessionTimerTicker.setWorkoutDay(day);
-                    updateSessionTimerButtonLabel(day);
 
                     workoutTimeDialog.dismiss();
                 })

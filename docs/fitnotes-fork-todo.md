@@ -270,6 +270,79 @@
   en particulier : l'affichage réel du nouveau dialogue et de son menu, le démarrage
   manuel sans série préalable, et le réglage Auto Start.
 
+- [x] **Épuration de l'IHM : barre de chrono, boutons Save/Clear conditionnels,
+  surbrillance de la ligne éditée - CODÉ + BUG DE SURBRILLANCE CORRIGÉ, PAS ENCORE
+  RETESTÉ (07/09/2026)** (retour
+  Romain 07/09/2026, après validation du dialogue "Workout Time" ci-dessus) : "sur le
+  bandeau du timer toujours visible à l'écran, je pense qu'on peut supprimer le bouton
+  résume et stop, enlever l'icone du runner et centrer le timer comme sur fitnote. ça
+  allège l'IHM déjà lourde [...] j'aimerai bien que les boutons UPDATE et DELETE de la
+  série ne soit visible que si on set une valeur dans weight and reps [...] si je click
+  sur une série déjà loggué, il faudrait une solution pour gérer les boutons et qu'ils
+  ne s'affichent pas / ne restent pas (mais je n'ai pas d'idée là-dessus) [...] met
+  aussi quelque chose pour mettre en surbrillance la ligne d'exercice sur laquelle j'ai
+  cliqué."
+
+  Trois changements distincts, tous sur `AddExerciseActivity`/`DayActivity` (barre de
+  chrono) et `AddExerciseActivity`/`AddExerciseWorkoutSetAdapter` (boutons + ligne) :
+
+  1. **Barre de chrono allégée** : icône course à pied et bouton Stop/Resume retirés de
+     `session_timer_bar` (`activity_add_exercise.xml`/`activity_day.xml`) - ne reste
+     que le décompte `HH:mm:ss`, centré. Un tap sur la barre ouvre directement le
+     dialogue "Workout Time" (déjà l'unique façon de faire Stop/Resume depuis son
+     ajout), qui porte désormais seul ce contrôle - `toggleSessionTimer()` reste la
+     logique partagée, `updateSessionTimerButtonLabel()` (qui ne servait qu'au bouton
+     de la barre) supprimée, devenue inutile.
+  2. **Save/Update et Clear/Delete masqués tant que Weight ET Reps ne sont pas
+     renseignés** : `AddExerciseActivity.wireSaveClearButtonsVisibility()`, un
+     `TextWatcher` commun sur `et_weight`/`et_reps` qui masque (`View.GONE`, pas
+     seulement invisible - le `RecyclerView` en dessous remonte automatiquement
+     combler l'espace libéré) ou affiche les deux boutons ensemble à chaque
+     changement. Comme tout `setText()` programmatique (+/-, Clear, Delete,
+     pré-remplissage d'édition...) passe par ce même `TextWatcher`, aucun appel
+     manuel supplémentaire n'est nécessaire ailleurs dans le fichier.
+  3. **Solution proposée par Claude pour la gestion des boutons en mode édition**
+     (Romain n'avait pas d'idée précise, question ouverte posée) : un retap sur la
+     ligne DÉJÀ sélectionnée désélectionne maintenant (nouvelle méthode
+     `AddExerciseActivity.cancelEditSet()` - vide les champs, ce qui masque
+     automatiquement les boutons via le point 2 ci-dessus, et retire la surbrillance)
+     plutôt que d'obliger à passer par Update ou Delete pour sortir du mode édition.
+     Taper une AUTRE série pendant qu'une édition est en cours bascule directement
+     dessus (comportement déjà existant, inchangé).
+  4. **Surbrillance de la ligne en cours d'édition** (retour Romain : "je ne sais pas
+     sur quelle ligne je me trouve et je dois regarder weight and reps value pour le
+     savoir") : `AddExerciseWorkoutSetAdapter.onBindViewHolder()` teinte la `CardView`
+     de la ligne dont la position correspond à `AddExerciseActivity.Clicked_Set` (tant
+     que `isEditMode` est vrai et hors sélection multiple) avec une nouvelle couleur
+     `@color/row_highlight` (bleu pâle dérivé de `colorPrimaryLight`) plutôt que la
+     couleur normale des lignes (`@color/custom_row`) - se met à jour à chaque tap
+     (`editSet()`/`cancelEditSet()` appellent `notifyDataSetChanged()`) et à chaque
+     rafraîchissement de la liste (Update/Delete/Undo, déjà couvert par les appels
+     existants à `updateTodaysExercises()`).
+
+  Cette surbrillance rejoint aussi la fonctionnalité "Écarts Prévu/Réalisé" déjà
+  livrée et validée (voir plus haut, item clos) - Romain avait un doute sur son statut
+  ("ça rejoindra la feature qu'on doit mettre en place (ou qui a sauté je ne me
+  souviens plus)") : elle n'a pas sauté, elle est en place depuis le 06/09/2026 (badge
+  discret + écran "Écarts Prévu/Réalisé" dédié), la surbrillance de ligne est un ajout
+  complémentaire, pas un remplacement.
+
+  **Bug corrigé (retour Romain, premier test réel) : "la surbrillance ne reste qu'un
+  fraction de seconde [...] je veux qu'elle reste pour savoir où je me situe."** Cause :
+  `cardview_set` (`workout_set_row.xml`) est déjà coloré via l'attribut
+  `android:backgroundTint`, pas via `app:cardBackgroundColor` - le premier essai
+  appelait `CardView.setCardBackgroundColor()`, une API différente qui modifie le
+  remplissage interne de la `CardView` mais reste recouverte par ce `backgroundTint`
+  statique dès qu'Android réévalue l'état du drawable (relâchement du tap, fin du
+  ripple...), d'où le flash suivi d'un retour à la couleur normale. Corrigé en passant
+  par `ViewCompat.setBackgroundTintList()` (pas `View.setBackgroundTintList()`
+  directement, natif API 21 seulement - le projet vise `minSdk 16`) pour rester sur le
+  même mécanisme de coloration que le XML, sans concurrence entre deux systèmes.
+
+  Vérifié côté Claude (équilibre accolades/parenthèses des trois fichiers Java
+  touchés, XML bien formé des deux layouts et de `colors.xml`). **Pas encore
+  retesté par Romain depuis le correctif.**
+
 - [x] **Historique des PR par nombre de reps - v2 VALIDÉE, COMMITÉE ET POUSSÉE PAR ROMAIN (06/09/2026)**
   (retour Romain, à propos de la définition exacte d'un PR pour l'export de séance) :
   "Un PR c'est un record (Personal Record) pour ce rep range (reps) pour ce poids

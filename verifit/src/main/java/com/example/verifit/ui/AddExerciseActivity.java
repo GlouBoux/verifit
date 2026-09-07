@@ -23,6 +23,8 @@ import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -140,7 +142,6 @@ public class AddExerciseActivity extends AppCompatActivity {
     // repos ci-dessus) - voir refreshSessionTimerBar()/toggleSessionTimer() plus bas et
     // le commentaire sur WorkoutDay.SessionStartTimestamp.
     private TextView tv_session_timer;
-    private MaterialButton bt_session_timer_toggle;
     private SessionTimerTicker sessionTimerTicker;
 
     // Chrono dedie a la Duration DANS le dialogue "Workout Time" (retour Romain
@@ -191,31 +192,26 @@ public class AddExerciseActivity extends AppCompatActivity {
         bt_clear = findViewById(R.id.bt_clear);
         bt_save = findViewById(R.id.bt_login_signup);
 
+        wireSaveClearButtonsVisibility();
+
         alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
         // Chrono de la seance entiere (retour Romain 06/09/2026) - demarrage automatique
-        // a la premiere serie loggee (voir startOrResumeSessionTimer()), affichage et
-        // Stop/Resume geres ici. L'etat reel (WorkoutDay) n'est connu qu'apres
+        // a la premiere serie loggee (voir startOrResumeSessionTimer()), affichage gere
+        // ici. L'etat reel (WorkoutDay) n'est connu qu'apres
         // initActivity()/MainActivity.dateSelected - le rafraichissement initial se fait
         // donc dans onResume() (appele juste apres onCreate()), pas ici.
+        // Retour Romain 07/09/2026 : la barre n'a plus son propre bouton Stop/Resume
+        // (voir activity_add_exercise.xml) - Stop/Resume se fait desormais uniquement
+        // depuis le dialogue "Workout Time" ci-dessous, toggleSessionTimer() reste la
+        // logique partagee que ce dialogue appelle.
         tv_session_timer = findViewById(R.id.tv_session_timer);
-        bt_session_timer_toggle = findViewById(R.id.bt_session_timer_toggle);
         sessionTimerTicker = new SessionTimerTicker(tv_session_timer);
 
-        bt_session_timer_toggle.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View view)
-            {
-                toggleSessionTimer();
-            }
-        });
-
         // Dialogue complet "Workout Time" (retour Romain 07/09/2026, apres captures
-        // FitNotes fournies) : ouvert en tapant la barre en dehors du bouton
-        // Start/Stop/Resume lui-meme, qui garde son action rapide inchangee - un View
-        // clicable (le bouton) consomme les touches dans ses propres limites avant
-        // celles de son parent, les deux listeners coexistent donc sans conflit.
+        // FitNotes fournies) : ouvert en tapant la barre, seul point d'entree pour
+        // Stop/Resume depuis que la barre a perdu son propre bouton (voir
+        // activity_add_exercise.xml).
         LinearLayout session_timer_bar = findViewById(R.id.session_timer_bar);
         session_timer_bar.setOnClickListener(new View.OnClickListener()
         {
@@ -593,27 +589,14 @@ public class AddExerciseActivity extends AppCompatActivity {
         WorkoutDay day = (position >= 0) ? MainActivity.dataStorage.getWorkoutDays().get(position) : null;
 
         sessionTimerTicker.setWorkoutDay(day);
-        updateSessionTimerButtonLabel(day);
     }
 
-    private void updateSessionTimerButtonLabel(WorkoutDay day)
-    {
-        // Le bouton permet un demarrage manuel meme si aucune serie n'a encore ete loggee
-        // depuis cet ecran (retour Romain 07/09/2026, test reel : une seance importee via
-        // JSON a deja ses series sans jamais passer par addSetExistingWorkoutDay()/
-        // addSetNewWorkoutDay(), qui sont les seuls endroits qui demarraient le chrono
-        // jusqu'ici - il fallait "logger une serie bidon puis la supprimer" pour debloquer
-        // le bouton). Seul cas encore desactive : aucun WorkoutDay du tout pour ce jour
-        // (rien a controler tant qu'aucune serie n'existe, import ou saisie manuelle).
-        boolean hasStarted = day != null && day.getSessionStartTimestamp() != null;
-
-        bt_session_timer_toggle.setEnabled(day != null);
-        bt_session_timer_toggle.setText(!hasStarted ? "Start" : (day.isSessionTimerRunning() ? "Stop" : "Resume"));
-    }
-
-    // Bouton Start/Stop/Resume de la barre de chrono de session (retour Romain 06/09/2026) :
-    // "il faut que je puisse y acceder [...] je dois pouvoir le controler" - sauvegarde
-    // immediatement, meme raisonnement que startOrResumeSessionTimer() ci-dessus.
+    // Start/Stop/Resume de la session (retour Romain 06/09/2026) : "il faut que je
+    // puisse y acceder [...] je dois pouvoir le controler" - sauvegarde immediatement,
+    // meme raisonnement que startOrResumeSessionTimer() ci-dessus. N'est plus appelee
+    // que par le bouton du dialogue "Workout Time" (retour Romain 07/09/2026, la barre
+    // persistante a perdu son propre bouton Stop/Resume - voir showWorkoutTimeDialog()
+    // et activity_add_exercise.xml).
     private void toggleSessionTimer()
     {
         int position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
@@ -642,7 +625,6 @@ public class AddExerciseActivity extends AppCompatActivity {
         MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
 
         sessionTimerTicker.setWorkoutDay(day);
-        updateSessionTimerButtonLabel(day);
     }
 
     // "Auto Start" (retour Romain 07/09/2026, reglage du dialogue Workout Time
@@ -674,8 +656,7 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         if (day == null || day.getSessionStartTimestamp() == null)
         {
-            // Rien a montrer tant qu'aucun chrono n'a demarre - meme garde que le
-            // bouton Start/Stop/Resume (updateSessionTimerButtonLabel()).
+            // Rien a montrer tant qu'aucun chrono n'a demarre.
             return;
         }
 
@@ -795,7 +776,6 @@ public class AddExerciseActivity extends AppCompatActivity {
                     MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
 
                     sessionTimerTicker.setWorkoutDay(day);
-                    updateSessionTimerButtonLabel(day);
 
                     workoutTimeDialog.dismiss();
                 })
@@ -1177,6 +1157,69 @@ public class AddExerciseActivity extends AppCompatActivity {
         UpdateViewOnClick();
 
         AddExerciseActivity.isEditMode = true;
+
+        // Rafraichit la liste pour faire apparaitre la surbrillance de cette ligne
+        // (retour Romain 07/09/2026, "je ne sais pas sur quelle ligne je me trouve") -
+        // voir AddExerciseWorkoutSetAdapter.onBindViewHolder().
+        workoutSetAdapter2.notifyDataSetChanged();
+    }
+
+    // Desselectionne la serie en cours d'edition (retour Romain 07/09/2026, retap sur
+    // une ligne deja selectionnee - voir AddExerciseWorkoutSetAdapter, le
+    // OnClickListener de cardView) : remet les champs et les boutons a l'etat neutre
+    // ("nouvelle serie"), sans rien modifier ni supprimer. Vider et_reps/et_weight ici
+    // masque aussi automatiquement Save/Clear (voir updateSaveClearButtonsVisibility(),
+    // declenchee par le TextWatcher sur ces deux champs).
+    public static void cancelEditSet()
+    {
+        AddExerciseActivity.isEditMode = false;
+        AddExerciseActivity.bt_save.setText("Save");
+        AddExerciseActivity.bt_clear.setText("Clear");
+        AddExerciseActivity.et_reps.setText("");
+        AddExerciseActivity.et_weight.setText("");
+
+        workoutSetAdapter2.notifyDataSetChanged();
+    }
+
+    // Allege l'IHM (retour Romain 07/09/2026, "les boutons UPDATE et DELETE de la
+    // serie ne soit visible que si on set une valeur dans weight and reps") : branche
+    // Save/Update et Clear/Delete sur le contenu des deux champs, pour qu'ils ne
+    // s'affichent que quand Weight ET Reps sont renseignes - a l'appel initial (fields
+    // vides au demarrage de l'ecran) comme a chaque frappe/effacement.
+    private void wireSaveClearButtonsVisibility()
+    {
+        TextWatcher watcher = new TextWatcher()
+        {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) { }
+
+            @Override
+            public void afterTextChanged(Editable s)
+            {
+                updateSaveClearButtonsVisibility();
+            }
+        };
+
+        et_weight.addTextChangedListener(watcher);
+        et_reps.addTextChangedListener(watcher);
+
+        updateSaveClearButtonsVisibility();
+    }
+
+    // Grace au TextWatcher ci-dessus, tout setText() programmatique sur et_weight/
+    // et_reps (+/-, Clear, Delete, cancelEditSet(), pre-remplissage d'edition...)
+    // reevalue automatiquement cette visibilite, sans appel manuel supplementaire.
+    private void updateSaveClearButtonsVisibility()
+    {
+        boolean hasValues = !et_weight.getText().toString().trim().isEmpty()
+                && !et_reps.getText().toString().trim().isEmpty();
+
+        int visibility = hasValues ? View.VISIBLE : View.GONE;
+        bt_save.setVisibility(visibility);
+        bt_clear.setVisibility(visibility);
     }
 
     // Update this activity when a set is clicked

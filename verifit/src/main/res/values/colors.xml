@@ -19,5 +19,9 @@
     <color name="core_grey_40">#919191</color>
     <color name="core_grey_55">#6a6a6a</color>
 
+    <!-- Surbrillance de la ligne de serie en cours d'edition (retour Romain 07/09/2026,
+         "je ne sais pas sur quelle ligne je me trouve") - AddExerciseWorkoutSetAdapter,
+         teinte derivee de colorPrimaryLight. -->
+    <color name="row_highlight">#CFEFFB</color>
 
 </resources>
