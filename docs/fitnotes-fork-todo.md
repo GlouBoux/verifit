@@ -2,6 +2,35 @@
 
 ## Codé, en attente de test réel (06/09/2026)
 
+- [x] **Nom de l'exercice tronqué dans la barre du haut - CORRIGÉ, PAS ENCORE
+  REBUILDÉ/RETESTÉ (07/09/2026)** (retour Romain 07/09/2026, sur l'écran
+  `AddExerciseActivity`) : "je vois le nom de l'exercice en cours. Mais il est tronqué
+  donc je ne sais pas sur quel exo je me trouve [...] c'est un pain point sur fitnotes
+  [...] cet affichage devrait être prioritaire (surtout par rapport à la liste
+  d'icones. je n'aime pas les liste d'icone en générale) [...] si vraiment le nom de
+  l'exo est trop long (ça arrive) alors ok pour le tronqué mais là c'est trop court (là
+  j'ai 2 lettres)."
+  Cause identifiée par lecture de `add_exercise_activity_menu.xml` : les 6 items de la
+  barre d'outils (Historique, Graph, Personal Records, Timer, Comments, Select sets)
+  étaient TOUS en `app:showAsAction="always"` - 6 icônes forcées à rester visibles dans
+  l'ActionBar, ne laissant presque plus de largeur au titre (`exercise_name`) à côté
+  d'elles, d'où la troncature extrême.
+  Corrigé : les 6 items passés en `app:showAsAction="never"` - ils rejoignent le menu
+  "..." (overflow) standard, ne laissant plus qu'une seule icône dans la barre, et le
+  titre récupère toute la largeur disponible. Effet de bord repéré et corrigé au
+  passage : 4 des 6 items (Historique, Graph, Timer, Comments) n'avaient jamais eu de
+  `android:title` - sans conséquence tant qu'ils étaient affichés en icône seule, mais
+  le menu "..." affiche ses entrées par TEXTE et non par icône : elles seraient restées
+  vides/inutilisables une fois basculées en overflow. Titres ajoutés en se basant sur
+  l'action de chaque item (`AddExerciseActivity.onOptionsItemSelected()`) : "Exercise
+  History", "Graph", "Timer", "Exercise Comments" (les deux autres avaient déjà "Personal
+  Records" et "Select sets").
+  Seul fichier modifié : `add_exercise_activity_menu.xml` (aucun changement Java
+  nécessaire). Vérifié côté Claude (XML bien formé). **Pas encore rebuildé/retesté par
+  Romain** - si la troncature persiste malgré la largeur récupérée (nom très long), une
+  option de secours serait un Toolbar personnalisé avec un style de titre plus
+  compact/agrandi, à explorer seulement si besoin après ce premier essai.
+
 - [x] **Bug : crash en supprimant la dernière série d'un exercice/jour - VALIDÉ,
   COMMITÉ ET POUSSÉ PAR ROMAIN (06/09/2026)** (retour Romain 06/09/2026) : "quand je suis sur un
   workout donné, si je supprime la dernière ligne du dernier exercice ça fait planter
@@ -760,6 +789,31 @@
   uniquement, avec avertissement explicite de ne pas l'importer telle quelle.
 
 ## En attente de décision / à planifier
+
+- [ ] **Idée : onglet/section "Prévu vs Réalisé" visible pendant la séance, avec le
+  commentaire de `workout_engine.py`** (retour Romain 07/09/2026, explicitement présenté
+  comme facultatif, avis demandé) : "ça serait une idée géniale d'avoir un tab où on voit
+  directement prévu / realisé avec le commentaire du script (la partie "ça fait un gain
+  théorique de X pourcent"). Je me dis que ça peut être bien si je veux voir l'info
+  pendant ma séance. Mais c'est peut être facultatif."
+  Existant aujourd'hui (voir item "Écarts Prévu/Réalisé" plus bas, clos) : un badge
+  discret par série en écart + tap pour voir le détail au cas par cas, plus un écran
+  dédié `DiscrepancyHistoryActivity` pour l'historique toutes séances confondues - mais
+  rien qui donne une vue d'ensemble immédiate "où j'en suis sur toute la séance en
+  cours" sans taper série par série, et le commentaire du script (`WorkoutSet.comment`,
+  déjà rempli par `mergeImportedSession()` à l'import) n'est visible que via le
+  commentaire de la série elle-même, pas rapproché de l'écart prévu/réalisé.
+  **Avis Claude (répondu à Romain le 07/09/2026)** : idée pertinente mais à ne PAS faire
+  en plus de l'existant - plutôt une évolution du badge/dialogue déjà en place, en y
+  ajoutant simplement le commentaire du script quand il y en a un (le dialogue
+  `set_discrepancy_dialog.xml`, déjà ouvert par tap sur le badge, est l'endroit naturel :
+  aucun nouvel écran, juste une ligne de plus). Un onglet séparé listant toutes les
+  séries en écart de la séance EN COURS (sous-ensemble filtré de
+  `DiscrepancyHistoryActivity`, restreint au jour affiché) reste envisageable si Romain
+  confirme en vouloir une vue d'ensemble en plus du détail par série - mais pas
+  prioritaire tant que le besoin réel n'est pas confirmé à l'usage. Décision à prendre
+  par Romain : enrichir le dialogue existant (rapide) suffit-il, ou veut-il vraiment la
+  vue d'ensemble par séance en plus ?
 
 - [ ] **Autoriser des charges négatives (exercices délestés/assistés)** (retour Romain
   06/09/2026, gros pain point identifié sur FitNotes) : "j'ai des exercices ou je me

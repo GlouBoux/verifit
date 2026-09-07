@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Retour Romain 07/09/2026 : "je vois le nom de l'exercice en cours [...] il est
+     tronque [...] la un ai 2 lettres [...] cet affichage devrait etre prioritaire
+     (surtout par rapport a la liste d'icones. je n'aime pas les listes d'icones en
+     general)". Cause : les 6 items ci-dessous etaient tous en
+     app:showAsAction="always", ne laissant presque plus de place au titre
+     (AddExerciseActivity.initActivity(), getSupportActionBar().setTitle(exercise_name))
+     dans la barre d'action. Passes en "never" : ils rejoignent le menu "..." standard
+     (un seul icone), le titre recupere toute la largeur disponible. android:title
+     ajoute sur les 4 items qui n'en avaient pas (invisibles jusqu'ici car
+     app:showAsAction="always" affiche l'icone seule - le menu "..." lui affiche le
+     texte, pas l'icone). -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
@@ -6,14 +17,16 @@
     <item
         android:id="@+id/history"
         android:icon="@drawable/ic_settings_backup_restore_24px"
-        app:showAsAction="always"
+        android:title="Exercise History"
+        app:showAsAction="never"
         app:iconTint="@color/cardview_light_background">
     </item>
 
     <item
         android:id="@+id/graph"
         android:icon="@drawable/ic_poll_24px"
-        app:showAsAction="always"
+        android:title="Graph"
+        app:showAsAction="never"
         app:iconTint="@color/cardview_light_background">
     </item>
 
@@ -26,7 +39,7 @@
         android:id="@+id/rep_range_history"
         android:icon="@drawable/ic_emoji_events_24px"
         android:title="Personal Records"
-        app:showAsAction="always"
+        app:showAsAction="never"
         app:iconTint="@color/cardview_light_background">
     </item>
 
@@ -34,7 +47,8 @@
     <item
         android:id="@+id/timer"
         android:icon="@drawable/ic_alarm_24px"
-        app:showAsAction="always"
+        android:title="Timer"
+        app:showAsAction="never"
         app:iconTint="@color/cardview_light_background">
 
     </item>
@@ -42,7 +56,8 @@
     <item
         android:id="@+id/comment"
         android:icon="@drawable/ic_comment_24px"
-        app:showAsAction="always"
+        android:title="Exercise Comments"
+        app:showAsAction="never"
         app:iconTint="@color/cardview_light_background">
 
     </item>
@@ -56,7 +71,7 @@
         android:id="@+id/select_sets"
         android:icon="@drawable/ic_fact_check_24px"
         android:title="Select sets"
-        app:showAsAction="always"
+        app:showAsAction="never"
         app:iconTint="@color/cardview_light_background">
 
     </item>

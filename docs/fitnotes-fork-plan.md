@@ -792,6 +792,42 @@ pour le `minSdk 16` du projet, `View.setBackgroundTintList()` natif exigeant l'A
 **Statut au 07/09/2026 : codé, correctif livré, vérifié côté Claude (équilibre
 accolades/parenthèses, XML bien formé) - pas encore retesté par Romain.**
 
+## Fonctionnalité 14 — Titre de l'exercice tronqué : items de la barre d'outils passés en overflow (07/09/2026)
+
+Suite au test de la Fonctionnalité 13 ci-dessus, Romain a signalé un pain point déjà
+connu sur FitNotes : "je vois le nom de l'exercice en cours. Mais il est tronqué donc
+je ne sais pas sur quel exo je me trouve [...] cet affichage devrait être prioritaire
+(surtout par rapport à la liste d'icones. je n'aime pas les liste d'icone en générale)
+[...] là j'ai 2 lettres."
+
+**Cause** : les 6 items de `add_exercise_activity_menu.xml` (Historique, Graph,
+Personal Records, Timer, Comments, Select sets) étaient tous en
+`app:showAsAction="always"` - 6 icônes forcées dans l'ActionBar, ne laissant presque
+plus de largeur au titre (`AddExerciseActivity.initActivity()`,
+`getSupportActionBar().setTitle(exercise_name)`).
+
+**Correctif** : les 6 items passés en `app:showAsAction="never"` - ils rejoignent le
+menu overflow "..." standard (une seule icône), le titre récupère toute la largeur
+disponible. Effet de bord détecté en cours de route : 4 des 6 items n'avaient jamais eu
+d'`android:title` (invisible tant qu'affichés en icône seule dans l'ActionBar) - le
+menu overflow affichant ses entrées par texte et non par icône, elles seraient restées
+vides. Titres ajoutés à partir de l'action de chaque item dans
+`onOptionsItemSelected()`. Seul fichier modifié, aucun changement Java nécessaire.
+
+Romain a aussi soumis une deuxième idée dans le même message, présentée comme
+facultative : un onglet/section visible pendant la séance montrant directement
+prévu/réalisé + le commentaire généré par `workout_engine.py` (le gain théorique en
+%), plutôt que de devoir taper sur le badge d'écart série par série. Avis donné : ne
+pas dupliquer l'écran existant (Fonctionnalité 7), mais enrichir le dialogue
+`set_discrepancy_dialog.xml` déjà ouvert par le badge en y ajoutant le commentaire du
+script - une vue d'ensemble par séance (sous-ensemble filtré de
+`DiscrepancyHistoryActivity`) resterait possible en plus si Romain confirme en avoir
+besoin après avoir testé la version enrichie du dialogue. Pas codé, en attente de
+décision (voir `docs/fitnotes-fork-todo.md`).
+
+**Statut au 07/09/2026 : codé, livré, vérifié côté Claude (XML bien formé) - pas encore
+rebuildé/retesté par Romain.**
+
 ## Incident : bug critique de perte de données à l'Import Session (05/09/2026)
 
 Romain a signalé, après avoir recompilé/réinstallé l'app puis importé le JSON de la
