@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -32,6 +33,7 @@ import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -46,6 +48,7 @@ import com.example.verifit.MonthXAxisFormatter;
 import com.example.verifit.RestTimerReceiver;
 import com.example.verifit.SessionTimerTicker;
 import com.example.verifit.SnackBarWithMessage;
+import com.example.verifit.WorkoutReportGenerator;
 import com.example.verifit.adapters.AddExerciseWorkoutSetAdapter;
 import com.example.verifit.adapters.ExerciseHistoryExerciseAdapter;
 import com.example.verifit.R;
@@ -140,6 +143,19 @@ public class AddExerciseActivity extends AppCompatActivity {
     private MaterialButton bt_session_timer_toggle;
     private SessionTimerTicker sessionTimerTicker;
 
+    // Chrono dedie a la Duration DANS le dialogue "Workout Time" (retour Romain
+    // 07/09/2026, voir showWorkoutTimeDialog()) - independant de sessionTimerTicker
+    // ci-dessus (barre persistante) : demarre a l'ouverture du dialogue, arrete a sa
+    // fermeture (setOnDismissListener), jamais actif quand le dialogue est ferme.
+    private SessionTimerTicker workoutTimeDialogTicker;
+
+    // Cle SharedPreferences du reglage "Auto Start" (retour Romain 07/09/2026,
+    // dialogue Workout Time Settings, capture FitNotes fournie) - dupliquee a
+    // l'identique dans DayActivity (meme convention que les autres methodes de ce
+    // chrono, ex. toggleSessionTimer()) : les deux ecrans doivent lire/ecrire
+    // exactement le meme reglage.
+    private static final String AUTO_START_PREF_KEY = "session_auto_start";
+
     private AlertDialog currentDialog = null;
 
     // Multi-select delete (retour Romain 05/09/2026) : sélectionner plusieurs séries et
@@ -192,6 +208,21 @@ public class AddExerciseActivity extends AppCompatActivity {
             public void onClick(View view)
             {
                 toggleSessionTimer();
+            }
+        });
+
+        // Dialogue complet "Workout Time" (retour Romain 07/09/2026, apres captures
+        // FitNotes fournies) : ouvert en tapant la barre en dehors du bouton
+        // Start/Stop/Resume lui-meme, qui garde son action rapide inchangee - un View
+        // clicable (le bouton) consomme les touches dans ses propres limites avant
+        // celles de son parent, les deux listeners coexistent donc sans conflit.
+        LinearLayout session_timer_bar = findViewById(R.id.session_timer_bar);
+        session_timer_bar.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                showWorkoutTimeDialog();
             }
         });
 
@@ -517,6 +548,17 @@ public class AddExerciseActivity extends AppCompatActivity {
     {
         if (workoutDay.getSessionStartTimestamp() == null)
         {
+            // Reglage "Auto Start" (retour Romain 07/09/2026, dialogue Workout Time
+            // Settings) : ne s'applique qu'au tout premier demarrage automatique d'une
+            // nouvelle seance - PAS a la reprise apres un Stop manuel ci-dessous, qui
+            // reste toujours automatique quelle que soit ce reglage (portee identique a
+            // la description "Auto Start" de FitNotes lui-meme : demarrer AU DEBUT
+            // d'une seance, pas la re-demarrer apres coup).
+            if (!isSessionAutoStartEnabled())
+            {
+                return;
+            }
+
             workoutDay.setSessionStartTimestamp(System.currentTimeMillis());
         }
         else if (workoutDay.getSessionEndTimestamp() != null)
@@ -556,15 +598,20 @@ public class AddExerciseActivity extends AppCompatActivity {
 
     private void updateSessionTimerButtonLabel(WorkoutDay day)
     {
+        // Le bouton permet un demarrage manuel meme si aucune serie n'a encore ete loggee
+        // depuis cet ecran (retour Romain 07/09/2026, test reel : une seance importee via
+        // JSON a deja ses series sans jamais passer par addSetExistingWorkoutDay()/
+        // addSetNewWorkoutDay(), qui sont les seuls endroits qui demarraient le chrono
+        // jusqu'ici - il fallait "logger une serie bidon puis la supprimer" pour debloquer
+        // le bouton). Seul cas encore desactive : aucun WorkoutDay du tout pour ce jour
+        // (rien a controler tant qu'aucune serie n'existe, import ou saisie manuelle).
         boolean hasStarted = day != null && day.getSessionStartTimestamp() != null;
 
-        // Rien a demarrer/arreter manuellement tant qu'aucune serie n'a ete loggee -
-        // desactive plutot que de laisser un bouton sans effet visible.
-        bt_session_timer_toggle.setEnabled(hasStarted);
-        bt_session_timer_toggle.setText(hasStarted && day.isSessionTimerRunning() ? "Stop" : "Resume");
+        bt_session_timer_toggle.setEnabled(day != null);
+        bt_session_timer_toggle.setText(!hasStarted ? "Start" : (day.isSessionTimerRunning() ? "Stop" : "Resume"));
     }
 
-    // Bouton Stop/Resume de la barre de chrono de session (retour Romain 06/09/2026) :
+    // Bouton Start/Stop/Resume de la barre de chrono de session (retour Romain 06/09/2026) :
     // "il faut que je puisse y acceder [...] je dois pouvoir le controler" - sauvegarde
     // immediatement, meme raisonnement que startOrResumeSessionTimer() ci-dessus.
     private void toggleSessionTimer()
@@ -576,12 +623,14 @@ public class AddExerciseActivity extends AppCompatActivity {
         }
 
         WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(position);
+
         if (day.getSessionStartTimestamp() == null)
         {
-            return;
+            // Demarrage manuel (retour Romain 07/09/2026) : plus besoin de logger puis
+            // supprimer une serie bidon pour "debloquer" ce bouton.
+            day.setSessionStartTimestamp(System.currentTimeMillis());
         }
-
-        if (day.isSessionTimerRunning())
+        else if (day.isSessionTimerRunning())
         {
             day.setSessionEndTimestamp(System.currentTimeMillis());
         }
@@ -594,6 +643,164 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         sessionTimerTicker.setWorkoutDay(day);
         updateSessionTimerButtonLabel(day);
+    }
+
+    // "Auto Start" (retour Romain 07/09/2026, reglage du dialogue Workout Time
+    // Settings, capture FitNotes fournie) - lu par startOrResumeSessionTimer().
+    // Active par defaut, comme sur FitNotes.
+    private boolean isSessionAutoStartEnabled()
+    {
+        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences", MODE_PRIVATE);
+        return sharedPreferences.getBoolean(AUTO_START_PREF_KEY, true);
+    }
+
+    private void setSessionAutoStartEnabled(boolean enabled)
+    {
+        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putBoolean(AUTO_START_PREF_KEY, enabled);
+        editor.apply();
+    }
+
+    // Dialogue complet "Workout Time" (retour Romain 07/09/2026, apres captures
+    // FitNotes fournies - voir le OnClickListener de session_timer_bar dans
+    // onCreate()) : Start Time / End Time / Duration, un bouton Stop/Resume qui
+    // reutilise toggleSessionTimer(), et un menu "..." (Reglages / Annuler le
+    // chrono - voir workout_time_dialog_menu.xml).
+    private void showWorkoutTimeDialog()
+    {
+        int position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
+        WorkoutDay day = (position >= 0) ? MainActivity.dataStorage.getWorkoutDays().get(position) : null;
+
+        if (day == null || day.getSessionStartTimestamp() == null)
+        {
+            // Rien a montrer tant qu'aucun chrono n'a demarre - meme garde que le
+            // bouton Start/Stop/Resume (updateSessionTimerButtonLabel()).
+            return;
+        }
+
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.workout_time_dialog, null);
+
+        TextView tv_date = dialogView.findViewById(R.id.tv_workout_time_date);
+        TextView tv_start = dialogView.findViewById(R.id.tv_workout_time_start);
+        TextView tv_end = dialogView.findViewById(R.id.tv_workout_time_end);
+        TextView tv_duration = dialogView.findViewById(R.id.tv_workout_time_duration);
+        ImageButton bt_overflow = dialogView.findViewById(R.id.bt_workout_time_overflow);
+        MaterialButton bt_toggle = dialogView.findViewById(R.id.bt_workout_time_toggle);
+        MaterialButton bt_close = dialogView.findViewById(R.id.bt_workout_time_close);
+
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+        tv_date.setText(WorkoutReportGenerator.formatDateHeader(day.getDate()));
+        tv_start.setText(timeFormat.format(new Date(day.getSessionStartTimestamp())));
+        tv_end.setText(day.getSessionEndTimestamp() != null
+                ? timeFormat.format(new Date(day.getSessionEndTimestamp()))
+                : "In progress");
+        bt_toggle.setText(day.isSessionTimerRunning() ? "Stop Timer" : "Resume Timer");
+
+        // Duration : chrono dedie a ce TextView, demarre ici et arrete a la fermeture
+        // du dialogue (setOnDismissListener plus bas) - voir le champ
+        // workoutTimeDialogTicker.
+        workoutTimeDialogTicker = new SessionTimerTicker(tv_duration);
+        workoutTimeDialogTicker.setWorkoutDay(day);
+        workoutTimeDialogTicker.start();
+
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dialogView).create();
+
+        bt_toggle.setOnClickListener(v ->
+        {
+            toggleSessionTimer();
+            dialog.dismiss();
+        });
+
+        bt_close.setOnClickListener(v -> dialog.dismiss());
+
+        bt_overflow.setOnClickListener(v ->
+        {
+            PopupMenu popupMenu = new PopupMenu(AddExerciseActivity.this, bt_overflow);
+            popupMenu.inflate(R.menu.workout_time_dialog_menu);
+            popupMenu.setOnMenuItemClickListener(item ->
+            {
+                int itemId = item.getItemId();
+                if (itemId == R.id.workout_time_settings)
+                {
+                    showWorkoutTimeSettingsDialog();
+                    return true;
+                }
+                else if (itemId == R.id.workout_time_cancel_timer)
+                {
+                    confirmCancelSessionTimer(dialog);
+                    return true;
+                }
+                return false;
+            });
+            popupMenu.show();
+        });
+
+        dialog.setOnDismissListener(d ->
+        {
+            if (workoutTimeDialogTicker != null)
+            {
+                workoutTimeDialogTicker.stop();
+                workoutTimeDialogTicker = null;
+            }
+        });
+
+        dialog.show();
+    }
+
+    // Sous-dialogue "Workout Time Settings" (menu "..." du dialogue Workout Time) -
+    // seul reglage reproduit : "Auto Start" (voir workout_time_settings_dialog.xml
+    // pour l'explication de l'absence volontaire d'un reglage "Auto Stop").
+    private void showWorkoutTimeSettingsDialog()
+    {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.workout_time_settings_dialog, null);
+
+        CheckBox cb_auto_start = dialogView.findViewById(R.id.cb_workout_time_auto_start);
+        MaterialButton bt_close = dialogView.findViewById(R.id.bt_workout_time_settings_close);
+
+        cb_auto_start.setChecked(isSessionAutoStartEnabled());
+
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dialogView).create();
+
+        cb_auto_start.setOnCheckedChangeListener((buttonView, isChecked) -> setSessionAutoStartEnabled(isChecked));
+        bt_close.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
+    }
+
+    // Confirmation avant d'annuler completement le chrono de la seance en cours
+    // (retour Romain 07/09/2026, action "Cancel Timer" du menu "...", irreversible -
+    // remet SessionStartTimestamp/SessionEndTimestamp a null, les series deja loggees
+    // ne sont elles jamais touchees).
+    private void confirmCancelSessionTimer(AlertDialog workoutTimeDialog)
+    {
+        // Wording en anglais (retour Romain 07/09/2026) : coherent avec le reste de
+        // cette fonctionnalite ("Cancel Timer" vient du menu du dialogue Workout Time
+        // lui-meme, cf. workout_time_dialog_menu.xml) plutot que de melanger les
+        // langues dans une seule interaction.
+        new AlertDialog.Builder(this)
+                .setTitle("Cancel Timer")
+                .setMessage("Cancel the timer for this workout? Sets already logged will not be deleted.")
+                .setPositiveButton("Cancel Timer", (dlg, which) ->
+                {
+                    int position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
+                    if (position < 0)
+                    {
+                        return;
+                    }
+
+                    WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(position);
+                    day.setSessionStartTimestamp(null);
+                    day.setSessionEndTimestamp(null);
+                    MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+
+                    sessionTimerTicker.setWorkoutDay(day);
+                    updateSessionTimerButtonLabel(day);
+
+                    workoutTimeDialog.dismiss();
+                })
+                .setNegativeButton("Back", null)
+                .show();
     }
 
     public Integer getSetIdFromResponse(okhttp3.Response response) throws IOException

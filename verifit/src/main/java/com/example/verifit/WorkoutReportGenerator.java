@@ -69,7 +69,11 @@ public class WorkoutReportGenerator
 
     // "vendredi 4 septembre 2026" - premiere lettre en majuscule pour un rendu
     // d'en-tete propre (FitNotes lui-meme l'affichait en minuscule, "vendredi...").
-    private static String formatDateHeader(String isoDate)
+    // Public (pas seulement private) : reutilisee telle quelle par le dialogue
+    // "Workout Time" (AddExerciseActivity/DayActivity.showWorkoutTimeDialog(), retour
+    // Romain 07/09/2026) pour afficher la date du jour avec le meme format francais
+    // propre que ce rapport, plutot que de dupliquer cette logique.
+    public static String formatDateHeader(String isoDate)
     {
         try
         {

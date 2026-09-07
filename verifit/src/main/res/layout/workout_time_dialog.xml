@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dialogue "Workout Time", ouvert en tapant la barre de chrono de session (retour
+     Romain 07/09/2026, apres avoir montre des captures de l'ecran equivalent sur
+     FitNotes) : Start Time / End Time / Duration, un bouton Start/Stop/Resume, et un
+     menu (icone "..." en haut a droite) avec Reglages (Auto Start) et Annuler le
+     chrono - voir AddExerciseActivity/DayActivity.showWorkoutTimeDialog() pour le
+     detail. Wording repris volontairement en anglais, a l'identique des captures
+     fournies (comme le reste de cette fonctionnalite : boutons "Stop"/"Resume" deja
+     en anglais sur la barre elle-meme). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Workout Time"
+        android:textColor="@color/colorPrimary"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="10dp"
+        android:background="@color/core_grey_10" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tv_workout_time_date"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/core_black"
+            android:textSize="16sp"
+            tools:text="lundi 7 septembre 2026" />
+
+        <ImageButton
+            android:id="@+id/bt_workout_time_overflow"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:srcCompat="@drawable/ic_more_vert_24px"
+            app:tint="@color/core_grey_55" />
+
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Start Time"
+        android:textColor="@color/core_grey_55"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/tv_workout_time_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/core_black"
+        android:textSize="18sp"
+        tools:text="09:52" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="End Time"
+        android:textColor="@color/core_grey_55"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/tv_workout_time_end"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/core_black"
+        android:textSize="18sp"
+        tools:text="In progress" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="Duration"
+        android:textColor="@color/core_grey_55"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/tv_workout_time_duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/core_black"
+        android:textSize="18sp"
+        tools:text="00:00:34" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/bt_workout_time_toggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Stop Timer"
+        android:textAllCaps="false"
+        app:cornerRadius="10dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/bt_workout_time_close"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Close"
+        android:textAllCaps="false"
+        android:textColor="@color/colorPrimary"
+        app:backgroundTint="@color/core_white"
+        app:cornerRadius="10dp" />
+
+</LinearLayout>

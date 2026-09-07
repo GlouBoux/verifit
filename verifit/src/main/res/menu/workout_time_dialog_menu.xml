@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Menu du bouton "..." du dialogue Workout Time (retour Romain 07/09/2026, captures
+     FitNotes fournies) - voir AddExerciseActivity/DayActivity.showWorkoutTimeDialog().
+     Pas d'icones : simple PopupMenu texte, comme sur les captures fournies. -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/workout_time_settings"
+        android:title="Settings">
+    </item>
+
+    <item
+        android:id="@+id/workout_time_cancel_timer"
+        android:title="Cancel Timer">
+    </item>
+
+</menu>

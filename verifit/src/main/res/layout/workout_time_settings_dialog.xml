@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sous-dialogue "Workout Time Settings" (menu "..." du dialogue Workout Time, retour
+     Romain 07/09/2026). Reproduit uniquement le reglage "Auto Start" observe sur les
+     captures FitNotes fournies. Pas de reglage "Auto Stop" ici : il n'existe aucun
+     signal fiable de "derniere serie de la seance" dans cette app pour arreter le
+     chrono automatiquement (meme ambiguite deja notee dans docs/fitnotes-fork-todo.md
+     pour la demande separee d'arret auto du minuteur de repos) - voir
+     AddExerciseActivity/DayActivity.showWorkoutTimeSettingsDialog(). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Workout Time Settings"
+        android:textColor="@color/colorPrimary"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="10dp"
+        android:background="@color/core_grey_10" />
+
+    <CheckBox
+        android:id="@+id/cb_workout_time_auto_start"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Auto Start"
+        android:textColor="@color/core_black"
+        android:textSize="16sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="The workout timer will start automatically when you complete the first set in a new workout."
+        android:textColor="@color/core_grey_55"
+        android:textSize="13sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/bt_workout_time_settings_close"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Close"
+        android:textAllCaps="false"
+        app:cornerRadius="10dp" />
+
+</LinearLayout>

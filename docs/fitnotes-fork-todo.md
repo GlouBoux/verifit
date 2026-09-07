@@ -167,8 +167,9 @@
   intact et reste utilisable comme avant via la boîte de dialogue "Timer" du menu -
   seule la barre persistante ajoutée par erreur a disparu.
 
-- [ ] **Chrono de la séance entière, contrôlable (Start auto / Stop-Resume manuel) -
-  CODÉ, PAS ENCORE TESTÉ (06/09/2026)** (retour Romain 06/09/2026, après un
+- [x] **Chrono de la séance entière, contrôlable (Start auto / Stop-Resume manuel) -
+  TESTÉ EN CONDITIONS RÉELLES PAR ROMAIN, CORRECTIF + DIALOGUE "WORKOUT TIME" LIVRÉS
+  (07/09/2026) - PAS ENCORE REBUILDÉ/RETESTÉ** (retour Romain 06/09/2026, après un
   malentendu sur la barre de minuteur de repos ci-dessus) : "on ne s'est pas compris.
   Je voulais parler du timer interne de toute la séance. Depuis combien de temps je
   fais ma séance. Celle qui sera envoyé dans le rapport de séance (le share). Comme je
@@ -222,11 +223,52 @@
     par l'export - conservé pour un usage futur éventuel (ex. mesurer le repos
     réellement pris entre deux séries, idée déjà notée plus bas dans ce document).
   Vérifié côté Claude (équilibre accolades/parenthèses de tous les fichiers Java
-  touchés, XML bien formé des deux layouts). **Pas encore testé/rebuild par Romain** -
-  en particulier : l'affichage réel des deux barres à l'écran (pas d'environnement de
-  build/émulateur côté Claude), la reprise automatique après un Stop manuel suivi
-  d'une nouvelle série, et le format de la ligne "Time" du rapport avec cette nouvelle
-  source (devrait être identique en apparence, seul le calcul sous-jacent a changé).
+  touchés, XML bien formé des deux layouts).
+
+  **Retour du premier test réel (séance du 07/09/2026, import JSON via
+  `generate_workout`) :**
+  1. **Bug confirmé et corrigé** : "le chrono ne se lance pas [après import JSON] [...]
+     du coup pour le lancer je dois faire un truc bizarre : log une série (et la
+     supprimé puisque pas pertinent)". Cause : le bouton Start/Stop/Resume était
+     désactivé tant qu'aucune série n'était passée par
+     `addSetExistingWorkoutDay()`/`addSetNewWorkoutDay()` (les seuls endroits qui
+     démarraient le chrono jusque-là) - une séance importée en JSON a déjà ses séries
+     sans jamais passer par ce chemin. **Corrigé** dans `AddExerciseActivity` et
+     `DayActivity` : le bouton est désormais actif dès qu'un `WorkoutDay` existe pour le
+     jour (import ou saisie manuelle), et permet un démarrage manuel du chrono.
+  2. **Comportement Stop → Resume clarifié (pas un bug)** : "si je stop / résume le
+     timer, le chrono continue d'exister en background [...] Je ne sais même pas si
+     c'est ce que je veux." Question posée explicitement à Romain (avec option
+     recommandée) : **confirmé qu'il veut garder ce comportement** - le temps d'arrêt
+     reste inclus dans la durée totale (pas de nouveau champ d'accumulation séparé,
+     `Stop` puis `Resume` équivaut à remettre `SessionEndTimestamp` à `null`, le calcul
+     reste `(fin ?? maintenant) - début`). Aucun changement de code nécessaire ici.
+  3. **Nouveau dialogue "Workout Time" (codé et livré, 07/09/2026)** : à partir de
+     captures d'écran de l'IHM équivalente sur FitNotes fournies par Romain, et de sa
+     confirmation ("Dialogue complet façon FitNotes") sur la proposition faite. Ouvert
+     en tapant la barre de chrono (en dehors du bouton Start/Stop/Resume lui-même, qui
+     garde son action rapide) - affiche Start Time / End Time / Duration (date au
+     format français propre, réutilise `WorkoutReportGenerator.formatDateHeader()`),
+     un bouton Stop/Resume Timer, et un menu "..." avec :
+     - **Settings** : sous-dialogue avec un unique réglage "Auto Start" (texte identique
+       à FitNotes : "The workout timer will start automatically when you complete the
+       first set in a new workout.", activé par défaut). **Pas de réglage "Auto Stop"** :
+       omission volontaire, faute de signal fiable de "dernière série de la séance"
+       dans cette app (même ambiguïté déjà notée plus bas dans ce document pour la
+       demande séparée d'arrêt auto du minuteur de repos) - à réévaluer si Romain
+       propose une heuristique.
+     - **Cancel Timer** : annule complètement le chrono de la séance en cours (remet
+       `SessionStartTimestamp`/`SessionEndTimestamp` à `null`, confirmation demandée
+       avant action) - les séries déjà loggées ne sont jamais touchées.
+     Nouveaux fichiers : `workout_time_dialog.xml`, `workout_time_settings_dialog.xml`,
+     `workout_time_dialog_menu.xml`. Le réglage "Auto Start" ne conditionne QUE le tout
+     premier démarrage automatique d'une nouvelle séance (`startOrResumeSessionTimer()`)
+     - jamais la reprise automatique après un Stop manuel suivi d'une nouvelle série
+     (portée identique à la description "Auto Start" de FitNotes lui-même).
+  Vérifié côté Claude (équilibre accolades/parenthèses des fichiers Java touchés, XML
+  bien formé des trois nouveaux fichiers). **Pas encore rebuildé/retesté par Romain** -
+  en particulier : l'affichage réel du nouveau dialogue et de son menu, le démarrage
+  manuel sans série préalable, et le réglage Auto Start.
 
 - [x] **Historique des PR par nombre de reps - v2 VALIDÉE, COMMITÉE ET POUSSÉE PAR ROMAIN (06/09/2026)**
   (retour Romain, à propos de la définition exacte d'un PR pour l'export de séance) :
@@ -377,6 +419,10 @@
   aucune série horodatée (ligne "Time" correctement absente), une séance avec une série
   nouvellement créée (ligne "Time: 22:31 – 22:31 (0h 0m)" correctement calculée, tag
   `[PR]` correct) - aucun bug relevé sur les deux exemples.
+  **Reconfirmé sur une vraie séance de sport complète (07/09/2026, 10 exercices, séance
+  importée en JSON puis loggée à la salle)** : ligne "Time" correcte (09:48 – 09:56,
+  0h 8m), tags `[PR]` et commentaires par série corrects (dont les commentaires générés
+  par `workout_engine.py`) - aucun bug relevé sur cet export non plus.
 
 - [ ] **Générer un programme ("Routine")** (retour Romain 06/09/2026) : équivalent de la
   fonctionnalité "Routines" de FitNotes - sélectionner un ensemble d'exercices (dans le

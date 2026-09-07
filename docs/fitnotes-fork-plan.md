@@ -711,6 +711,48 @@ uniquement par lecture de code, équilibrage accolades/parenthèses, et bonne fo
 XML). Reste à utiliser `getRepRangePRSets()` dans le générateur d'export une fois
 celui-ci écrit.
 
+## Fonctionnalité 12 — Chrono de séance : dialogue "Workout Time", correctif démarrage manuel (07/09/2026)
+
+Suite au premier test réel de la Fonctionnalité "Chrono de la séance entière" (codée le
+06/09/2026, voir `docs/fitnotes-fork-todo.md`), sur une vraie séance de sport
+(importée en JSON via `generate_workout`, loggée à la salle).
+
+**Bug trouvé et corrigé** : le chrono ne pouvait pas être démarré manuellement pour une
+séance dont les séries arrivaient par import JSON (`AddExerciseActivity.addSet*()`, les
+seuls endroits qui démarraient le chrono jusque-là, ne sont jamais appelés par l'import).
+Romain devait "logger une série bidon puis la supprimer" pour débloquer le bouton.
+Corrigé dans `AddExerciseActivity` et `DayActivity` : le bouton Start/Stop/Resume est
+actif dès qu'un `WorkoutDay` existe, quelle que soit son origine.
+
+**Comportement Stop → Resume clarifié** : Romain a remarqué que le temps d'arrêt entre un
+Stop et un Resume est inclus dans la durée totale affichée/exportée ("je ne sais même pas
+si c'est ce que je veux"). Question posée explicitement (avec option recommandée) :
+confirmé qu'il veut garder ce comportement - aucun changement de code nécessaire, c'était
+le comportement voulu depuis le début (voir le commentaire sur
+`WorkoutDay.SessionStartTimestamp`).
+
+**Nouveau dialogue "Workout Time"** : Romain a fourni 5 captures d'écran de l'IHM
+équivalente sur FitNotes ("Analyse els et propose moi un design similaire / feature
+similaire"). Proposition faite et confirmée par Romain ("Dialogue complet façon
+FitNotes") : dialogue ouvert en tapant la barre de chrono (le bouton Start/Stop/Resume
+garde son action rapide inchangée), affichant Start Time / End Time / Duration, un
+bouton Stop/Resume Timer, et un menu "..." avec Settings (réglage "Auto Start" seul -
+pas d'"Auto Stop", faute de signal fiable de fin de séance dans cette app) et Cancel
+Timer (annule le chrono en cours, confirmation demandée, ne touche jamais aux séries
+déjà loggées).
+
+Nouveaux fichiers : `workout_time_dialog.xml`, `workout_time_settings_dialog.xml`,
+`workout_time_dialog_menu.xml`. `WorkoutReportGenerator.formatDateHeader()` élargie de
+`private` à `public static` pour être réutilisée par le dialogue (même format de date
+français que le rapport "Share workout").
+
+**Statut au 07/09/2026 : codé, vérifié côté Claude (équilibre accolades/parenthèses,
+XML bien formé), livré sur la machine de Romain - pas encore rebuildé/testé.**
+
+Par ailleurs, le rapport "Share workout" lui-même (Fonctionnalité déjà validée, voir
+plus haut) a été reconfirmé correct sur cette même vraie séance (10 exercices, tags
+`[PR]` et commentaires par série corrects) - aucun bug relevé.
+
 ## Incident : bug critique de perte de données à l'Import Session (05/09/2026)
 
 Romain a signalé, après avoir recompilé/réinstallé l'app puis importé le JSON de la
