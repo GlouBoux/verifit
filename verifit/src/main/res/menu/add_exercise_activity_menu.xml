@@ -9,7 +9,17 @@
      (un seul icone), le titre recupere toute la largeur disponible. android:title
      ajoute sur les 4 items qui n'en avaient pas (invisibles jusqu'ici car
      app:showAsAction="always" affiche l'icone seule - le menu "..." lui affiche le
-     texte, pas l'icone). -->
+     texte, pas l'icone).
+
+     Suite (retour Romain 07/09/2026, apres validation du correctif ci-dessus) : "il
+     faudrait que j'ai un settings [...] qui me demande quels boutons je veux display.
+     Une fois selectionne, ces boutons/icone serait visible juste a cote des 3 points
+     (et donc mangerait un peu de place sur le nom d'exo et c'est ok)." Le
+     app:showAsAction="never" statique ci-dessous n'est donc plus que la valeur PAR
+     DEFAUT : AddExerciseActivity.onCreateOptionsMenu() l'ecrase a l'ouverture du menu
+     selon le choix de Romain (reglage "Toolbar Settings" tout en bas de ce fichier,
+     voir showToolbarSettingsDialog()) - un item "epingle" redevient "always", les
+     autres restent "never". -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
@@ -76,7 +86,17 @@
 
     </item>
 
-
+    <!-- Retour Romain 07/09/2026 : reglage permettant d'epingler certains des 6 items
+         ci-dessus a cote du menu "..." plutot que de tous les laisser dans l'overflow
+         (voir commentaire en tete de fichier). Reste toujours lui-meme dans l'overflow
+         (jamais epinglable) - ouvre AddExerciseActivity.showToolbarSettingsDialog(). -->
+    <item
+        android:id="@+id/toolbar_settings"
+        android:icon="@drawable/ic_view_compact_24px"
+        android:title="Toolbar Settings"
+        app:showAsAction="never"
+        app:iconTint="@color/cardview_light_background">
+    </item>
 
 
 

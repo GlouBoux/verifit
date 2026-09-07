@@ -822,11 +822,38 @@ pas dupliquer l'écran existant (Fonctionnalité 7), mais enrichir le dialogue
 `set_discrepancy_dialog.xml` déjà ouvert par le badge en y ajoutant le commentaire du
 script - une vue d'ensemble par séance (sous-ensemble filtré de
 `DiscrepancyHistoryActivity`) resterait possible en plus si Romain confirme en avoir
-besoin après avoir testé la version enrichie du dialogue. Pas codé, en attente de
-décision (voir `docs/fitnotes-fork-todo.md`).
+besoin après avoir testé la version enrichie du dialogue. **Réponse de Romain (07/09/2026)
+: "ok on verra à l'usage si le besoin se fait effectivement sentir"** - reste en pause,
+pas codé (voir `docs/fitnotes-fork-todo.md`).
 
-**Statut au 07/09/2026 : codé, livré, vérifié côté Claude (XML bien formé) - pas encore
-rebuildé/retesté par Romain.**
+**Confirmé par Romain** : "validé, comité, pushé."
+
+### Suite (07/09/2026) : reglage "Toolbar Settings" pour epingler certaines icones
+
+Romain, satisfait du correctif ci-dessus, a demandé d'aller plus loin : "on va encore
+plus simple : il faudrait que j'ai un settings quelque part, peut être sur l'écran avec
+tous les boutons que tu as mis sous les 3 petits points, qui me demande quels boutons
+je veux display. Une fois selectionné, ces boutons/icone serait visible juste à coté
+des 3 points (et donc mangerait un peu de place sur le nom d'exo et c'est ok)."
+
+**Implémentation** :
+- Nouvel item "Toolbar Settings" ajouté à `add_exercise_activity_menu.xml`, toujours
+  lui-même dans l'overflow (non épinglable) - ouvre `toolbar_settings_dialog.xml`, une
+  case à cocher par item épinglable (les 6 items de la Fonctionnalité 14 ci-dessus).
+- `AddExerciseActivity.onCreateOptionsMenu()` : après l'inflate, une boucle sur
+  `PINNABLE_TOOLBAR_ITEM_IDS` applique `MenuItem.setShowAsAction()` selon une
+  préférence par item (`isToolbarItemPinned()`, `SharedPreferences`, clé
+  `toolbar_pinned_<nom_ressource_item>`, calculée via
+  `getResources().getResourceEntryName(itemId)` pour éviter de dupliquer les noms en
+  dur) - `ALWAYS` si épinglé (visible à côté du "..."), `NEVER` sinon (dans l'overflow,
+  comportement par défaut identique à la Fonctionnalité 14, rien de coché au départ).
+- Chaque case à cocher du dialogue persiste son choix (`setToolbarItemPinned()`) puis
+  appelle `invalidateOptionsMenu()` - la barre se met à jour immédiatement, sans avoir
+  à rouvrir l'écran.
+
+**Statut au 07/09/2026 : codé, livré, vérifié côté Claude (équilibre accolades/
+parenthèses, XML bien formé des deux fichiers touchés) - pas encore rebuildé/retesté
+par Romain.**
 
 ## Incident : bug critique de perte de données à l'Import Session (05/09/2026)
 

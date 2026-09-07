@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dialogue "Toolbar Settings" (retour Romain 07/09/2026, apres le correctif du titre
+     tronque - voir add_exercise_activity_menu.xml) : "il faudrait que j'ai un settings
+     [...] qui me demande quels boutons je veux display. Une fois selectionne, ces
+     boutons/icone serait visible juste a cote des 3 points (et donc mangerait un peu
+     de place sur le nom d'exo et c'est ok)." Une case a cocher par item normalement
+     dans l'overflow "..." - cochee = epingle a cote du menu "...", decochee = reste
+     dans l'overflow. Voir AddExerciseActivity.showToolbarSettingsDialog() et
+     onCreateOptionsMenu() (applique le choix via MenuItem.setShowAsAction()). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Toolbar Settings"
+        android:textColor="@color/colorPrimary"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="10dp"
+        android:background="@color/core_grey_10" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Choose which icons stay visible next to the &#8942; menu. The rest stay in the &#8942; menu."
+        android:textColor="@color/core_grey_55"
+        android:textSize="13sp" />
+
+    <CheckBox
+        android:id="@+id/cb_toolbar_history"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Exercise History"
+        android:textColor="@color/core_black"
+        android:textSize="16sp" />
+
+    <CheckBox
+        android:id="@+id/cb_toolbar_graph"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Graph"
+        android:textColor="@color/core_black"
+        android:textSize="16sp" />
+
+    <CheckBox
+        android:id="@+id/cb_toolbar_rep_range_history"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Personal Records"
+        android:textColor="@color/core_black"
+        android:textSize="16sp" />
+
+    <CheckBox
+        android:id="@+id/cb_toolbar_timer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Timer"
+        android:textColor="@color/core_black"
+        android:textSize="16sp" />
+
+    <CheckBox
+        android:id="@+id/cb_toolbar_comment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Exercise Comments"
+        android:textColor="@color/core_black"
+        android:textSize="16sp" />
+
+    <CheckBox
+        android:id="@+id/cb_toolbar_select_sets"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Select sets"
+        android:textColor="@color/core_black"
+        android:textSize="16sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/bt_toolbar_settings_close"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Close"
+        android:textAllCaps="false"
+        app:cornerRadius="10dp" />
+
+</LinearLayout>

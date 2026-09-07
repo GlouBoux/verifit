@@ -1502,13 +1502,86 @@ public class AddExerciseActivity extends AppCompatActivity {
         }
     }
 
+    // Retour Romain 07/09/2026 (suite du correctif du titre tronque) : items de la
+    // barre d'outils pouvant etre "epingles" a cote du menu "..." via le reglage
+    // "Toolbar Settings" (voir showToolbarSettingsDialog()) - le reste des 6 items du
+    // menu (add_exercise_activity_menu.xml) reste dans l'overflow par defaut.
+    private static final int[] PINNABLE_TOOLBAR_ITEM_IDS = {
+            R.id.history, R.id.graph, R.id.rep_range_history, R.id.timer, R.id.comment, R.id.select_sets
+    };
+
+    private static final String TOOLBAR_PIN_PREF_PREFIX = "toolbar_pinned_";
+
+    private boolean isToolbarItemPinned(int itemId)
+    {
+        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences", MODE_PRIVATE);
+        return sharedPreferences.getBoolean(TOOLBAR_PIN_PREF_PREFIX + getResources().getResourceEntryName(itemId), false);
+    }
+
+    private void setToolbarItemPinned(int itemId, boolean pinned)
+    {
+        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putBoolean(TOOLBAR_PIN_PREF_PREFIX + getResources().getResourceEntryName(itemId), pinned);
+        editor.apply();
+    }
+
     // Menu Stuff
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.add_exercise_activity_menu,menu);
+
+        // Applique le choix de Romain (reglage "Toolbar Settings") par-dessus la
+        // valeur par defaut "never" du XML - un item epingle redevient "always",
+        // visible directement a cote du menu "..." plutot que dans l'overflow.
+        for (int itemId : PINNABLE_TOOLBAR_ITEM_IDS)
+        {
+            MenuItem menuItem = menu.findItem(itemId);
+            if (menuItem != null)
+            {
+                menuItem.setShowAsAction(isToolbarItemPinned(itemId)
+                        ? MenuItem.SHOW_AS_ACTION_ALWAYS
+                        : MenuItem.SHOW_AS_ACTION_NEVER);
+            }
+        }
+
         return super.onCreateOptionsMenu(menu);
+    }
+
+    // Dialogue "Toolbar Settings" (retour Romain 07/09/2026) : "il faudrait que j'ai un
+    // settings [...] qui me demande quels boutons je veux display. Une fois selectionne,
+    // ces boutons/icone serait visible juste a cote des 3 points (et donc mangerait un
+    // peu de place sur le nom d'exo et c'est ok)." Une case a cocher par item
+    // epinglable - chaque changement est applique tout de suite via
+    // invalidateOptionsMenu() (pas besoin de rouvrir l'ecran pour voir l'effet).
+    private void showToolbarSettingsDialog()
+    {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.toolbar_settings_dialog, null);
+
+        wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_history), R.id.history);
+        wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_graph), R.id.graph);
+        wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_rep_range_history), R.id.rep_range_history);
+        wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_timer), R.id.timer);
+        wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_comment), R.id.comment);
+        wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_select_sets), R.id.select_sets);
+
+        MaterialButton bt_close = dialogView.findViewById(R.id.bt_toolbar_settings_close);
+
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dialogView).create();
+        bt_close.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
+    }
+
+    private void wireToolbarPinCheckbox(CheckBox checkBox, int itemId)
+    {
+        checkBox.setChecked(isToolbarItemPinned(itemId));
+        checkBox.setOnCheckedChangeListener((buttonView, isChecked) ->
+        {
+            setToolbarItemPinned(itemId, isChecked);
+            invalidateOptionsMenu();
+        });
     }
 
     @Override
@@ -1654,6 +1727,13 @@ public class AddExerciseActivity extends AppCompatActivity {
 
             // Default option is volume
             setupLineChart(alertDialog, volumeValues, lineChart, workoutMonths, workoutDates,"kg", false);
+        }
+
+        // Retour Romain 07/09/2026 : reglage "quels boutons je veux display" a cote du
+        // menu "..." (voir showToolbarSettingsDialog() / onCreateOptionsMenu()).
+        else if(item.getItemId() == R.id.toolbar_settings)
+        {
+            showToolbarSettingsDialog();
         }
 
         // Exercise Comments

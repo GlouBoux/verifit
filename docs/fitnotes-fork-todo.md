@@ -2,14 +2,15 @@
 
 ## Codé, en attente de test réel (06/09/2026)
 
-- [x] **Nom de l'exercice tronqué dans la barre du haut - CORRIGÉ, PAS ENCORE
-  REBUILDÉ/RETESTÉ (07/09/2026)** (retour Romain 07/09/2026, sur l'écran
-  `AddExerciseActivity`) : "je vois le nom de l'exercice en cours. Mais il est tronqué
-  donc je ne sais pas sur quel exo je me trouve [...] c'est un pain point sur fitnotes
-  [...] cet affichage devrait être prioritaire (surtout par rapport à la liste
-  d'icones. je n'aime pas les liste d'icone en générale) [...] si vraiment le nom de
-  l'exo est trop long (ça arrive) alors ok pour le tronqué mais là c'est trop court (là
-  j'ai 2 lettres)."
+- [x] **Nom de l'exercice tronqué dans la barre du haut, puis reglage "Toolbar
+  Settings" pour epingler certaines icones - VALIDE, COMMITE ET POUSSE PAR ROMAIN
+  POUR LE 1er CORRECTIF, 2e VOLET LIVRE PAS ENCORE REBUILDE/RETESTE (07/09/2026)**
+  (retour Romain 07/09/2026, sur l'écran `AddExerciseActivity`) : "je vois le nom de
+  l'exercice en cours. Mais il est tronqué donc je ne sais pas sur quel exo je me
+  trouve [...] c'est un pain point sur fitnotes [...] cet affichage devrait être
+  prioritaire (surtout par rapport à la liste d'icones. je n'aime pas les liste
+  d'icone en générale) [...] si vraiment le nom de l'exo est trop long (ça arrive)
+  alors ok pour le tronqué mais là c'est trop court (là j'ai 2 lettres)."
   Cause identifiée par lecture de `add_exercise_activity_menu.xml` : les 6 items de la
   barre d'outils (Historique, Graph, Personal Records, Timer, Comments, Select sets)
   étaient TOUS en `app:showAsAction="always"` - 6 icônes forcées à rester visibles dans
@@ -25,11 +26,29 @@
   l'action de chaque item (`AddExerciseActivity.onOptionsItemSelected()`) : "Exercise
   History", "Graph", "Timer", "Exercise Comments" (les deux autres avaient déjà "Personal
   Records" et "Select sets").
-  Seul fichier modifié : `add_exercise_activity_menu.xml` (aucun changement Java
-  nécessaire). Vérifié côté Claude (XML bien formé). **Pas encore rebuildé/retesté par
-  Romain** - si la troncature persiste malgré la largeur récupérée (nom très long), une
-  option de secours serait un Toolbar personnalisé avec un style de titre plus
-  compact/agrandi, à explorer seulement si besoin après ce premier essai.
+  Seul fichier modifié pour ce premier correctif : `add_exercise_activity_menu.xml`
+  (aucun changement Java nécessaire). Vérifié côté Claude (XML bien formé). **Confirmé
+  par Romain** : "validé, comité, pushé."
+  **Suite demandée par Romain dans la foulée** ("on va encore plus simple") : "il
+  faudrait que j'ai un settings quelque part, peut être sur l'écran avec tous les
+  boutons que tu as mis sous les 3 petits points, qui me demande quels boutons je veux
+  display. Une fois selectionné, ces boutons/icone serait visible juste à coté des 3
+  points (et donc mangerait un peu de place sur le nom d'exo et c'est ok)." Codé et
+  livré :
+  - Nouvel item "Toolbar Settings" dans `add_exercise_activity_menu.xml` (reste
+    lui-même toujours dans l'overflow, jamais épinglable) - ouvre un dialogue
+    (`toolbar_settings_dialog.xml`) avec une case à cocher par item épinglable
+    (Historique, Graph, Personal Records, Timer, Comments, Select sets).
+  - `AddExerciseActivity.onCreateOptionsMenu()` applique désormais le choix de Romain
+    par-dessus la valeur XML statique : `MenuItem.setShowAsAction()` à l'ouverture du
+    menu, `ALWAYS` (épinglé, visible à côté du "...") si coché, `NEVER` (overflow)
+    sinon - lu depuis `SharedPreferences` (`toolbar_pinned_<nom_item>`, tout décoché
+    par défaut, comportement identique au premier correctif tant que rien n'est
+    épinglé).
+  - Chaque case à cocher appelle `invalidateOptionsMenu()` au changement - effet
+    visible immédiatement, sans avoir à rouvrir l'écran.
+  Vérifié côté Claude (équilibre accolades/parenthèses du fichier Java, XML bien formé
+  des deux fichiers). **Pas encore rebuildé/retesté par Romain.**
 
 - [x] **Bug : crash en supprimant la dernière série d'un exercice/jour - VALIDÉ,
   COMMITÉ ET POUSSÉ PAR ROMAIN (06/09/2026)** (retour Romain 06/09/2026) : "quand je suis sur un
@@ -814,6 +833,8 @@
   prioritaire tant que le besoin réel n'est pas confirmé à l'usage. Décision à prendre
   par Romain : enrichir le dialogue existant (rapide) suffit-il, ou veut-il vraiment la
   vue d'ensemble par séance en plus ?
+  **Reponse de Romain (07/09/2026)** : "ok on verra à l'usage si le besoin se fait
+  effectivement sentir" - reste en pause, rien à coder pour l'instant.
 
 - [ ] **Autoriser des charges négatives (exercices délestés/assistés)** (retour Romain
   06/09/2026, gros pain point identifié sur FitNotes) : "j'ai des exercices ou je me
