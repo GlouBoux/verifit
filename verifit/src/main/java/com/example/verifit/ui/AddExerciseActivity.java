@@ -306,27 +306,20 @@ public class AddExerciseActivity extends AppCompatActivity {
                     // If workout day exists
                     if(position >= 0)
                     {
-                        // Find comment of that workout day/exercise
-                        WorkoutDay workoutDay = MainActivity.dataStorage.getWorkoutDays().get(position);
-
-                        for(int i = 0; i < workoutDay.getSets().size(); i++)
-                        {
-                            WorkoutSet workoutSet1 = workoutDay.getSets().get(i);
-
-                            if(workoutSet1.getExerciseName().equals(exercise_name))
-                            {
-                                String exerciseComment = workoutSet1.getComment();
-                                if(exerciseComment == "null" || exerciseComment == null)
-                                {
-                                    workoutSet.setComment("");
-                                }
-                                else
-                                {
-                                    workoutSet.setComment(exerciseComment);
-                                }
-                            }
-                        }
-
+                        // Retour Romain 07/09/2026 : "quand j'ajoute une série, le
+                        // commentaire de la série precedant est aussi copié [...] il
+                        // ne faut pas." Il y avait ici une boucle sur toutes les
+                        // series existantes de cet exercice qui recopiait le
+                        // commentaire de la DERNIERE serie trouvee (donc la
+                        // precedente, vu que les series sont ajoutees en fin de
+                        // liste) sur la nouvelle serie - relique du code de base
+                        // (avant que WorkoutSet.comment ne devienne un vrai
+                        // commentaire INDIVIDUEL par serie, voir Fonctionnalite 3
+                        // "Commentaire par serie" dans docs/fitnotes-fork-plan.md).
+                        // Supprimee : une nouvelle serie part desormais toujours sans
+                        // commentaire (comme deja pose par le constructeur de
+                        // WorkoutSet ci-dessus), a editer individuellement si besoin
+                        // via l'appui long (WorkoutSetAdapter).
 
                         // Offline
                         if(sharedPreferences.isOfflineMode())

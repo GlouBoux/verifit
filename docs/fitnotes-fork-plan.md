@@ -861,6 +861,27 @@ d'affichage dans le menu overflow "..."), changement purement cosmétique.
 parenthèses, XML bien formé des fichiers touchés) - pas encore rebuildé/retesté
 par Romain.**
 
+## Bug : commentaire de la série précédente copié sur toute nouvelle série (07/09/2026)
+
+Retour Romain : "Quand j'ajoute une série, le commentaire de la série précédant est
+aussi copié. je crois que c'est ce fonctionnement). Bien entendu il ne faut pas."
+
+**Cause** : `AddExerciseActivity.clickSave()` (branche "jour déjà existant") contenait
+une boucle sur toutes les séries déjà loggées de l'exercice courant, qui recopiait sur
+la nouvelle série le commentaire de la DERNIÈRE trouvée - en pratique toujours la
+série précédente, puisque les séries sont ajoutées en fin de liste. Relique du code de
+base, antérieure à la Fonctionnalité 3 "Commentaire par série" (voir plus haut) qui a
+transformé `WorkoutSet.comment` en un vrai commentaire individuel par série - cette
+boucle n'avait plus de raison d'être depuis, mais n'avait jamais été retirée.
+
+**Correctif** : boucle supprimée. Une nouvelle série démarre toujours sans commentaire
+(comportement déjà celui du constructeur `WorkoutSet` par défaut, et déjà celui de la
+première série d'un nouveau jour, qui ne passait pas par cette boucle). Éditer le
+commentaire d'une série précise via l'appui long (`WorkoutSetAdapter`) reste inchangé.
+
+**Statut au 07/09/2026 : codé, livré, vérifié côté Claude (équilibre accolades/
+parenthèses) - pas encore rebuildé/retesté par Romain.**
+
 ## Incident : bug critique de perte de données à l'Import Session (05/09/2026)
 
 Romain a signalé, après avoir recompilé/réinstallé l'app puis importé le JSON de la

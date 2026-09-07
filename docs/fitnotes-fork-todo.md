@@ -2,6 +2,25 @@
 
 ## Codé, en attente de test réel (06/09/2026)
 
+- [x] **Bug : le commentaire de la série précédente était copié sur toute nouvelle
+  série - CORRIGÉ, PAS ENCORE REBUILDÉ/RETESTÉ (07/09/2026)** (retour Romain
+  07/09/2026) : "Quand j'ajoute une série, le commentaire de la série précédant est
+  aussi copié. je crois que c'est ce fonctionnement). Bien entendu il ne faut pas."
+  Cause : `AddExerciseActivity.clickSave()` (création d'une nouvelle série sur un jour
+  déjà existant) contenait une boucle héritée du code de base, parcourant toutes les
+  séries déjà loggées de cet exercice ce jour-là et recopiant sur la nouvelle série le
+  commentaire de la DERNIÈRE trouvée - donc systématiquement la précédente, les séries
+  étant ajoutées en fin de liste. Cette boucle datait d'avant que
+  `WorkoutSet.comment` ne devienne un vrai commentaire INDIVIDUEL par série
+  (Fonctionnalité 3 "Commentaire par série", voir `docs/fitnotes-fork-plan.md`) - elle
+  n'avait plus lieu d'être depuis, mais n'avait jamais été retirée.
+  Corrigé : boucle supprimée. Une nouvelle série démarre désormais toujours sans
+  commentaire (valeur par défaut du constructeur `WorkoutSet`, déjà le cas pour la
+  toute première série d'un nouveau jour) - éditer le commentaire d'UNE série reste
+  possible individuellement via l'appui long (`WorkoutSetAdapter`), inchangé. Seul
+  fichier modifié : `AddExerciseActivity.java`. Vérifié côté Claude (équilibre
+  accolades/parenthèses). **Pas encore rebuildé/retesté par Romain.**
+
 - [x] **Nom de l'exercice tronqué dans la barre du haut, puis reglage "Toolbar
   Settings" pour epingler certaines icones - VALIDE, COMMITE ET POUSSE PAR ROMAIN
   POUR LE 1er CORRECTIF, 2e VOLET LIVRE PAS ENCORE REBUILDE/RETESTE (07/09/2026)**
