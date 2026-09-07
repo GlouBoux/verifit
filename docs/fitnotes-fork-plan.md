@@ -861,6 +861,34 @@ d'affichage dans le menu overflow "..."), changement purement cosmétique.
 parenthèses, XML bien formé des fichiers touchés) - pas encore rebuildé/retesté
 par Romain.**
 
+## Popup "Set Added/Deleted+Undo" déplacée en haut de l'écran (07/09/2026)
+
+Retour Romain : "La popup dismiss / undo, tu pourrais la mettre en haut de l'écran ?
+peut être au niveau du timer de séance ? Là c'est bien c'est très accessible mais ça
+m'empêche de visualiser ce que je viens d'ajouter avant que la popup s'en aille."
+
+**Mécanique** : un `Snackbar` Android Material s'ancre toujours en BAS de son parent
+par défaut - il n'existe pas d'option sur `Snackbar.Builder` pour changer ça ; il faut
+récupérer la vue du Snackbar après `Snackbar.make()` et modifier la gravité de ses
+propres `LayoutParams` (un `FrameLayout.LayoutParams` puisque le parent utilisé,
+`android.R.id.content`, est un `FrameLayout`).
+
+**Implémentation** : `SnackBarWithMessage` (classe partagée, utilisée dans 7 écrans/
+adapters de l'app : Login, Settings, MainActivity, ExerciseAdapter, en plus
+d'`AddExerciseActivity`) gagne deux nouvelles méthodes `showSnackbarAtTop()`/
+`showSnackbarWithUndoAtTop()` à côté des méthodes existantes (laissées inchangées,
+toujours ancrées en bas) plutôt que de changer le comportement par défaut de toute
+l'app - seuls les écrans concernés par ce retour basculent. `AddExerciseActivity` :
+`showSnackbarMessage()` (point de passage commun pour Set Added/Updated/le nombre de
+séries supprimées/Comment Logged/les erreurs réseau) et les deux appels directs Set
+Deleted+Undo / Set Restored utilisent désormais les variantes "AtTop" - la popup
+atterrit juste sous l'ActionBar, au même endroit que la barre de chrono de séance. Le
+message "No data found" du dialogue Graph (sans rapport avec l'ajout d'une série) reste
+volontairement en bas.
+
+**Statut au 07/09/2026 : codé, livré, vérifié côté Claude (équilibre accolades/
+parenthèses des deux fichiers touchés) - pas encore rebuildé/retesté par Romain.**
+
 ## Bug : commentaire de la série précédente copié sur toute nouvelle série (07/09/2026)
 
 Retour Romain : "Quand j'ajoute une série, le commentaire de la série précédant est

@@ -484,7 +484,10 @@ public class AddExerciseActivity extends AppCompatActivity {
     {
         runOnUiThread(() -> {
             SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(AddExerciseActivity.this);
-            snackBarWithMessage.showSnackbar(message);
+            // Retour Romain 07/09/2026 : messages lies aux series (Set Added/Updated/
+            // Deleted, Comment Logged...) affiches en haut de l'ecran plutot qu'en bas
+            // - voir SnackBarWithMessage.showSnackbarAtTop().
+            snackBarWithMessage.showSnackbarAtTop(message);
         });
     }
 
@@ -949,7 +952,7 @@ public class AddExerciseActivity extends AppCompatActivity {
             // verifit_rs en mode compte en ligne, comme pour les autres mutations
             // ajoutees depuis - de toute facon vouee a disparaitre, voir la TODO).
             SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(((Activity) ct));
-            snackBarWithMessage.showSnackbarWithUndo("Set Deleted", () -> undoDeleteSet(ct, to_be_removed_set, removedSetIndex));
+            snackBarWithMessage.showSnackbarWithUndoAtTop("Set Deleted", () -> undoDeleteSet(ct, to_be_removed_set, removedSetIndex));
             updateTodaysExercises();
         });
     }
@@ -980,7 +983,7 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         ((Activity) ct).runOnUiThread(() -> {
             SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(((Activity) ct));
-            snackBarWithMessage.showSnackbar("Set Restored");
+            snackBarWithMessage.showSnackbarAtTop("Set Restored");
             updateTodaysExercises();
         });
     }

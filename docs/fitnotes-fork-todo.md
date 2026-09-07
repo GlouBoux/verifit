@@ -2,6 +2,28 @@
 
 ## Codé, en attente de test réel (06/09/2026)
 
+- [x] **Popup "Set Added/Updated/Deleted+Undo/Restored" affichée en haut de l'écran
+  plutôt qu'en bas - CODÉ, PAS ENCORE REBUILDÉ/RETESTÉ (07/09/2026)** (retour Romain
+  07/09/2026) : "La popup dismiss / undo, tu pourrais la mettre en haut de l'écran ?
+  peut être au niveau du timer de séance ? Là c'est bien c'est très accessible mais ça
+  m'empêche de visualiser ce que je viens d'ajouter avant que la popup s'en aille."
+  Un `Snackbar` Android s'ancre par défaut en BAS de son parent - pas d'option native
+  pour changer ça via `Snackbar.Builder`, il faut modifier la gravité de ses propres
+  `LayoutParams` après `Snackbar.make()`.
+  `SnackBarWithMessage` (classe partagée, utilisée par 7 écrans/adapters de l'app :
+  Login, Settings, MainActivity, ExerciseAdapter, en plus d'`AddExerciseActivity`) gagne
+  deux nouvelles méthodes `showSnackbarAtTop()`/`showSnackbarWithUndoAtTop()` À CÔTÉ des
+  méthodes existantes (`showSnackbar()`/`showSnackbarWithUndo()`, inchangées, toujours en
+  bas) - seuls les écrans concernés par ce retour basculent, le reste de l'app n'est pas
+  affecté. `AddExerciseActivity.showSnackbarMessage()` (le point de passage commun pour
+  Set Added/Updated/le nombre de séries supprimées/Comment Logged/les erreurs réseau sur
+  cet écran) et les deux appels directs Set Deleted+Undo / Set Restored utilisent
+  désormais les variantes "AtTop" - la popup atterrit juste sous l'ActionBar, au même
+  endroit que la barre de chrono de séance. Le message "No data found" du dialogue Graph
+  (sans rapport avec l'ajout d'une série) reste volontairement en bas, inchangé.
+  Vérifié côté Claude (équilibre accolades/parenthèses des deux fichiers touchés).
+  **Pas encore rebuildé/retesté par Romain.**
+
 - [x] **Bug : le commentaire de la série précédente était copié sur toute nouvelle
   série - CORRIGÉ, PAS ENCORE REBUILDÉ/RETESTÉ (07/09/2026)** (retour Romain
   07/09/2026) : "Quand j'ajoute une série, le commentaire de la série précédant est
