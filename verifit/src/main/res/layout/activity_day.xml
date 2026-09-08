@@ -59,11 +59,31 @@
         app:srcCompat="@drawable/ic_add_24px"
         app:tint="@color/core_white" />
 
+    <!-- Commentaire de la seance entiere (Vague 3 du plan de migration, retour Romain
+         07/09/2026) - meme champ que sur l'ecran d'accueil (item_view_pager.xml), voir
+         ce layout pour le detail. GONE si aucun commentaire - voir
+         DayActivity.initActivity(). -->
+    <TextView
+        android:id="@+id/tv_workout_comment"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="10dp"
+        android:textColor="@color/core_grey_55"
+        android:textStyle="italic"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/session_timer_bar"
+        tools:text="Great session, felt strong on bench"
+        tools:visibility="visible" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view_day"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@+id/session_timer_bar"
+        app:layout_constraintTop_toBottomOf="@+id/tv_workout_comment"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

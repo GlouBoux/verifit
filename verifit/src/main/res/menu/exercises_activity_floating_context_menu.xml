@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- "Favorite Exercises" (Vague 1 du plan de migration, feature FitNotes) - titre
+         bascule entre "Favorite"/"Unfavorite" selon l'etat actuel de l'exercice, voir
+         ExerciseAdapter.MyViewHolder.showPopupMenu(). -->
+    <item
+        android:id="@+id/favorite"
+        android:title="Favorite"
+        android:icon="@drawable/ic_star_fill0_wght400_grad0_opsz24">
+    </item>
+
     <item
         android:id="@+id/edit"
         android:title="Edit"

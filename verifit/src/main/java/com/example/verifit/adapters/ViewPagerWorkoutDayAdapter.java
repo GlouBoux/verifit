@@ -59,11 +59,13 @@ public class ViewPagerWorkoutDayAdapter extends RecyclerView.Adapter<ViewPagerWo
 
         // Find which exercises were performed that given date
         ArrayList<WorkoutExercise> Today_Execrises = new ArrayList<WorkoutExercise>();
+        WorkoutDay currentWorkoutDay = null;
         for(int i = 0; i < MainActivity.dataStorage.getWorkoutDays().size(); i++)
         {
             if(Date_Str1.equals(MainActivity.dataStorage.getWorkoutDays().get(i).getDate()))
             {
-                Today_Execrises = MainActivity.dataStorage.getWorkoutDays().get(i).getExercises();
+                currentWorkoutDay = MainActivity.dataStorage.getWorkoutDays().get(i);
+                Today_Execrises = currentWorkoutDay.getExercises();
             }
         }
 
@@ -76,9 +78,26 @@ public class ViewPagerWorkoutDayAdapter extends RecyclerView.Adapter<ViewPagerWo
 
         // Set Recycler View
         ViewPagerExerciseAdapter workoutExerciseAdapter = new ViewPagerExerciseAdapter(ct, Today_Execrises);
+        // Superset (Vague 2, retour Romain 07/09/2026) : necessaire pour que l'adapter
+        // retrouve le groupe de chaque exercice (barre coloree).
+        workoutExerciseAdapter.setWorkoutDay(currentWorkoutDay);
         holder.recyclerView_Main.setAdapter(workoutExerciseAdapter);
         holder.recyclerView_Main.setLayoutManager(new LinearLayoutManager(ct));
         workoutExerciseAdapter.setOnStartDragListener(viewHolder -> holder.itemTouchHelper.startDrag(viewHolder));
+
+        // Commentaire de la seance entiere (Vague 3, retour Romain 07/09/2026) -
+        // currentWorkoutDay est null pour un jour vide (voir MainActivity.getInfiniteWorkoutDays(),
+        // simple squelette de date sans commentaire possible avant la premiere serie).
+        String workoutComment = (currentWorkoutDay != null) ? currentWorkoutDay.getComment() : "";
+        if (workoutComment.trim().isEmpty())
+        {
+            holder.tv_workout_comment.setVisibility(View.GONE);
+        }
+        else
+        {
+            holder.tv_workout_comment.setVisibility(View.VISIBLE);
+            holder.tv_workout_comment.setText(workoutComment);
+        }
 
         // Convert Date To Something Sensible
         try
@@ -146,6 +165,7 @@ public class ViewPagerWorkoutDayAdapter extends RecyclerView.Adapter<ViewPagerWo
         private ConstraintLayout date_bg; // Used for navigating to AddExerciseActivity with date
         private ImageButton img_bt_back;
         private ImageButton img_bt_next;
+        private TextView tv_workout_comment;
 
         // Retour Romain 05/09/2026 : réorganisation par glisser-déposer des exercices de
         // ce jour ("comme FitNotes"). Un seul ItemTouchHelper par ViewHolder, créé ici
@@ -172,6 +192,7 @@ public class ViewPagerWorkoutDayAdapter extends RecyclerView.Adapter<ViewPagerWo
             date_bg = itemView.findViewById(R.id.date_bg);
             img_bt_back = itemView.findViewById(R.id.img_bt_back);
             img_bt_next = itemView.findViewById(R.id.img_bt_next);
+            tv_workout_comment = itemView.findViewById(R.id.tv_workout_comment);
 
             itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
                     ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0)

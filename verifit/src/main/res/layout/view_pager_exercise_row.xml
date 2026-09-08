@@ -26,6 +26,20 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
+            <!-- Barre coloree du groupe de superset (Vague 2, retour Romain
+                 07/09/2026) - meme mecanique que day_exercise_row.xml (DayActivity),
+                 dupliquee ici car l'ecran d'accueil (onglet Workout, ViewPager2) a son
+                 propre layout/adapter de ligne d'exercice. Voir
+                 ViewPagerExerciseAdapter.onBindViewHolder(). -->
+            <View
+                android:id="@+id/v_superset_bar"
+                android:layout_width="6dp"
+                android:layout_height="0dp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
             <TextView
                 android:id="@+id/tv_date"
                 android:layout_width="0dp"

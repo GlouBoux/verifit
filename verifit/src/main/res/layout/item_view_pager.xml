@@ -99,12 +99,35 @@
                 app:layout_constraintTop_toBottomOf="@+id/date_bg"
                 tools:layout_editor_absoluteX="16dp" />
 
+            <!-- Commentaire de la seance entiere (Vague 3 du plan de migration, retour
+                 Romain 07/09/2026 - "Comment a Workout" de FitNotes, distinct du
+                 commentaire par serie deja existant). GONE si aucun commentaire - voir
+                 ViewPagerWorkoutDayAdapter.onBindViewHolder(). En ConstraintLayout, une
+                 vue GONE dans une chaine ne laisse aucun espace vide : recyclerView_Main
+                 remonte automatiquement contre blue_line quand ce champ est masque. -->
+            <TextView
+                android:id="@+id/tv_workout_comment"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="4dp"
+                android:textColor="@color/core_grey_55"
+                android:textStyle="italic"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/blue_line"
+                tools:text="Great session, felt strong on bench"
+                tools:visibility="visible" />
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerView_Main"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/blue_line"
+                app:layout_constraintTop_toBottomOf="@+id/tv_workout_comment"
                 tools:layout_editor_absoluteX="-16dp" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>

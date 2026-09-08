@@ -2,7 +2,12 @@
 <!-- Contextual action bar shown while selecting sets to delete in bulk
      (AddExerciseActivity, retour Romain 05/09/2026). One action: delete the
      current selection. Cancelling the selection itself is the ActionMode's
-     built-in close ("X") button, no extra item needed for that. -->
+     built-in close ("X") button, no extra item needed for that.
+
+     Correctif 08/09/2026 (meme cause que exercise_selection_action_menu.xml,
+     trouvee suite au retour de Romain sur cette derniere) : app:iconTint manquant,
+     icone noire sur le fond sombre de la barre contextuelle. Corrige de la meme
+     facon par coherence, meme si non signale explicitement ici. -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
@@ -10,7 +15,8 @@
         android:id="@+id/delete_selected"
         android:icon="@drawable/ic_delete_24px"
         android:title="Delete"
-        app:showAsAction="always">
+        app:showAsAction="always"
+        app:iconTint="@color/cardview_light_background">
     </item>
 
 </menu>

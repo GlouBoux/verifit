@@ -37,4 +37,33 @@
         app:iconTint="@color/cardview_light_background">
     </item>
 
+    <!-- Vague 3 du plan de migration, retour Romain 07/09/2026 - meme action que sur
+         l'ecran d'accueil (MainActivity), disponible ici aussi puisque DayActivity sert
+         a revisiter n'importe quel jour passe. -->
+    <item
+        android:id="@+id/comment_workout"
+        android:title="Comment Workout"
+        app:showAsAction="never">
+    </item>
+
+    <!-- Vague 3, retour Romain 07/09/2026 - meme actions que sur l'ecran d'accueil, voir
+         main_activity_menu.xml. -->
+    <item
+        android:id="@+id/copy_workout"
+        android:title="Copy Workout"
+        app:showAsAction="never">
+    </item>
+
+    <item
+        android:id="@+id/copy_previous_workout"
+        android:title="Copy Previous Workout"
+        app:showAsAction="never">
+    </item>
+
+    <item
+        android:id="@+id/move_workout"
+        android:title="Move Workout"
+        app:showAsAction="never">
+    </item>
+
 </menu>

@@ -22,6 +22,11 @@ public class ExercisesActivity extends AppCompatActivity implements BottomNaviga
     public ExerciseAdapter exerciseAdapter;
     public String date_clicked;
 
+    // "Show Exercise Details" (Vague 1 du plan de migration, feature FitNotes) - meme
+    // SharedPreferences que le reste de l'app, cle dediee. Voir onCreateOptionsMenu()/
+    // onOptionsItemSelected() et ExerciseAdapter.setShowDetails().
+    private static final String SHOW_EXERCISE_DETAILS_PREF_KEY = "show_exercise_details";
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -55,8 +60,27 @@ public class ExercisesActivity extends AppCompatActivity implements BottomNaviga
         // Find Recycler View Object
         recyclerView = findViewById(R.id.recycler_view_exercises);
         exerciseAdapter = new ExerciseAdapter(this, MainActivity.dataStorage.getKnownExercises());
+        exerciseAdapter.setShowDetails(isShowExerciseDetailsEnabled());
         recyclerView.setAdapter(exerciseAdapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+    }
+
+    // "Show Exercise Details" (Vague 1) - voir SHOW_EXERCISE_DETAILS_PREF_KEY. Masque
+    // par defaut.
+    private boolean isShowExerciseDetailsEnabled()
+    {
+        android.content.SharedPreferences sharedPreferences =
+                getSharedPreferences("shared preferences", MODE_PRIVATE);
+        return sharedPreferences.getBoolean(SHOW_EXERCISE_DETAILS_PREF_KEY, false);
+    }
+
+    private void setShowExerciseDetailsEnabled(boolean enabled)
+    {
+        android.content.SharedPreferences sharedPreferences =
+                getSharedPreferences("shared preferences", MODE_PRIVATE);
+        android.content.SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putBoolean(SHOW_EXERCISE_DETAILS_PREF_KEY, enabled);
+        editor.apply();
     }
 
     @Override
@@ -65,6 +89,8 @@ public class ExercisesActivity extends AppCompatActivity implements BottomNaviga
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.exercises_activity_menu,menu);
 
+        // "Show Exercise Details" (Vague 1) - reflete l'etat persiste a l'ouverture du menu.
+        menu.findItem(R.id.show_details).setChecked(isShowExerciseDetailsEnabled());
 
         // Search Stuff
         MenuItem searchItem = menu.findItem(R.id.search);
@@ -95,6 +121,13 @@ public class ExercisesActivity extends AppCompatActivity implements BottomNaviga
         {
             Intent in = new Intent(this, CustomExerciseActivity.class);
             startActivity(in);
+        }
+        else if(item.getItemId() == R.id.show_details)
+        {
+            boolean enabled = !item.isChecked();
+            item.setChecked(enabled);
+            setShowExerciseDetailsEnabled(enabled);
+            exerciseAdapter.setShowDetails(enabled);
         }
         else if(item.getItemId() == R.id.settings)
         {

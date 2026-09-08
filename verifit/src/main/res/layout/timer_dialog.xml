@@ -47,7 +47,7 @@
         app:cornerRadius="10dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/bt_start"
-        app:layout_constraintTop_toBottomOf="@+id/sb_beep_duration" />
+        app:layout_constraintTop_toBottomOf="@+id/cb_rest_timer_auto_start" />
 
 
     <EditText
@@ -119,7 +119,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/bt_close"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/sb_beep_duration" />
+        app:layout_constraintTop_toBottomOf="@+id/cb_rest_timer_auto_start" />
 
     <!-- Retour Romain 06/09/2026 : "il faudrait pouvoir ajuster le volume suivant le
          bruit ambiant du jour" (comme sur FitNotes) - regle le volume du bip joue par
@@ -184,5 +184,23 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tv_beep_duration_label" />
+
+    <!-- Retour Romain (fitnotes-fork-todo.md, "Nouvelles demandes" 06/09/2026) + feature
+         FitNotes confirmee (fitnotes-features-workout-tools.md, "Auto Start") : demarre
+         automatiquement le minuteur a chaque nouvelle serie loggee, tant qu'on reste sur
+         l'exercice - voir AddExerciseActivity.autoStartRestTimerIfEnabled(). Desactive
+         par defaut (voir REST_TIMER_AUTO_START_PREF_KEY). -->
+    <CheckBox
+        android:id="@+id/cb_rest_timer_auto_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="20dp"
+        android:text="Auto Start"
+        android:textColor="@color/core_black"
+        android:textSize="16sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/sb_beep_duration" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

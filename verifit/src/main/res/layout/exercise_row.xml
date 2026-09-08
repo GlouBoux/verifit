@@ -23,33 +23,93 @@
 
             <TextView
                 android:id="@+id/tv_date"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
                 android:layout_marginLeft="15dp"
                 android:layout_marginTop="15dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginRight="8dp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:text="Decline Hammer Strength Chest Press"
                 android:textColor="@color/core_black"
                 android:textSize="18sp"
+                app:layout_constraintEnd_toStartOf="@+id/iv_favorite"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <!-- "Favorite Exercises" (Vague 1 du plan de migration, feature FitNotes) :
+                 etoile bleue affichee uniquement si Exercise.getFavorite() est vrai -
+                 voir ExerciseAdapter.onBindViewHolder() et le menu "Favorite"/"Unfavorite"
+                 du long-press. -->
+            <ImageView
+                android:id="@+id/iv_favorite"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginTop="15dp"
+                android:layout_marginEnd="15dp"
+                android:layout_marginRight="15dp"
+                android:contentDescription="Favorite"
+                android:tint="@color/colorPrimary"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_star_fill0_wght400_grad0_opsz24"
+                tools:visibility="visible" />
+
+            <!-- "Category Colours" (Vague 1 du plan de migration) : point de couleur par
+                 categorie - voir com.example.verifit.model.CategoryColours et
+                 ExerciseAdapter.onBindViewHolder() (teinte appliquee en code, pas de
+                 couleur fixe ici). Pas d'ecran "liste de categories" cote Verifit
+                 aujourd'hui, donc affiche directement ici en attendant (prepare aussi
+                 le terrain pour les points du Calendrier, Vague 3). -->
+            <ImageView
+                android:id="@+id/iv_category_colour"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_marginStart="15dp"
+                android:layout_marginLeft="15dp"
+                android:layout_marginTop="7dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/tv_date"
+                app:srcCompat="@drawable/ic_brightness_1_24px"
+                android:contentDescription="Category colour" />
+
             <TextView
                 android:id="@+id/exercise_bodypart"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_marginLeft="6dp"
+                android:layout_marginBottom="10dp"
+                android:text="Shoulders"
+                android:textSize="14sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/iv_category_colour"
+                app:layout_constraintTop_toTopOf="@+id/iv_category_colour"
+                app:layout_constraintVertical_bias="0.0" />
+
+            <!-- "Show Exercise Details" (Vague 1) : Workout Count / Last Used Date,
+                 masque par defaut - voir ExercisesActivity (menu "Show Details") et
+                 ExerciseAdapter.setShowDetails()/onBindViewHolder(). -->
+            <TextView
+                android:id="@+id/tv_exercise_details"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
                 android:layout_marginLeft="15dp"
                 android:layout_marginTop="2dp"
                 android:layout_marginBottom="10dp"
-                android:text="Shoulders"
-                android:textSize="14sp"
+                android:text="12 séances - il y a 3 jours"
+                android:textColor="@color/core_grey_55"
+                android:textSize="12sp"
+                android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tv_date"
-                app:layout_constraintVertical_bias="0.0" />
+                app:layout_constraintTop_toBottomOf="@+id/exercise_bodypart"
+                app:layout_constraintVertical_bias="0.0"
+                tools:visibility="visible" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

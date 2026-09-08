@@ -198,6 +198,121 @@ public class DataStorage {
         return -1;
     }
 
+    // --- Copy/Move a Workout (Vague 3 du plan de migration, retour Romain 07/09/2026) ---
+
+    // Date ("yyyy-MM-dd") du jour avec des series le plus recent STRICTEMENT AVANT
+    // beforeDate, ou null s'il n'y en a aucun. Sert a "Copy Previous Workout" (raccourci
+    // qui saute l'etape de choix manuel du jour source dans le calendrier) - la
+    // comparaison lexicographique suffit puisque le format "yyyy-MM-dd" est trie
+    // naturellement dans l'ordre chronologique.
+    public String getMostRecentWorkoutDateBefore(String beforeDate)
+    {
+        String mostRecent = null;
+        for (WorkoutDay day : workoutDays)
+        {
+            String date = day.getDate();
+            if (day.getSets() == null || day.getSets().isEmpty())
+            {
+                continue;
+            }
+            if (date.compareTo(beforeDate) >= 0)
+            {
+                continue;
+            }
+            if (mostRecent == null || date.compareTo(mostRecent) > 0)
+            {
+                mostRecent = date;
+            }
+        }
+        return mostRecent;
+    }
+
+    // Copie les series des exercices nommes depuis sourceDate vers destinationDate (les
+    // deux peuvent etre le meme jour dans le cas degenere, meme si l'UI ne propose pas
+    // ce cas). Chaque serie copiee est un WorkoutSet TOUT NEUF (nouvelle date, pas
+    // d'id/timestamp/valeurs "prevues" repris du set source - voir les champs laisses a
+    // leur valeur par defaut dans le constructeur utilise) plutot qu'un WorkoutSet
+    // partage entre les deux jours, pour que modifier la copie n'affecte jamais
+    // l'original. Cree destinationDate dans workoutDays s'il n'existe pas encore.
+    // Retourne le nombre de series copiees (0 si sourceDate/exerciseNames ne
+    // correspond a rien - l'appelant peut alors avertir l'utilisateur sans avoir
+    // modifie quoi que ce soit).
+    public int copySetsToDay(String sourceDate, String destinationDate, List<String> exerciseNames)
+    {
+        int sourceDayPosition = getDayPosition(sourceDate);
+        if (sourceDayPosition < 0)
+        {
+            return 0;
+        }
+
+        WorkoutDay sourceDay = workoutDays.get(sourceDayPosition);
+        List<WorkoutSet> setsToCopy = new ArrayList<WorkoutSet>();
+        for (WorkoutSet set : sourceDay.getSets())
+        {
+            if (exerciseNames.contains(set.getExerciseName()))
+            {
+                setsToCopy.add(set);
+            }
+        }
+
+        if (setsToCopy.isEmpty())
+        {
+            return 0;
+        }
+
+        int destinationDayPosition = getDayPosition(destinationDate);
+        WorkoutDay destinationDay;
+        if (destinationDayPosition >= 0)
+        {
+            destinationDay = workoutDays.get(destinationDayPosition);
+        }
+        else
+        {
+            destinationDay = new WorkoutDay();
+            destinationDay.setDate(destinationDate);
+            workoutDays.add(destinationDay);
+        }
+
+        for (WorkoutSet set : setsToCopy)
+        {
+            WorkoutSet copy = new WorkoutSet(destinationDate, set.getExerciseName(), set.getCategory(), set.getReps(), set.getWeight(), set.getComment());
+            destinationDay.addSet(copy);
+        }
+
+        return setsToCopy.size();
+    }
+
+    // Retire les series des exercices nommes du jour donne - utilise par "Move a
+    // Workout" APRES copySetsToDay() vers la destination, pour ne pas dupliquer les
+    // series (voir MainActivity/DayActivity.moveWorkout()). Supprime le jour lui-meme
+    // de workoutDays s'il ne reste plus aucune serie, meme logique que
+    // deleteExerciseSetsLocally() deja utilisee ailleurs pour la suppression.
+    public void removeExerciseSetsFromDay(String date, List<String> exerciseNames)
+    {
+        int dayPosition = getDayPosition(date);
+        if (dayPosition < 0)
+        {
+            return;
+        }
+
+        WorkoutDay day = workoutDays.get(dayPosition);
+        List<WorkoutSet> setsToRemove = new ArrayList<WorkoutSet>();
+        for (WorkoutSet set : day.getSets())
+        {
+            if (exerciseNames.contains(set.getExerciseName()))
+            {
+                setsToRemove.add(set);
+            }
+        }
+
+        day.removeSets(setsToRemove);
+
+        if (day.getSets().isEmpty())
+        {
+            workoutDays.remove(dayPosition);
+        }
+    }
+
     // Returns index of exercise
     public int getExercisePosition(String Date, String exerciseName)
     {
@@ -767,6 +882,55 @@ public class DataStorage {
             }
         }
         return false;
+    }
+
+    // "Show Exercise Details" (Vague 1 du plan de migration, feature FitNotes) :
+    // nombre de séances distinctes où cet exercice a été loggé - une occurrence par
+    // WorkoutDay meme s'il apparait plusieurs fois dans la meme seance (ex. superset,
+    // pas encore implemente a ce jour, mais on ecrit deja la bonne semantique).
+    public int getExerciseWorkoutCount(String exerciseName)
+    {
+        int count = 0;
+        for (WorkoutDay day : workoutDays)
+        {
+            for (WorkoutExercise exercise : day.getExercises())
+            {
+                if (exercise.getExercise().equals(exerciseName))
+                {
+                    count++;
+                    break;
+                }
+            }
+        }
+        return count;
+    }
+
+    // "Show Exercise Details" (Vague 1) : date de la derniere seance ayant loggé cet
+    // exercice, au format yyyy-MM-dd (meme convention que WorkoutDay.getDate()) - null
+    // si l'exercice n'a jamais ete utilise. Comparaison par chaine plutot que
+    // SimpleDateFormat (comme sortWorkoutDaysDate() plus haut) : le format ISO
+    // yyyy-MM-dd trie deja correctement en ordre lexicographique.
+    public String getExerciseLastUsedDate(String exerciseName)
+    {
+        String lastDate = null;
+        for (WorkoutDay day : workoutDays)
+        {
+            boolean presentThisDay = false;
+            for (WorkoutExercise exercise : day.getExercises())
+            {
+                if (exercise.getExercise().equals(exerciseName))
+                {
+                    presentThisDay = true;
+                    break;
+                }
+            }
+
+            if (presentThisDay && (lastDate == null || day.getDate().compareTo(lastDate) > 0))
+            {
+                lastDate = day.getDate();
+            }
+        }
+        return lastDate;
     }
 
     // Returns the exercise category if exists, else it returns an empty string

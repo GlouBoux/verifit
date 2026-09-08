@@ -25,6 +25,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.verifit.LoadingDialog;
 import com.example.verifit.SharedPreferences;
 import com.example.verifit.SnackBarWithMessage;
+import com.example.verifit.model.CategoryColours;
 import com.example.verifit.model.Exercise;
 import com.example.verifit.R;
 import com.example.verifit.model.WorkoutSet;
@@ -34,9 +35,16 @@ import com.example.verifit.ui.MainActivity;
 import com.example.verifit.verifitrs.WorkoutSetsApi;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
+
+import android.widget.ImageView;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -50,12 +58,99 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
     ArrayList<Exercise> Exercises;
     ArrayList<Exercise> Exercises_Full; // for search functionality
 
+    // "Show Exercise Details" (Vague 1 du plan de migration, feature FitNotes) -
+    // masque par defaut, bascule via ExercisesActivity (menu "Show Details"). Voir
+    // setShowDetails()/onBindViewHolder().
+    private boolean showDetails = false;
+
+    // Comparateur "Favorite Exercises" (Vague 1) : favoris en premier, ordre stable
+    // sinon (Collections.sort est un tri stable en Java) - voir sortFavoritesFirst().
+    private static final Comparator<Exercise> FAVORITES_FIRST_COMPARATOR = new Comparator<Exercise>()
+    {
+        @Override
+        public int compare(Exercise a, Exercise b)
+        {
+            boolean aFavorite = isFavorite(a);
+            boolean bFavorite = isFavorite(b);
+            if (aFavorite == bFavorite)
+            {
+                return 0;
+            }
+            return aFavorite ? -1 : 1;
+        }
+    };
+
+    private static boolean isFavorite(Exercise exercise)
+    {
+        return exercise.getFavorite() != null && exercise.getFavorite();
+    }
+
     // Adapter Constructor 7 minute mark
     public ExerciseAdapter(Context ct, ArrayList<Exercise> Exercises)
     {
         this.ct = ct;
         this.Exercises = new ArrayList<>(Exercises); // If you this is changed to: this.Exercises = Exercises; then on search diary activity will not recognize known exercises
         this.Exercises_Full = new ArrayList<>(Exercises);
+        sortFavoritesFirst();
+    }
+
+    // "Favorite Exercises" (Vague 1) : remonte les exercices favoris en tete de liste -
+    // appele a la construction et a chaque bascule Favorite/Unfavorite (voir
+    // onMenuItemClick()) pour un feedback immediat, comme sur FitNotes.
+    private void sortFavoritesFirst()
+    {
+        Collections.sort(Exercises, FAVORITES_FIRST_COMPARATOR);
+        Collections.sort(Exercises_Full, FAVORITES_FIRST_COMPARATOR);
+    }
+
+    // Appele par ExercisesActivity (menu "Show Details") - voir onBindViewHolder().
+    public void setShowDetails(boolean showDetails)
+    {
+        this.showDetails = showDetails;
+        notifyDataSetChanged();
+    }
+
+    // "Show Exercise Details" (Vague 1) : "12 séances - il y a 3 jours" / "Jamais
+    // utilisé" si l'exercice n'a encore aucune séance loggée.
+    private String formatExerciseDetails(Exercise exercise)
+    {
+        int workoutCount = MainActivity.dataStorage.getExerciseWorkoutCount(exercise.getName());
+        String lastUsedDate = MainActivity.dataStorage.getExerciseLastUsedDate(exercise.getName());
+
+        String plural = workoutCount > 1 ? "séances" : "séance";
+
+        if (lastUsedDate == null)
+        {
+            return workoutCount + " " + plural;
+        }
+
+        return workoutCount + " " + plural + " - " + formatElapsedSince(lastUsedDate);
+    }
+
+    // Convertit une date yyyy-MM-dd (WorkoutDay.getDate()) en temps ecoule relatif
+    // ("Aujourd'hui"/"Hier"/"X jours") - meme convention de format que
+    // DataStorage.sortWorkoutDaysDate().
+    private String formatElapsedSince(String isoDate)
+    {
+        try
+        {
+            Date date = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(isoDate);
+            long diffDays = (new Date().getTime() - date.getTime()) / (24L * 60 * 60 * 1000);
+
+            if (diffDays <= 0)
+            {
+                return "il y a aujourd'hui";
+            }
+            if (diffDays == 1)
+            {
+                return "il y a 1 jour";
+            }
+            return "il y a " + diffDays + " jours";
+        }
+        catch (Exception e)
+        {
+            return isoDate;
+        }
     }
 
     @NonNull
@@ -70,9 +165,28 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
     @Override
     public void onBindViewHolder(@NonNull MyViewHolder holder, int position)
     {
+        Exercise exercise = Exercises.get(position);
+
         // Change TextView text
-        holder.tv_exercise_name.setText(Exercises.get(position).getName());
-        holder.tv_exercise_bodypart.setText(Exercises.get(position).getBodyPart());
+        holder.tv_exercise_name.setText(exercise.getName());
+        holder.tv_exercise_bodypart.setText(exercise.getBodyPart());
+
+        // "Category Colours" (Vague 1) : voir com.example.verifit.model.CategoryColours.
+        holder.iv_category_colour.setColorFilter(CategoryColours.getColour(exercise.getBodyPart()));
+
+        // "Favorite Exercises" (Vague 1) : etoile visible seulement si favori.
+        holder.iv_favorite.setVisibility(isFavorite(exercise) ? View.VISIBLE : View.GONE);
+
+        // "Show Exercise Details" (Vague 1) : masque par defaut, voir setShowDetails().
+        if (showDetails)
+        {
+            holder.tv_exercise_details.setVisibility(View.VISIBLE);
+            holder.tv_exercise_details.setText(formatExerciseDetails(exercise));
+        }
+        else
+        {
+            holder.tv_exercise_details.setVisibility(View.GONE);
+        }
 
         // Goto Add Exercise Activity
         holder.cardview_exercise_1.setOnClickListener(new View.OnClickListener() {
@@ -162,6 +276,9 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
     public class MyViewHolder extends  RecyclerView.ViewHolder implements View.OnLongClickListener, PopupMenu.OnMenuItemClickListener, AdapterView.OnItemSelectedListener {
         TextView tv_exercise_name;
         TextView tv_exercise_bodypart;
+        ImageView iv_favorite;
+        ImageView iv_category_colour;
+        TextView tv_exercise_details;
         CardView cardview_exercise_1;
         String exercise_name;
         String new_exercise_category;
@@ -172,6 +289,9 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
             super(itemView);
             tv_exercise_name = itemView.findViewById(R.id.tv_date);
             tv_exercise_bodypart = itemView.findViewById(R.id.exercise_bodypart);
+            iv_favorite = itemView.findViewById(R.id.iv_favorite);
+            iv_category_colour = itemView.findViewById(R.id.iv_category_colour);
+            tv_exercise_details = itemView.findViewById(R.id.tv_exercise_details);
             cardview_exercise_1 = itemView.findViewById(R.id.cardview_exercise_1);
 
             // For PopUp Menu
@@ -192,6 +312,16 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
         {
             PopupMenu popupMenu = new PopupMenu(view.getContext(),view);
             popupMenu.inflate(R.menu.exercises_activity_floating_context_menu);
+
+            // "Favorite Exercises" (Vague 1) : le libelle reflete l'etat actuel de
+            // l'exercice sur lequel on vient de faire l'appui long, comme sur FitNotes.
+            int position = getAdapterPosition();
+            if (position != RecyclerView.NO_POSITION)
+            {
+                MenuItem favoriteItem = popupMenu.getMenu().findItem(R.id.favorite);
+                favoriteItem.setTitle(isFavorite(Exercises.get(position)) ? "Unfavorite" : "Favorite");
+            }
+
             popupMenu.setOnMenuItemClickListener(this);
             popupMenu.show();
         }
@@ -200,6 +330,22 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
         @Override
         public boolean onMenuItemClick(MenuItem item)
         {
+            // "Favorite Exercises" (Vague 1 du plan de migration, feature FitNotes) :
+            // bascule Favorite/Unfavorite, persiste immediatement (meme convention que
+            // les autres actions de ce menu) et remonte l'exercice en tete de liste.
+            if(item.getItemId() == R.id.favorite)
+            {
+                int position = getAdapterPosition();
+                Exercise exercise = Exercises.get(position);
+
+                MainActivity.dataStorage.setFavoriteExercise(exercise.getName(), !isFavorite(exercise));
+                MainActivity.dataStorage.saveKnownExerciseData(ct);
+
+                sortFavoritesFirst();
+                notifyDataSetChanged();
+                return true;
+            }
+
             // Edit Exercise
             if(item.getItemId() == R.id.edit)
             {

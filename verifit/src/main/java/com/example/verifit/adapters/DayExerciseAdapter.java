@@ -17,6 +17,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.verifit.R;
+import com.example.verifit.model.SupersetGroup;
+import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.ui.AddExerciseActivity;
 import com.example.verifit.ui.MainActivity;
@@ -65,6 +67,13 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
     // WorkoutDay pour persister l'ordre final).
     private OnStartDragListener dragListener;
 
+    // WorkoutDay du jour affiche (Vague 2 du plan de migration, retour Romain
+    // 07/09/2026) - uniquement pour retrouver le groupe de superset de chaque
+    // exercice (barre coloree, voir onBindViewHolder()/setWorkoutDay()). Peut etre
+    // null tant que DayActivity.initActivity() n'a pas encore trouve le WorkoutDay
+    // correspondant (jour vide).
+    private WorkoutDay day;
+
     public interface OnSelectionChangedListener {
         void onSelectionChanged(int selectedCount);
     }
@@ -87,6 +96,14 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
     public void setOnStartDragListener(OnStartDragListener listener)
     {
         this.dragListener = listener;
+    }
+
+    // Voir le commentaire du champ "day" ci-dessus. A appeler par DayActivity a
+    // chaque (re)chargement de l'ecran (initActivity()).
+    public void setWorkoutDay(WorkoutDay day)
+    {
+        this.day = day;
+        notifyDataSetChanged();
     }
 
     public void enterSelectionMode()
@@ -148,9 +165,23 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
         return selectedExerciseNames.size();
     }
 
+    // Retour Romain implicite (Vague 2, 07/09/2026) : dans l'ordre d'AFFICHAGE
+    // actuel (celui de Exercises, deja pilote par WorkoutDay.ExerciseOrder), pas
+    // l'ordre d'iteration non garanti du HashSet interne - important pour
+    // DayActivity.groupSelectedExercises(), qui utilise cet ordre comme ordre
+    // d'enchainement du superset cree. Ne change rien pour le seul autre appelant
+    // (suppression groupee), qui ne se soucie pas de l'ordre.
     public List<String> getSelectedExerciseNames()
     {
-        return new ArrayList<>(selectedExerciseNames);
+        List<String> ordered = new ArrayList<>();
+        for (WorkoutExercise exercise : Exercises)
+        {
+            if (selectedExerciseNames.contains(exercise.getExercise()))
+            {
+                ordered.add(exercise.getExercise());
+            }
+        }
+        return ordered;
     }
 
     private void toggleSelection(int position)
@@ -170,6 +201,33 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
             selectedExerciseNames.add(exerciseName);
         }
         notifyItemChanged(position);
+
+        if (selectionChangedListener != null)
+        {
+            selectionChangedListener.onSelectionChanged(selectedExerciseNames.size());
+        }
+    }
+
+    // "All" (retour Romain 08/09/2026) : sélectionne d'un coup tous les exercices
+    // actuellement affichés, sans avoir à cocher chaque case une par une - utile
+    // avant un Group ou une suppression groupée qui couvre toute la séance.
+    // Retour Romain 08/09/2026 (bis) : un reclic alors que tout est déjà sélectionné
+    // désélectionne tout d'un coup plutôt que de ne rien faire - comportement "case à
+    // cocher" classique (tout / rien) plutôt qu'une action à sens unique.
+    public void selectAll()
+    {
+        if (!Exercises.isEmpty() && selectedExerciseNames.size() == Exercises.size())
+        {
+            selectedExerciseNames.clear();
+        }
+        else
+        {
+            for (WorkoutExercise exercise : Exercises)
+            {
+                selectedExerciseNames.add(exercise.getExercise());
+            }
+        }
+        notifyDataSetChanged();
 
         if (selectionChangedListener != null)
         {
@@ -257,6 +315,19 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
 
         // Colorize exercise icon accordingly
         setCategoryIconTint(holder,Exercises.get(position).getExercise());
+
+        // Barre coloree de superset (Vague 2 du plan de migration, retour Romain
+        // 07/09/2026) - voir le champ "day" plus haut.
+        SupersetGroup group = (day != null) ? day.getSupersetGroupForExercise(Exercises.get(position).getExercise()) : null;
+        if (group != null)
+        {
+            holder.supersetBar.setVisibility(View.VISIBLE);
+            holder.supersetBar.setBackgroundColor(group.getColor());
+        }
+        else
+        {
+            holder.supersetBar.setVisibility(View.GONE);
+        }
     }
 
     // Simple
@@ -323,6 +394,7 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
         ImageView imageView;
         CheckBox checkbox;
         ImageView dragHandle;
+        View supersetBar;
 
         public MyViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -334,6 +406,7 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
             imageView = itemView.findViewById(R.id.imageView2);
             checkbox = itemView.findViewById(R.id.exercise_checkbox);
             dragHandle = itemView.findViewById(R.id.drag_handle);
+            supersetBar = itemView.findViewById(R.id.v_superset_bar);
 
                 // Bascule la sélection en mode sélection multiple, sinon replie/déplie
                 // cette série précise (voir toggleCollapse/collapsedExerciseNames).

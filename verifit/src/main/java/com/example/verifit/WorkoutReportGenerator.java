@@ -41,6 +41,15 @@ public class WorkoutReportGenerator
 
         report.append("FitNotes Workout - ").append(formatDateHeader(day.getDate())).append("\n");
 
+        // "Comment a Workout" (Vague 3 du plan de migration, retour Romain 07/09/2026) -
+        // affiche juste sous l'en-tete, comme sur FitNotes ("affiche au-dessus de la
+        // seance").
+        String workoutComment = day.getComment();
+        if (!workoutComment.trim().isEmpty())
+        {
+            report.append(workoutComment.trim()).append("\n");
+        }
+
         String timeLine = buildTimeLine(day);
         if (timeLine != null)
         {

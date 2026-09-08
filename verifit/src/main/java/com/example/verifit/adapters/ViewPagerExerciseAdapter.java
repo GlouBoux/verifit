@@ -15,6 +15,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.verifit.R;
+import com.example.verifit.model.SupersetGroup;
+import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.ui.AddExerciseActivity;
 import com.example.verifit.ui.MainActivity;
@@ -59,6 +61,13 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
     // début du geste ; setDragging(false), à la fin du geste, ne les rouvre plus.
     private final Set<String> collapsedExerciseNames = new HashSet<>();
 
+    // WorkoutDay de cette page (Vague 2, retour Romain 07/09/2026) - uniquement pour
+    // retrouver le groupe de superset de chaque exercice (barre coloree), meme role
+    // que sur DayExerciseAdapter. Mis a jour a chaque bind (voir
+    // ViewPagerWorkoutDayAdapter.onBindViewHolder()) puisque les ViewHolder sont
+    // recycles en swipant entre les jours.
+    private WorkoutDay day;
+
     public interface OnSelectionChangedListener {
         void onSelectionChanged(int selectedCount);
     }
@@ -81,6 +90,13 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
     public void setOnStartDragListener(OnStartDragListener listener)
     {
         this.dragListener = listener;
+    }
+
+    // Voir le commentaire du champ "day" ci-dessus.
+    public void setWorkoutDay(WorkoutDay day)
+    {
+        this.day = day;
+        notifyDataSetChanged();
     }
 
     public void enterSelectionMode()
@@ -142,9 +158,20 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
         return selectedExerciseNames.size();
     }
 
+    // Dans l'ordre d'AFFICHAGE actuel (voir DayExerciseAdapter, meme correctif) - sert
+    // desormais aussi d'ordre d'enchainement quand on cree un superset depuis cet
+    // ecran (MainActivity.groupSelectedExercises()).
     public List<String> getSelectedExerciseNames()
     {
-        return new ArrayList<>(selectedExerciseNames);
+        List<String> ordered = new ArrayList<>();
+        for (WorkoutExercise exercise : Exercises)
+        {
+            if (selectedExerciseNames.contains(exercise.getExercise()))
+            {
+                ordered.add(exercise.getExercise());
+            }
+        }
+        return ordered;
     }
 
     private void toggleSelection(int position)
@@ -164,6 +191,30 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
             selectedExerciseNames.add(exerciseName);
         }
         notifyItemChanged(position);
+
+        if (selectionChangedListener != null)
+        {
+            selectionChangedListener.onSelectionChanged(selectedExerciseNames.size());
+        }
+    }
+
+    // "All" (retour Romain 08/09/2026), meme mecanique que DayExerciseAdapter -
+    // reclic alors que tout est deja selectionne -> desactive tout (retour Romain
+    // 08/09/2026, bis).
+    public void selectAll()
+    {
+        if (!Exercises.isEmpty() && selectedExerciseNames.size() == Exercises.size())
+        {
+            selectedExerciseNames.clear();
+        }
+        else
+        {
+            for (WorkoutExercise exercise : Exercises)
+            {
+                selectedExerciseNames.add(exercise.getExercise());
+            }
+        }
+        notifyDataSetChanged();
 
         if (selectionChangedListener != null)
         {
@@ -273,7 +324,17 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
         // Change exercise color accordingly
         setCategoryIconTint(holder,Exercises.get(position).getExercise());
 
-
+        // Barre coloree de superset (Vague 2, retour Romain 07/09/2026).
+        SupersetGroup group = (day != null) ? day.getSupersetGroupForExercise(Exercises.get(position).getExercise()) : null;
+        if (group != null)
+        {
+            holder.supersetBar.setVisibility(View.VISIBLE);
+            holder.supersetBar.setBackgroundColor(group.getColor());
+        }
+        else
+        {
+            holder.supersetBar.setVisibility(View.GONE);
+        }
     }
 
     // Simple
@@ -330,6 +391,7 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
         ImageView imageView;
         CheckBox checkbox;
         ImageView dragHandle;
+        View supersetBar;
 
         public MyViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -340,6 +402,7 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
             imageView = itemView.findViewById(R.id.imageView3);
             checkbox = itemView.findViewById(R.id.exercise_checkbox);
             dragHandle = itemView.findViewById(R.id.drag_handle);
+            supersetBar = itemView.findViewById(R.id.v_superset_bar);
         }
     }
 }

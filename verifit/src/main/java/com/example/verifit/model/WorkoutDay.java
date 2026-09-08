@@ -23,6 +23,26 @@ public class WorkoutDay {
     // UpdateData() la garde quand même défensivement.
     private ArrayList<String> ExerciseOrder;
 
+    // Groupes de superset de ce jour (Vague 2 du plan de migration, retour Romain
+    // 07/09/2026). Un exercice appartient a au plus un groupe : voir
+    // getSupersetGroupForExercise(). Comme ExerciseOrder ci-dessus, absent des
+    // sauvegardes anterieures a cet ajout - Gson retombe sur la liste vide
+    // initialisee ici ; UpdateData() la garde aussi defensivement contre null et
+    // retire les exercices qui ont disparu du jour (suppression de serie) ainsi que
+    // les groupes qui tombent a 0 ou 1 membre (un superset suppose au moins 2
+    // exercices).
+    private ArrayList<SupersetGroup> SupersetGroups;
+
+    // Commentaire de la SEANCE ENTIERE (Vague 3 du plan de migration, retour Romain
+    // 07/09/2026 - "Comment a Workout" de FitNotes, distinct du commentaire PAR
+    // SERIE deja existant sur WorkoutSet). Absent des sauvegardes anterieures a cet
+    // ajout - Gson retombe donc sur null (pas "", contrairement a un champ avec
+    // initialiseur : Gson desserialise sans passer par le constructeur) ; getComment()
+    // ci-dessous ne renvoie jamais null pour eviter tout NullPointerException cote
+    // appelant, et UpdateData() le normalise aussi en "" par coherence avec
+    // ExerciseOrder/SupersetGroups.
+    private String Comment;
+
     // Chrono de la seance entiere (retour Romain 06/09/2026) : "je ne sais ni ne peux
     // controler ce timer, il faut que je puisse y acceder [...] je dois pouvoir le
     // controler". Demarre automatiquement (epoch millis) au moment ou la PREMIERE serie
@@ -50,6 +70,8 @@ public class WorkoutDay {
         Sets = new ArrayList<WorkoutSet>();
         Exercises = new ArrayList<WorkoutExercise>();
         ExerciseOrder = new ArrayList<String>();
+        SupersetGroups = new ArrayList<SupersetGroup>();
+        Comment = "";
         DayVolume = 0.0;
         Date = "0000-00-00";
         Reps = 0;
@@ -169,11 +191,23 @@ public class WorkoutDay {
             ExerciseOrder = new ArrayList<String>();
         }
 
+        if (SupersetGroups == null)
+        {
+            SupersetGroups = new ArrayList<SupersetGroup>();
+        }
+
+        if (Comment == null)
+        {
+            Comment = "";
+        }
+
         if(Sets.isEmpty())
         {
             Sets.clear();
             Exercises.clear();
             ExerciseOrder.clear();
+            SupersetGroups.clear();
+            Comment = "";
             DayVolume = 0.0;
             Date = "0000-00-00";
             Reps = 0;
@@ -209,6 +243,20 @@ public class WorkoutDay {
             if (!ExerciseOrder.contains(exercise_name))
             {
                 ExerciseOrder.add(exercise_name);
+            }
+        }
+
+        // Nettoyage des groupes de superset : un exercice qui a disparu du jour
+        // (derniere serie supprimee) sort de son groupe ; un groupe qui tombe a 0
+        // ou 1 membre est dissous (un superset suppose au moins 2 exercices).
+        Iterator<SupersetGroup> supersetGroupIterator = SupersetGroups.iterator();
+        while (supersetGroupIterator.hasNext())
+        {
+            SupersetGroup group = supersetGroupIterator.next();
+            group.getExerciseNames().retainAll(Exercises_Present);
+            if (group.getExerciseNames().size() < 2)
+            {
+                supersetGroupIterator.remove();
             }
         }
 
@@ -363,6 +411,136 @@ public class WorkoutDay {
     public boolean isSessionTimerRunning()
     {
         return SessionStartTimestamp != null && SessionEndTimestamp == null;
+    }
+
+    // --- Comment a Workout (Vague 3 du plan de migration, retour Romain 07/09/2026) ---
+
+    // Ne renvoie jamais null (voir le commentaire du champ Comment ci-dessus) - les
+    // appelants (affichage, export) peuvent tester .isEmpty() sans se soucier de null.
+    public String getComment()
+    {
+        return Comment == null ? "" : Comment;
+    }
+
+    public void setComment(String comment)
+    {
+        Comment = comment;
+    }
+
+    // --- Supersets (Vague 2 du plan de migration, retour Romain 07/09/2026) ---
+
+    public ArrayList<SupersetGroup> getSupersetGroups()
+    {
+        return SupersetGroups;
+    }
+
+    public void setSupersetGroups(ArrayList<SupersetGroup> supersetGroups)
+    {
+        SupersetGroups = supersetGroups;
+    }
+
+    // Groupe auquel appartient cet exercice ce jour-la, ou null s'il n'est dans
+    // aucun groupe.
+    public SupersetGroup getSupersetGroupForExercise(String exerciseName)
+    {
+        if (SupersetGroups == null)
+        {
+            return null;
+        }
+        for (SupersetGroup group : SupersetGroups)
+        {
+            if (group.getExerciseNames().contains(exerciseName))
+            {
+                return group;
+            }
+        }
+        return null;
+    }
+
+    // Cree un nouveau groupe a partir des noms fournis (dans l'ordre fourni -
+    // l'appelant doit passer l'ordre d'affichage actuel, voir
+    // DayExerciseAdapter.getSelectedExerciseNames()), ou etend/renomme un groupe
+    // existant si l'un des exercices selectionnes en fait deja partie (retour
+    // Romain implicite : re-selectionner un groupe existant + "Group" sert a le
+    // renommer/recolorer plutot qu'a creer un doublon incoherent). Chaque exercice
+    // selectionne est d'abord retire de son eventuel ancien groupe (un exercice ne
+    // peut etre que dans un seul groupe a la fois) - la purge des groupes devenus
+    // vides n'a lieu qu'UNE FOIS a la fin, sans quoi targetGroup pourrait etre
+    // supprime entre son detachement et sa reconstitution ci-dessous.
+    public SupersetGroup addToSupersetGroup(ArrayList<String> exerciseNames, String name, int color)
+    {
+        if (SupersetGroups == null)
+        {
+            SupersetGroups = new ArrayList<SupersetGroup>();
+        }
+
+        SupersetGroup targetGroup = null;
+        for (String exerciseName : exerciseNames)
+        {
+            SupersetGroup existing = getSupersetGroupForExercise(exerciseName);
+            if (existing != null)
+            {
+                targetGroup = existing;
+                break;
+            }
+        }
+
+        for (String exerciseName : exerciseNames)
+        {
+            SupersetGroup previous = getSupersetGroupForExercise(exerciseName);
+            if (previous != null)
+            {
+                previous.getExerciseNames().remove(exerciseName);
+            }
+        }
+
+        if (targetGroup == null)
+        {
+            targetGroup = new SupersetGroup(name, color, new ArrayList<String>());
+            SupersetGroups.add(targetGroup);
+        }
+        else
+        {
+            targetGroup.setName(name);
+        }
+
+        for (String exerciseName : exerciseNames)
+        {
+            if (!targetGroup.getExerciseNames().contains(exerciseName))
+            {
+                targetGroup.getExerciseNames().add(exerciseName);
+            }
+        }
+
+        removeEmptySupersetGroups();
+        return targetGroup;
+    }
+
+    // Retire un exercice de son groupe (le dissout si moins de 2 membres restent).
+    public void removeFromSupersetGroup(String exerciseName)
+    {
+        SupersetGroup group = getSupersetGroupForExercise(exerciseName);
+        if (group != null)
+        {
+            group.getExerciseNames().remove(exerciseName);
+        }
+        removeEmptySupersetGroups();
+    }
+
+    private void removeEmptySupersetGroups()
+    {
+        if (SupersetGroups == null)
+        {
+            return;
+        }
+        Iterator<SupersetGroup> it = SupersetGroups.iterator();
+        while (it.hasNext())
+        {
+            if (it.next().getExerciseNames().size() < 2)
+            {
+                it.remove();
+            }
+        }
     }
 
 }

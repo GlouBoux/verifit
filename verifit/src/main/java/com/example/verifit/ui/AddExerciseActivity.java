@@ -54,6 +54,7 @@ import com.example.verifit.WorkoutReportGenerator;
 import com.example.verifit.adapters.AddExerciseWorkoutSetAdapter;
 import com.example.verifit.adapters.ExerciseHistoryExerciseAdapter;
 import com.example.verifit.R;
+import com.example.verifit.model.SupersetGroup;
 import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
@@ -138,6 +139,12 @@ public class AddExerciseActivity extends AppCompatActivity {
     // setupTimer()/loadDuration()/RestTimerReceiver.DURATION_PREF_KEY.
     public SeekBar sb_beep_duration;
 
+    // "Auto Start" du minuteur de REPOS (07/09/2026, feature FitNotes, vague 1 du plan
+    // de migration `docs/fitnotes-migration-plan.md`) - distinct de
+    // cb_workout_time_auto_start (chrono de SEANCE). Voir
+    // autoStartRestTimerIfEnabled()/isRestTimerAutoStartEnabled() plus bas.
+    public CheckBox cb_rest_timer_auto_start;
+
     // Chrono de la SEANCE entiere (retour Romain 06/09/2026, distinct du minuteur de
     // repos ci-dessus) - voir refreshSessionTimerBar()/toggleSessionTimer() plus bas et
     // le commentaire sur WorkoutDay.SessionStartTimestamp.
@@ -156,6 +163,21 @@ public class AddExerciseActivity extends AppCompatActivity {
     // chrono, ex. toggleSessionTimer()) : les deux ecrans doivent lire/ecrire
     // exactement le meme reglage.
     private static final String AUTO_START_PREF_KEY = "session_auto_start";
+
+    // Cle SharedPreferences du reglage "Auto Start" du minuteur de REPOS (07/09/2026) -
+    // demande initiale de Romain dans fitnotes-fork-todo.md ("Nouvelles demandes",
+    // 06/09/2026) : "ajouter start timer quand on valide la premiere serie". Feature
+    // FitNotes confirmee dans fitnotes-features-workout-tools.md : demarre a CHAQUE
+    // nouvelle serie (pas seulement la premiere), tant qu'on reste sur l'exercice. Pas
+    // de reglage "Auto Stop" associe : FitNotes lui-meme n'en propose pas (meme
+    // ambiguite que pour AUTO_START_PREF_KEY ci-dessus sur ce que "derniere serie"
+    // signifierait). Cle distincte de AUTO_START_PREF_KEY (chrono de SEANCE) et de
+    // RestTimerReceiver.VOLUME_PREF_KEY/DURATION_PREF_KEY (reglages du bip), memes
+    // SharedPreferences. Desactive par defaut : contrairement au chrono de seance
+    // (une seule fois par seance, sans gene si oublie), demarrer le minuteur de repos
+    // à CHAQUE serie sans y avoir consenti serait plus intrusif - à activer
+    // explicitement dans la boite de dialogue "Timer".
+    private static final String REST_TIMER_AUTO_START_PREF_KEY = "rest_timer_auto_start";
 
     private AlertDialog currentDialog = null;
 
@@ -571,8 +593,64 @@ public class AddExerciseActivity extends AppCompatActivity {
         runOnUiThread(()->{
             updateTodaysExercises();
             refreshSessionTimerBar();
+            autoStartRestTimerIfEnabled();
+
+            if (advanceToNextSupersetExerciseIfApplicable())
+            {
+                // Ecran deja remplace par le prochain exercice du superset - voir
+                // le commentaire de la methode ci-dessous. Inutile d'afficher "Set
+                // Added" ici, ca apparaitrait de facon incoherente pendant la
+                // transition vers un autre exercice.
+                return;
+            }
+
             showSnackbarMessage("Set Added");
         });
+    }
+
+    // Superset (Vague 2 du plan de migration, retour Romain 07/09/2026) : si
+    // l'exercice courant appartient a un groupe de superset actif (AutoAdvance a
+    // true, voir DayActivity.groupSelectedExercises()) pour le jour affiche,
+    // relance cet ecran directement sur le PROCHAIN exercice du groupe (en
+    // bouclant sur le premier apres le dernier). Verifit n'a pas d'ecran
+    // "Navigation Panel" comme FitNotes permettant de changer d'exercice sans
+    // changer d'ecran (voir le plan de migration, section Vague 2) - on relance
+    // donc une nouvelle instance de AddExerciseActivity plutot que de basculer en
+    // place, en demarrant la suivante puis en finissant l'instance courante : la
+    // pile de retour ne grossit donc pas a chaque serie (chaque exercice du
+    // superset REMPLACE le precedent, exactement comme si l'utilisateur avait tape
+    // directement dessus depuis DayActivity), et overridePendingTransition(0, 0)
+    // evite l'animation de transition standard pour que l'enchainement paraisse
+    // aussi immediat que possible. Retourne true si un enchainement a eu lieu
+    // (l'appelant doit alors s'abstenir de tout traitement supplementaire sur
+    // cette instance, qui va etre detruite).
+    private boolean advanceToNextSupersetExerciseIfApplicable()
+    {
+        int position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
+        WorkoutDay day = (position >= 0) ? MainActivity.dataStorage.getWorkoutDays().get(position) : null;
+        if (day == null)
+        {
+            return false;
+        }
+
+        SupersetGroup group = day.getSupersetGroupForExercise(exercise_name);
+        if (group == null || !group.isAutoAdvance())
+        {
+            return false;
+        }
+
+        String nextExercise = group.getNextExercise(exercise_name);
+        if (nextExercise == null || nextExercise.equals(exercise_name))
+        {
+            return false;
+        }
+
+        Intent intent = new Intent(this, AddExerciseActivity.class);
+        intent.putExtra("exercise", nextExercise);
+        startActivity(intent);
+        overridePendingTransition(0, 0);
+        finish();
+        return true;
     }
 
     // Retrouve le WorkoutDay du jour affiche (peut etre null si aucune serie n'a encore
@@ -638,6 +716,44 @@ public class AddExerciseActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putBoolean(AUTO_START_PREF_KEY, enabled);
         editor.apply();
+    }
+
+    // "Auto Start" du minuteur de REPOS (07/09/2026) - voir REST_TIMER_AUTO_START_PREF_KEY
+    // ci-dessus pour le detail. Desactive par defaut.
+    public boolean isRestTimerAutoStartEnabled()
+    {
+        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences", MODE_PRIVATE);
+        return sharedPreferences.getBoolean(REST_TIMER_AUTO_START_PREF_KEY, false);
+    }
+
+    public void setRestTimerAutoStartEnabled(boolean enabled)
+    {
+        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putBoolean(REST_TIMER_AUTO_START_PREF_KEY, enabled);
+        editor.apply();
+    }
+
+    // Appelee a chaque nouvelle serie loggee (voir updateViewAndShowMessage(), seul
+    // appelant des deux methodes addSet*WorkoutDay ci-dessus) - demarre le minuteur de
+    // repos avec la duree configuree si le reglage "Auto Start" est active, meme si un
+    // repos etait deja en cours (une nouvelle serie signifie un nouveau repos qui
+    // commence, cf. commentaire de REST_TIMER_AUTO_START_PREF_KEY). Reutilise
+    // loadTimerDurationFromPrefs()/resetTimer()/startTimer() : fonctionnent deja sans
+    // que la boite de dialogue "Timer" ait ete ouverte cette session (meme mecanique
+    // que la barre de chrono de seance persistante), donc le minuteur se declenche en
+    // arriere-plan (notification + bip a la fin, via RestTimerReceiver) sans avoir a
+    // ouvrir ce dialogue.
+    private void autoStartRestTimerIfEnabled()
+    {
+        if (!isRestTimerAutoStartEnabled())
+        {
+            return;
+        }
+
+        loadTimerDurationFromPrefs();
+        resetTimer();
+        startTimer();
     }
 
     // Dialogue complet "Workout Time" (retour Romain 07/09/2026, apres captures
@@ -2103,6 +2219,7 @@ public class AddExerciseActivity extends AppCompatActivity {
         bt_reset = view.findViewById(R.id.bt_close);
         sb_volume = view.findViewById(R.id.sb_volume);
         sb_beep_duration = view.findViewById(R.id.sb_beep_duration);
+        cb_rest_timer_auto_start = view.findViewById(R.id.cb_rest_timer_auto_start);
 
         // Barre de minuteur persistante (retour Romain 06/09/2026) : si le minuteur a ete
         // demarre/mis en pause depuis la barre persistante avant l'ouverture de ce
@@ -2124,6 +2241,9 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         loadVolume();
         loadDuration();
+        cb_rest_timer_auto_start.setChecked(isRestTimerAutoStartEnabled());
+        cb_rest_timer_auto_start.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> setRestTimerAutoStartEnabled(isChecked));
 
         // Retour Romain 06/09/2026 : volume du bip de fin de repos reglable depuis
         // l'app ("ajuster le volume suivant le bruit ambiant du jour") - persiste des

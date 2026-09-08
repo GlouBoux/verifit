@@ -5,18 +5,24 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
+    <!-- Avertissement de suppression en cascade (Vague 1 du plan de migration,
+         `fitnotes-features-exercises.md` section 5) : texte rempli dynamiquement par
+         ExerciseAdapter (nombre de séances/séries impactées) avant l'affichage - voir
+         onMenuItemClick(), item R.id.delete. Largeur/wrap adaptes a un texte plus long
+         que le "Delete all sets with this exercise?" d'origine (une seule ligne fixe). -->
     <TextView
         android:id="@+id/tv_date"
-        android:layout_width="300dp"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
         android:layout_marginLeft="20dp"
         android:layout_marginTop="20dp"
-        android:ellipsize="end"
-        android:maxLines="1"
+        android:layout_marginEnd="20dp"
+        android:layout_marginRight="20dp"
         android:text="Delete all sets with this exercise?"
         android:textColor="@color/colorPrimary"
-        android:textSize="22sp"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 

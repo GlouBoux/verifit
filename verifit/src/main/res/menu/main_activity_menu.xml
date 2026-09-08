@@ -21,6 +21,37 @@
         app:iconTint="@color/cardview_light_background">
     </item>
 
+    <!-- Vague 3 du plan de migration, retour Romain 07/09/2026 - "Comment Workout" de
+         l'Overflow Menu FitNotes (Home Screen). Repliee dans le menu "..." plutot que
+         toujours visible, comme sur FitNotes - voir
+         MainActivity.showCommentWorkoutDialog(). -->
+    <item
+        android:id="@+id/comment_workout"
+        android:title="Comment Workout"
+        app:showAsAction="never">
+    </item>
+
+    <!-- Vague 3, retour Romain 07/09/2026 - "Copy Workout"/"Copy Previous Workout"/
+         "Move Workout" de l'Overflow Menu FitNotes. Voir
+         MainActivity.promptCopyOrMoveExercises()/copyPreviousWorkout(). -->
+    <item
+        android:id="@+id/copy_workout"
+        android:title="Copy Workout"
+        app:showAsAction="never">
+    </item>
+
+    <item
+        android:id="@+id/copy_previous_workout"
+        android:title="Copy Previous Workout"
+        app:showAsAction="never">
+    </item>
+
+    <item
+        android:id="@+id/move_workout"
+        android:title="Move Workout"
+        app:showAsAction="never">
+    </item>
+
 <!--    <item-->
 <!--        android:id="@+id/account"-->
 <!--        android:icon="@drawable/ic_account_circle_24px"-->

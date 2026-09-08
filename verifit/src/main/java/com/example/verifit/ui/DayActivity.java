@@ -22,6 +22,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -34,6 +35,8 @@ import com.example.verifit.SessionTimerTicker;
 import com.example.verifit.WorkoutReportGenerator;
 import com.example.verifit.adapters.DayExerciseAdapter;
 import com.example.verifit.R;
+import com.example.verifit.model.SupersetColours;
+import com.example.verifit.model.SupersetGroup;
 import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
@@ -170,18 +173,37 @@ public class DayActivity extends AppCompatActivity {
             getSupportActionBar().setTitle(formated_date);
 
             ArrayList<WorkoutExercise> Today_Execrises = new ArrayList<WorkoutExercise>();
+            WorkoutDay currentDay = null;
 
             for(int i = 0; i < MainActivity.dataStorage.getWorkoutDays().size(); i++)
             {
                 if(date_clicked.equals(MainActivity.dataStorage.getWorkoutDays().get(i).getDate()))
                 {
-                    Today_Execrises = MainActivity.dataStorage.getWorkoutDays().get(i).getExercises();
+                    currentDay = MainActivity.dataStorage.getWorkoutDays().get(i);
+                    Today_Execrises = currentDay.getExercises();
                 }
             }
 
 
+            // Commentaire de la seance entiere (Vague 3, retour Romain 07/09/2026) -
+            // currentDay est null si aucune serie n'a jamais ete loggee ce jour-la.
+            TextView tv_workout_comment = findViewById(R.id.tv_workout_comment);
+            String workoutComment = (currentDay != null) ? currentDay.getComment() : "";
+            if (workoutComment.trim().isEmpty())
+            {
+                tv_workout_comment.setVisibility(View.GONE);
+            }
+            else
+            {
+                tv_workout_comment.setVisibility(View.VISIBLE);
+                tv_workout_comment.setText(workoutComment);
+            }
+
             // Set Recycler View
             workoutExerciseAdapter = new DayExerciseAdapter(this, Today_Execrises);
+            // Superset (Vague 2, retour Romain 07/09/2026) : necessaire pour que
+            // l'adapter retrouve le groupe de chaque exercice (barre coloree).
+            workoutExerciseAdapter.setWorkoutDay(currentDay);
             workoutExerciseAdapter.setOnSelectionChangedListener(count -> {
                 if (selectionActionMode != null)
                 {
@@ -320,9 +342,24 @@ public class DayActivity extends AppCompatActivity {
 
             @Override
             public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                if (item.getItemId() == R.id.delete_selected_exercises)
+                if (item.getItemId() == R.id.select_all_exercises)
+                {
+                    workoutExerciseAdapter.selectAll();
+                    return true;
+                }
+                else if (item.getItemId() == R.id.delete_selected_exercises)
                 {
                     confirmDeleteSelectedExercises(mode);
+                    return true;
+                }
+                else if (item.getItemId() == R.id.group_selected_exercises)
+                {
+                    groupSelectedExercises(mode);
+                    return true;
+                }
+                else if (item.getItemId() == R.id.ungroup_selected_exercises)
+                {
+                    ungroupSelectedExercises(mode);
                     return true;
                 }
                 return false;
@@ -440,6 +477,111 @@ public class DayActivity extends AppCompatActivity {
         }
     }
 
+    // Groupe les exercices selectionnes en superset (Vague 2 du plan de migration,
+    // retour Romain 07/09/2026). Si la selection contient un exercice deja membre
+    // d'un groupe existant, ce bouton sert a le renommer/recolorer/reconfigurer
+    // plutot qu'a en creer un second incoherent - voir
+    // WorkoutDay.addToSupersetGroup(). L'ordre de selectedNames (ordre d'AFFICHAGE
+    // actuel, voir DayExerciseAdapter.getSelectedExerciseNames()) devient l'ordre
+    // d'enchainement du superset.
+    private void groupSelectedExercises(ActionMode mode)
+    {
+        List<String> selectedNames = workoutExerciseAdapter.getSelectedExerciseNames();
+
+        if (selectedNames.size() < 2)
+        {
+            Toast.makeText(this, "Select at least 2 exercises to group", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int day_position = MainActivity.dataStorage.getDayPosition(date_clicked);
+        if (day_position < 0)
+        {
+            mode.finish();
+            return;
+        }
+
+        WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
+
+        // Pre-remplit nom/couleur/auto-advance si la selection appartient deja a un
+        // groupe existant.
+        final SupersetGroup existingGroup = day.getSupersetGroupForExercise(selectedNames.get(0));
+        String prefillName = (existingGroup != null && existingGroup.getName() != null) ? existingGroup.getName() : "";
+
+        LinearLayout dialogLayout = new LinearLayout(this);
+        dialogLayout.setOrientation(LinearLayout.VERTICAL);
+        int paddingPx = (int) (16 * getResources().getDisplayMetrics().density);
+        dialogLayout.setPadding(paddingPx, paddingPx, paddingPx, paddingPx);
+
+        final EditText input = new EditText(this);
+        input.setHint("Superset name (optional)");
+        input.setText(prefillName);
+        dialogLayout.addView(input);
+
+        // Passage automatique a l'exercice suivant (retour Romain 07/09/2026).
+        // Verifit n'a pas de "Navigation Panel" comme FitNotes permettant de changer
+        // d'exercice sans changer d'ecran - l'enchainement se fait donc en relancant
+        // AddExerciseActivity sur l'exercice suivant, voir
+        // AddExerciseActivity.advanceToNextSupersetExerciseIfApplicable(). Case a
+        // cocher par groupe, cochee par defaut, pour pouvoir desactiver ce
+        // comportement au cas par cas si ca ne convient pas a l'usage.
+        final CheckBox cb_auto_advance = new CheckBox(this);
+        cb_auto_advance.setText("Automatically move to next exercise after each set");
+        cb_auto_advance.setChecked(existingGroup == null || existingGroup.isAutoAdvance());
+        dialogLayout.addView(cb_auto_advance);
+
+        new AlertDialog.Builder(this)
+                .setTitle(selectedNames.size() + " exercise(s) selected")
+                .setView(dialogLayout)
+                .setPositiveButton("Group", (dlg, which) ->
+                {
+                    String name = input.getText().toString().trim();
+                    int color = (existingGroup != null)
+                            ? existingGroup.getColor()
+                            : SupersetColours.getNextAvailableColor(day.getSupersetGroups());
+
+                    SupersetGroup savedGroup = day.addToSupersetGroup(new ArrayList<>(selectedNames), name, color);
+                    savedGroup.setAutoAdvance(cb_auto_advance.isChecked());
+
+                    MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+                    mode.finish();
+                    initActivity();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    // Retire les exercices selectionnes de leur groupe de superset (Vague 2, retour
+    // Romain 07/09/2026) - action non destructive (aucune serie supprimee), donc
+    // pas de dialogue de confirmation, contrairement a Delete.
+    private void ungroupSelectedExercises(ActionMode mode)
+    {
+        List<String> selectedNames = workoutExerciseAdapter.getSelectedExerciseNames();
+
+        if (selectedNames.isEmpty())
+        {
+            Toast.makeText(this, "No exercise selected", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int day_position = MainActivity.dataStorage.getDayPosition(date_clicked);
+        if (day_position < 0)
+        {
+            mode.finish();
+            return;
+        }
+
+        WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
+        for (String exerciseName : selectedNames)
+        {
+            day.removeFromSupersetGroup(exerciseName);
+        }
+        MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+
+        mode.finish();
+        initActivity();
+    }
+
     // Supprime toutes les séries d'un jour pour les exercices sélectionnés (pas
     // seulement "aujourd'hui" au sens calendaire - date_clicked est le jour ouvert
     // dans cet écran, qui peut être n'importe quel jour passé).
@@ -493,7 +635,165 @@ public class DayActivity extends AppCompatActivity {
             shareWorkout();
             return true;
         }
+        else if(item.getItemId() == R.id.comment_workout)
+        {
+            showCommentWorkoutDialog();
+            return true;
+        }
+        else if(item.getItemId() == R.id.copy_workout)
+        {
+            new CalendarPickerDialog(this, MainActivity.dataStorage, date_clicked,
+                    dateKey -> promptCopyOrMoveExercises(dateKey, date_clicked, false)).show();
+            return true;
+        }
+        else if(item.getItemId() == R.id.copy_previous_workout)
+        {
+            copyPreviousWorkout();
+            return true;
+        }
+        else if(item.getItemId() == R.id.move_workout)
+        {
+            new CalendarPickerDialog(this, MainActivity.dataStorage, date_clicked,
+                    dateKey -> promptCopyOrMoveExercises(dateKey, date_clicked, true)).show();
+            return true;
+        }
         return super.onOptionsItemSelected(item);
+    }
+
+    // "Copy Previous Workout" - voir MainActivity.copyPreviousWorkout(), meme logique.
+    private void copyPreviousWorkout()
+    {
+        String sourceDate = MainActivity.dataStorage.getMostRecentWorkoutDateBefore(date_clicked);
+        if (sourceDate == null)
+        {
+            Toast.makeText(this, "No previous workout found", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        promptCopyOrMoveExercises(sourceDate, date_clicked, false);
+    }
+
+    // "Copy a Workout" / "Move a Workout" - voir MainActivity.promptCopyOrMoveExercises()
+    // pour le detail des choix (scope reduit a la selection par exercice entier).
+    private void promptCopyOrMoveExercises(String sourceDate, String destinationDate, boolean move)
+    {
+        if (sourceDate.equals(destinationDate))
+        {
+            Toast.makeText(this, "Choose a different day", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int sourceDayPosition = MainActivity.dataStorage.getDayPosition(sourceDate);
+        if (sourceDayPosition < 0 || MainActivity.dataStorage.getWorkoutDays().get(sourceDayPosition).getExercises().isEmpty())
+        {
+            Toast.makeText(this, "No workout to copy on that day", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        List<WorkoutExercise> sourceExercises = MainActivity.dataStorage.getWorkoutDays().get(sourceDayPosition).getExercises();
+        final String[] exerciseNames = new String[sourceExercises.size()];
+        final boolean[] checked = new boolean[sourceExercises.size()];
+        for (int i = 0; i < sourceExercises.size(); i++)
+        {
+            exerciseNames[i] = sourceExercises.get(i).getExercise();
+            checked[i] = true;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle((move ? "Move from " : "Copy from ") + WorkoutReportGenerator.formatDateHeader(sourceDate))
+                .setMultiChoiceItems(exerciseNames, checked, (dialog, which, isChecked) -> checked[which] = isChecked)
+                .setPositiveButton(move ? "Move" : "Copy", (dialog, which) ->
+                {
+                    List<String> selectedNames = new ArrayList<>();
+                    for (int i = 0; i < exerciseNames.length; i++)
+                    {
+                        if (checked[i])
+                        {
+                            selectedNames.add(exerciseNames[i]);
+                        }
+                    }
+
+                    if (selectedNames.isEmpty())
+                    {
+                        Toast.makeText(this, "No exercise selected", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    int copiedCount = MainActivity.dataStorage.copySetsToDay(sourceDate, destinationDate, selectedNames);
+                    if (move)
+                    {
+                        MainActivity.dataStorage.removeExerciseSetsFromDay(sourceDate, selectedNames);
+                    }
+
+                    MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+
+                    MainActivity.autoBackupRequired = true;
+                    com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
+                    sharedPreferences.save("true", "autoBackupRequired");
+
+                    Toast.makeText(this, copiedCount + " set(s) " + (move ? "moved" : "copied"), Toast.LENGTH_SHORT).show();
+                    initActivity();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    // "Comment a Workout" (Vague 3 du plan de migration, retour Romain 07/09/2026) -
+    // commentaire de la SEANCE ENTIERE, distinct du commentaire par serie deja
+    // existant sur WorkoutSet. Cree le WorkoutDay du jour s'il n'existe pas encore
+    // (aucune serie loggee) plutot que de desactiver l'action : contrairement a
+    // FitNotes, ou un jour vide n'a pas d'ecran a partir duquel ouvrir ce dialogue,
+    // Vérifit affiche DayActivity meme pour un jour sans serie (voir MainActivity.openDay()),
+    // donc l'action doit rester utilisable.
+    private void showCommentWorkoutDialog()
+    {
+        int day_position = MainActivity.dataStorage.getDayPosition(date_clicked);
+        final WorkoutDay day;
+        if (day_position >= 0)
+        {
+            day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
+        }
+        else
+        {
+            day = new WorkoutDay();
+            day.setDate(date_clicked);
+            MainActivity.dataStorage.getWorkoutDays().add(day);
+        }
+
+        final EditText input = new EditText(this);
+        input.setHint("Comment (optional)");
+        input.setText(day.getComment());
+        int paddingPx = (int) (16 * getResources().getDisplayMetrics().density);
+        input.setPadding(paddingPx, paddingPx, paddingPx, paddingPx);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Comment Workout")
+                .setView(input)
+                .setPositiveButton("Save", (dlg, which) ->
+                {
+                    day.setComment(input.getText().toString().trim());
+
+                    // Un WorkoutDay tout juste cree ci-dessus, encore sans serie, n'a
+                    // rien a faire dans la liste s'il ne sert finalement qu'a porter un
+                    // commentaire vide (utilisateur qui ouvre le dialogue puis annule sa
+                    // saisie) - evite de polluer les donnees avec des jours fantomes.
+                    if (day.getSets().isEmpty() && day.getComment().isEmpty())
+                    {
+                        MainActivity.dataStorage.getWorkoutDays().remove(day);
+                    }
+
+                    MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+                    initActivity();
+                })
+                .setNegativeButton("Cancel", (dlg, which) ->
+                {
+                    // Meme nettoyage si l'utilisateur annule juste apres la creation
+                    // ci-dessus (jour vide, commentaire jamais sauvegarde).
+                    if (day.getSets().isEmpty() && day.getComment().isEmpty())
+                    {
+                        MainActivity.dataStorage.getWorkoutDays().remove(day);
+                    }
+                })
+                .show();
     }
 
     // "Share workout" (retour Romain 06/09/2026, fonctionnalite qu'il avait sur

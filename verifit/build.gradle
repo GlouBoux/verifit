@@ -50,3 +50,12 @@ dependencies {
     // re-add material-calendar-view at 1.9.2 (current Maven Central release) and
     // volley at 1.1.1+ instead of these exact versions.
 }
+
+// Contournement (07/09/2026) : Android Studio essaie parfois d'executer une tache
+// Kotlin ("prepareKotlinBuildScriptModel") meme sur ce module 100% Java, probablement
+// a cause des dependances -ktx (fragment-ktx, activity-ktx) ci-dessus qui font croire
+// a l'IDE qu'il y a du Kotlin. Comme le plugin Kotlin n'est pas applique ici, cette
+// tache n'existe pas et l'IDE plante avec "Task not found". On la declare en no-op
+// pour que la recherche de tache aboutisse sans rien faire. Solution standard/connue
+// pour ce message d'erreur precis sur des projets Java purs.
+task prepareKotlinBuildScriptModel {}
