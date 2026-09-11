@@ -7,5 +7,20 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <!-- Vague IHM (11/09/2026) - IHM-1 "socle visuel commun".
+         Ce style porte le MEME nom que "CardView.Light" fourni par la librairie
+         androidx.cardview. Les ressources du module app priment sur celles des
+         librairies lors du merge : cette redefinition s'applique donc a TOUTES les
+         cartes du style="@style/CardView.Light" existant (workout_set_row.xml,
+         item_view_pager.xml, etc.) sans avoir a toucher chaque layout un par un.
+         Objectif : se rapprocher des cartes FitNotes - coins plus arrondis, elevation
+         plus discrete (look "plat" plutot que Material par defaut). Les couleurs de
+         fond des cartes restent pilotees par custom_row.xml (inchange dans ce commit) :
+         un calibrage plus precis des teintes suivra une fois que Romain aura pu
+         confirmer/fournir des references FitNotes en theme Light (voir migration plan). -->
+    <style name="CardView.Light">
+        <item name="cardCornerRadius">8dp</item>
+        <item name="cardElevation">1dp</item>
+    </style>
 
 </resources>
