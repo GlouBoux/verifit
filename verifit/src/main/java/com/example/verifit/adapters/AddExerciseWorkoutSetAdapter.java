@@ -42,6 +42,24 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
     private final Set<Integer> selectedPositions = new HashSet<>();
     private OnSelectionChangedListener selectionChangedListener;
 
+    // Badge "Personal Record" (Vague IHM, IHM-2, retour Romain 11/09/2026). Recalcule a
+    // la demande via refreshPRSets() plutot qu'a chaque bind (calculateRepRangeHistory()
+    // reparcourt tout l'historique de l'exercice - trop couteux pour tourner sur chaque
+    // ligne a chaque scroll). Cet adapter est un champ statique persistant cote
+    // AddExerciseActivity (contrairement a WorkoutSetAdapter, recree a chaque bind cote
+    // DayExerciseAdapter/ViewPagerExerciseAdapter), donc pas de calcul dans le
+    // constructeur ici : refreshPRSets() doit etre appelee explicitement (voir
+    // AddExerciseActivity.initrecyclerView()/updateTodaysExercises()) a chaque fois que
+    // Todays_Exercise_Sets change (nouvelle serie, edition, suppression).
+    private Set<WorkoutSet> prSets = new HashSet<>();
+
+    public void refreshPRSets(String exerciseName)
+    {
+        prSets = (exerciseName != null)
+                ? MainActivity.dataStorage.getRepRangePRSets(exerciseName)
+                : new HashSet<WorkoutSet>();
+    }
+
     public interface OnSelectionChangedListener {
         void onSelectionChanged(int selectedCount);
     }
@@ -179,6 +197,13 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
                 showDiscrepancyDialog(holder.getAdapterPosition());
             }
         });
+
+        // Badge "Personal Record" (retour Romain 11/09/2026) - meme logique de
+        // detection que le tag "[PR]" de l'export texte (DataStorage.getRepRangePRSets(),
+        // comparaison par reference puisque WorkoutSet ne redefinit pas equals()).
+        holder.prBadge.setVisibility(
+            prSets.contains(Workout_Sets.get(position)) ? View.VISIBLE : View.GONE
+        );
 
         // Surbrillance de la ligne actuellement en edition (retour Romain 07/09/2026,
         // "je ne sais pas sur quelle ligne je me trouve et je dois regarder weight and
@@ -378,6 +403,7 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         CheckBox checkbox;
         ImageView commentIndicator;
         ImageView discrepancyBadge;
+        ImageView prBadge;
 
         public MyViewHolder(@NonNull View itemView)
         {
@@ -389,6 +415,7 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
             checkbox = itemView.findViewById(R.id.set_checkbox);
             commentIndicator = itemView.findViewById(R.id.set_comment_indicator);
             discrepancyBadge = itemView.findViewById(R.id.set_discrepancy_badge);
+            prBadge = itemView.findViewById(R.id.set_pr_badge);
         }
     }
 }

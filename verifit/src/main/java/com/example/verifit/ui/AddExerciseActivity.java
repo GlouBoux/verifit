@@ -1458,6 +1458,13 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         bt_clear.setText("Clear");
 
+        // Retour Romain 11/09/2026 (badge Personal Record) : re-derive apres chaque
+        // ajout/edition/suppression de serie, puisqu'une serie qui vient d'etre loggee
+        // (ou dont le poids/les reps viennent d'etre modifies) peut desormais etre - ou
+        // ne plus etre - un record. Doit precéder notifyDataSetChanged() pour que le
+        // premier rendu voie deja le bon etat des badges.
+        AddExerciseActivity.workoutSetAdapter2.refreshPRSets(AddExerciseActivity.exercise_name);
+
         // Update Recycler View
         AddExerciseActivity.workoutSetAdapter2.notifyDataSetChanged();
     }
@@ -1488,6 +1495,7 @@ public class AddExerciseActivity extends AppCompatActivity {
         // Find Recycler View Object
         recyclerView = findViewById(R.id.recycler_view);
         workoutSetAdapter2 = new AddExerciseWorkoutSetAdapter(this,Todays_Exercise_Sets);
+        workoutSetAdapter2.refreshPRSets(exercise_name);
         workoutSetAdapter2.setOnSelectionChangedListener(count -> {
             if (selectionActionMode != null)
             {

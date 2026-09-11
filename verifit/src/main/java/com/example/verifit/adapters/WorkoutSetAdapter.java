@@ -19,6 +19,8 @@ import com.example.verifit.ui.MainActivity;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 // Adapter for WorkoutSet Class
 public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.MyViewHolder> {
@@ -26,10 +28,24 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
     Context ct;
     ArrayList<WorkoutSet> Workout_Sets;
 
+    // Badge "Personal Record" (Vague IHM, IHM-2, retour Romain 11/09/2026). Contrairement
+    // a AddExerciseWorkoutSetAdapter (champ persistant refraichi explicitement), cet
+    // adapter est recree a chaque bind par DayExerciseAdapter/ViewPagerExerciseAdapter
+    // (un WorkoutSetAdapter par carte exercice, jamais reutilise) - calculer une seule
+    // fois ici, au constructeur, est donc deja toujours a jour sans hook supplementaire.
+    // Nom d'exercice lu directement sur la premiere serie (WorkoutSet.getExerciseName())
+    // plutot que demande en parametre : toutes les series de cette liste partagent le
+    // meme exercice (une carte = un exercice), meme logique que
+    // getRepRangePRSets()/getComment() deja lus directement sur chaque WorkoutSet.
+    private final Set<WorkoutSet> prSets;
+
     public WorkoutSetAdapter(Context ct, ArrayList<WorkoutSet> Workout_Sets)
     {
         this.ct = ct;
         this.Workout_Sets = Workout_Sets;
+        this.prSets = (!Workout_Sets.isEmpty() && Workout_Sets.get(0).getExerciseName() != null)
+                ? MainActivity.dataStorage.getRepRangePRSets(Workout_Sets.get(0).getExerciseName())
+                : new HashSet<WorkoutSet>();
     }
 
     @NonNull
@@ -71,6 +87,13 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
                 showDiscrepancyDialog(holder.getAdapterPosition());
             }
         });
+
+        // Badge "Personal Record" (retour Romain 11/09/2026) - meme logique de
+        // detection que le tag "[PR]" de l'export texte (DataStorage.getRepRangePRSets(),
+        // comparaison par reference puisque WorkoutSet ne redefinit pas equals()).
+        holder.prBadge.setVisibility(
+            prSets.contains(Workout_Sets.get(position)) ? View.VISIBLE : View.GONE
+        );
 
         // Retour Romain 05/09/2026 : inversion volontaire par rapport au comportement
         // d'origine (tap = stats, long-press = commentaire) - c'est le commentaire que
@@ -245,6 +268,7 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
         CardView cardView;
         ImageView commentIndicator;
         ImageView discrepancyBadge;
+        ImageView prBadge;
 
 
         public MyViewHolder(@NonNull View itemView) {
@@ -255,6 +279,7 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
             cardView = itemView.findViewById(R.id.cardview_set);
             commentIndicator = itemView.findViewById(R.id.set_comment_indicator);
             discrepancyBadge = itemView.findViewById(R.id.set_discrepancy_badge);
+            prBadge = itemView.findViewById(R.id.set_pr_badge);
 
         }
     }

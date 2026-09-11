@@ -3,8 +3,14 @@
      11, retour 08/09/2026) - voir CalendarFilterDialog/CalendarFilter. Categories
      ajoutees programmatiquement dans calendar_filter_categories_container (une
      CheckBox par entree de R.array.Categories, voir CalendarFilterDialog) plutot que
-     codees en dur ici, pour rester synchronise avec ce tableau. -->
+     codees en dur ici, pour rester synchronise avec ce tableau.
+
+     Vague IHM, IHM-3 (11/09/2026) : boutons Save/Reset passes en MaterialButton avec
+     coins arrondis 10dp - meme convention deja appliquee partout ailleurs dans l'app
+     (Save/Clear de l'ecran de saisie, Save/Reset du dialogue Timer) plutot que les
+     Button par defaut sans style qu'ils utilisaient jusqu'ici. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@android:color/white">
@@ -134,20 +140,25 @@
             android:gravity="end"
             android:orientation="horizontal">
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/calendar_filter_reset"
-                style="?android:attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Reset" />
+                android:text="Reset"
+                android:textAllCaps="false"
+                android:textColor="@color/colorPrimary"
+                app:backgroundTint="@color/core_white"
+                app:cornerRadius="10dp" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/calendar_filter_save"
-                style="?android:attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="Save" />
+                android:text="Save"
+                android:textAllCaps="false"
+                android:textColor="@color/core_white"
+                app:cornerRadius="10dp" />
 
         </LinearLayout>
 

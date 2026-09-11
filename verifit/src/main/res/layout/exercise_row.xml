@@ -6,8 +6,14 @@
     android:layout_height="wrap_content"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- Vague IHM, IHM-4 (11/09/2026) : style="@style/CardView.Light" ajoute ici -
+         cette carte n'avait aucun style applique et gardait donc les coins carres/
+         elevation par defaut de la librairie androidx.cardview, contrairement a
+         toutes les autres cartes de l'app (workout_set_row.xml, item_view_pager.xml...)
+         deja passees en coins arrondis 8dp/elevation 1dp lors d'IHM-1. -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cardview_exercise_1"
+        style="@style/CardView.Light"
         android:backgroundTint="@color/custom_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

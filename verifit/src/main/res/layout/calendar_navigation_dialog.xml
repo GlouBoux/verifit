@@ -6,7 +6,13 @@
      Category/Exercise Filter and the List View toggle, plus the List View's
      RecyclerView itself (calendar_day_list_row.xml rows), hidden until toggled on.
      Replaces the plain Android DatePickerDialog previously opened from the toolbar's
-     calendar icon. -->
+     calendar icon.
+
+     Vague IHM, IHM-3 (11/09/2026) : icones de navigation/outils de ce dialogue tintees
+     en @color/colorPrimary - meme convention deja appliquee en IHM-1/IHM-2 (steppers
+     +/- de l'ecran de saisie, icone commentaire) et chez FitNotes lui-meme (fleches
+     precedent/suivant en bleu, ic_action_left_blue/right_blue). Rien d'autre change
+     ici : structure et espacements identiques. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -25,8 +31,10 @@
             android:id="@+id/calendar_prev_month"
             android:layout_width="40dp"
             android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@null"
-            android:src="@drawable/ic_keyboard_arrow_left_24px" />
+            android:src="@drawable/ic_keyboard_arrow_left_24px"
+            android:tint="@color/colorPrimary" />
 
         <TextView
             android:id="@+id/calendar_month_label"
@@ -43,8 +51,10 @@
             android:id="@+id/calendar_next_month"
             android:layout_width="40dp"
             android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@null"
-            android:src="@drawable/ic_keyboard_arrow_right_24px" />
+            android:src="@drawable/ic_keyboard_arrow_right_24px"
+            android:tint="@color/colorPrimary" />
 
     </LinearLayout>
 
@@ -68,7 +78,8 @@
             android:layout_height="36dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@null"
-            android:src="@drawable/ic_fact_check_24px" />
+            android:src="@drawable/ic_fact_check_24px"
+            android:tint="@color/colorPrimary" />
 
         <TextView
             android:id="@+id/calendar_filter_results"
@@ -87,6 +98,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@null"
             android:src="@drawable/ic_keyboard_arrow_left_24px"
+            android:tint="@color/colorPrimary"
             android:visibility="gone" />
 
         <ImageButton
@@ -96,6 +108,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@null"
             android:src="@drawable/ic_keyboard_arrow_right_24px"
+            android:tint="@color/colorPrimary"
             android:visibility="gone" />
 
         <ImageButton
@@ -104,7 +117,8 @@
             android:layout_height="36dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@null"
-            android:src="@drawable/ic_view_compact_24px" />
+            android:src="@drawable/ic_view_compact_24px"
+            android:tint="@color/colorPrimary" />
 
     </LinearLayout>
 

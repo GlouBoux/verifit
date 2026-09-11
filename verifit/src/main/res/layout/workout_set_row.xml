@@ -120,6 +120,40 @@
                 app:layout_constraintEnd_toStartOf="@+id/set_comment_indicator"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <!-- Retour Romain 11/09/2026 : le badge PR d'origine (chaine avec les badges
+                 commentaire/ecart a droite) chevauchait le mot "reps" des que 2-3 badges
+                 etaient visibles en meme temps sur la meme ligne. Deplace ici, ancre sur
+                 une Guideline a position FIXE (independante de la largeur du nombre de
+                 reps, qui est lui-meme ancre par sa DROITE - width wrap_content - et
+                 grandit donc vers la GAUCHE entre 1 et 2+ chiffres) : contrairement a un
+                 ancrage relatif a set_reps, la position du trophee ne bouge jamais, que
+                 ce soit 1 ou 11 reps. Place dans l'espace vide entre le bloc poids/kg et
+                 le nombre de reps. -->
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/guideline_pr_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_end="130dp" />
+
+            <!-- Badge "Personal Record" (Vague IHM, IHM-2, retour Romain 11/09/2026 :
+                 "ajoute le badge PR") - visible quand cette serie est un record reel pour
+                 son nombre de reps exact (DataStorage.getRepRangePRSets(), meme logique
+                 que le tag "[PR]" deja utilise par l'export texte de seance - aucune
+                 nouvelle regle de detection, juste un nouvel affichage). Trophee comme
+                 FitNotes (Training_Track_Filled_With_Comments_Annotated.png). -->
+            <ImageView
+                android:id="@+id/set_pr_badge"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:visibility="gone"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_emoji_events_24px"
+                app:tint="@color/core_yellow"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="@+id/guideline_pr_badge"
+                app:layout_constraintTop_toTopOf="parent" />
+
             <View
                 android:id="@+id/blue_line"
                 android:layout_width="match_parent"
