@@ -17,6 +17,7 @@ import android.util.Pair;
 import android.widget.Toast;
 
 import com.example.verifit.model.Exercise;
+import com.example.verifit.model.Goal;
 import com.example.verifit.model.ImportedExercise;
 import com.example.verifit.model.ImportedSession;
 import com.example.verifit.model.ImportedSet;
@@ -52,6 +53,7 @@ public class DataStorage {
     ArrayList<WorkoutSet> sets = new ArrayList<WorkoutSet>();
     ArrayList<WorkoutDay> workoutDays = new ArrayList<WorkoutDay>();
     ArrayList<Exercise> knownExercises = new ArrayList<Exercise>(); // Initialized with hardcoded exercises
+    ArrayList<Goal> goals = new ArrayList<Goal>(); // "Goals" (Vague 4, item 14) - persiste en JSON comme knownExercises ci-dessus
     HashMap<String,Double> volumePRs = new HashMap<String,Double>();
     HashMap<String, Pair<Double,Double>> setVolumePRs = new HashMap<String, Pair<Double,Double>>(); // first = reps, second = weight
     HashMap<String,Double> actualOneRepMaxPRs = new HashMap<String,Double>();
@@ -734,6 +736,86 @@ public class DataStorage {
         }
     }
 
+    // "Goals" (Vague 4 du plan de migration, item 14, retour Romain 08/09/2026 :
+    // "passe a la vague 4") - meme motif de persistance (JSON via Gson dans les
+    // SharedPreferences) que saveKnownExerciseData()/loadKnownExercisesData()
+    // ci-dessus, sous une cle "goals" dediee.
+    public ArrayList<Goal> getGoals()
+    {
+        return goals;
+    }
+
+    public void setGoals(ArrayList<Goal> goals)
+    {
+        this.goals = goals;
+    }
+
+    // Le plus petit entier libre plutot qu'un simple compteur incremental persiste a
+    // part - suffisant tant que les objectifs ne sont pas supprimes/recrees en
+    // rafale, et evite un champ supplementaire a synchroniser.
+    public int getNextGoalId()
+    {
+        int maxId = 0;
+        for (Goal goal : goals)
+        {
+            if (goal.getId() > maxId)
+            {
+                maxId = goal.getId();
+            }
+        }
+        return maxId + 1;
+    }
+
+    public void saveGoalsData(Context ct)
+    {
+        android.content.SharedPreferences sharedPreferences = ct.getSharedPreferences("shared preferences",MODE_PRIVATE);
+        android.content.SharedPreferences.Editor editor = sharedPreferences.edit();
+        Gson gson = new Gson();
+        String json = gson.toJson(goals);
+        editor.putString("goals",json);
+        editor.apply();
+    }
+
+    public void loadGoalsData(Context context)
+    {
+        if(goals.isEmpty())
+        {
+            SharedPreferences sharedPreferences = context.getSharedPreferences("shared preferences",MODE_PRIVATE);
+            Gson gson = new Gson();
+            String json = sharedPreferences.getString("goals",null);
+            Type type = new TypeToken<ArrayList<Goal>>(){}.getType();
+            goals = gson.fromJson(json,type);
+
+            if(goals == null)
+            {
+                goals = new ArrayList<Goal>();
+            }
+        }
+    }
+
+    // Valeur actuelle "depuis toujours" (meme perimetre que Personal Records) pour le
+    // type suivi par cet objectif - reutilise telle quelle l'agregation ecrite pour
+    // "Statistics par periode" (item 13 ci-dessus) plutot que de recalculer un
+    // chiffre en parallele.
+    public Double calculateGoalCurrentValue(Goal goal)
+    {
+        ExercisePersonalStats stats = calculateExerciseStatsForPeriod(goal.getExerciseName(), null, null);
+
+        switch (goal.getType())
+        {
+            case MAX_WEIGHT:
+                return stats.getMaxWeight();
+            case MAX_REPS:
+                return stats.getMaxReps();
+            case TOTAL_VOLUME:
+                return stats.getTotalVolume();
+            case ESTIMATED_1RM:
+                return stats.getEstimated1RM();
+            default:
+                return 0.0;
+        }
+    }
+
     // Read CSV from internal storage
     public boolean readFile(Uri uri, Context context)
     {
@@ -944,6 +1026,106 @@ public class DataStorage {
             }
         }
         return "";
+    }
+
+    // "Statistics par periode" (Vague 4 du plan de migration, item 13, retour Romain
+    // 08/09/2026 : "passe a la vague 4") - agrege les statistiques d'un exercice sur
+    // une plage de dates ISO "yyyy-MM-dd" (bornes incluses, une borne null = illimitee
+    // de ce cote, les deux null = "All"). Reprend exactement les formules deja
+    // utilisees pour l'agregation par jour dans WorkoutDay.UpdateData()
+    // (WorkoutSet.getVolume()/getEplayOneRepMax()) afin que ces stats "par periode"
+    // restent coherentes avec celles affichees ailleurs (Personal Records, export
+    // Share Workout) plutot que de reinventer un calcul parallele. Voir
+    // ExerciseStatsPeriodDialog, seul appelant actuel.
+    public ExercisePersonalStats calculateExerciseStatsForPeriod(String exerciseName, String startDateIso, String endDateIso)
+    {
+        ExercisePersonalStats stats = new ExercisePersonalStats();
+        stats.setExerciseName(exerciseName);
+        stats.setExerciseCategory(getExerciseCategory(exerciseName));
+
+        double totalSets = 0.0;
+        double totalReps = 0.0;
+        double totalVolume = 0.0;
+        double maxWeight = 0.0;
+        double maxReps = 0.0;
+        double maxSetVolume = 0.0;
+        double actualOneRepMax = 0.0;
+        double estimatedOneRepMax = 0.0;
+
+        WorkoutSet maxWeightSet = new WorkoutSet();
+        WorkoutSet maxRepsSet = new WorkoutSet();
+        WorkoutSet maxVolumeSet = new WorkoutSet();
+
+        HashSet<String> workoutDatesWithExercise = new HashSet<>();
+
+        for (WorkoutDay day : getWorkoutDays())
+        {
+            String date = day.getDate();
+            if (startDateIso != null && date.compareTo(startDateIso) < 0)
+            {
+                continue;
+            }
+            if (endDateIso != null && date.compareTo(endDateIso) > 0)
+            {
+                continue;
+            }
+            if (day.getSets() == null)
+            {
+                continue;
+            }
+
+            for (WorkoutSet set : day.getSets())
+            {
+                if (!set.getExerciseName().equals(exerciseName))
+                {
+                    continue;
+                }
+
+                totalSets += 1;
+                totalReps += set.getReps();
+                totalVolume += set.getVolume();
+                workoutDatesWithExercise.add(date);
+
+                if (set.getReps() == 1 && set.getWeight() > actualOneRepMax)
+                {
+                    actualOneRepMax = set.getWeight();
+                }
+                if (set.getEplayOneRepMax() > estimatedOneRepMax)
+                {
+                    estimatedOneRepMax = set.getEplayOneRepMax();
+                }
+                if (set.getReps() > maxReps)
+                {
+                    maxReps = set.getReps();
+                    maxRepsSet = set;
+                }
+                if (set.getWeight() > maxWeight)
+                {
+                    maxWeight = set.getWeight();
+                    maxWeightSet = set;
+                }
+                if (set.getVolume() > maxSetVolume)
+                {
+                    maxSetVolume = set.getVolume();
+                    maxVolumeSet = set;
+                }
+            }
+        }
+
+        stats.setTotalWorkouts((double) workoutDatesWithExercise.size());
+        stats.setTotalSets(totalSets);
+        stats.setTotalReps(totalReps);
+        stats.setTotalVolume(totalVolume);
+        stats.setMaxWeight(maxWeight);
+        stats.setMaxReps(maxReps);
+        stats.setMaxSetVolume(maxSetVolume);
+        stats.setActual1RM(actualOneRepMax);
+        stats.setEstimated1RM(estimatedOneRepMax);
+        stats.setMaxWeightSet(maxWeightSet);
+        stats.setMaxRepsSet(maxRepsSet);
+        stats.setMaxVolumeSet(maxVolumeSet);
+
+        return stats;
     }
 
     // Returns the exercise category if exists, else it returns an empty string

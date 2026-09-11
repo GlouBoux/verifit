@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Goals" (Vague 4 du plan de migration, item 14) - "+" toujours visible dans la
+     barre d'outils (app:showAsAction="always", meme convention que le bouton "All"
+     ajoute a exercise_selection_action_menu.xml) plutot que dans l'overflow, pour
+     rester coherent avec le geste principal de cet ecran (ajouter un objectif). -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/add_goal"
+        android:title="Add Goal"
+        android:icon="@drawable/ic_add_24px"
+        app:showAsAction="always"
+        app:iconTint="@color/cardview_light_background">
+    </item>
+
+</menu>

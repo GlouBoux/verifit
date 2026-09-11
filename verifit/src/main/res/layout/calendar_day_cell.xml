@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- One cell of the CalendarPickerDialog's month grid: a day number (with a colored
-     circle behind it when it's the selected day) and a small dot underneath when that
-     day already has a logged workout. Filler cells (days outside the displayed month)
-     are left blank and disabled by CalendarPickerDialog.DayGridAdapter. -->
+     circle behind it when it's the selected day) and, underneath, up to 4 small dots
+     when that day already has a logged workout - one per distinct category trained
+     that day (Vague 3 du plan de migration, "Category Dots" multicolores, retour
+     08/09/2026), tinted at runtime from CategoryColours instead of the single fixed
+     dot color used before. A day with more than 4 categories trained just shows the
+     first 4 (CalendarPickerDialog.buildDayCategoryColours()) - extremely rare in
+     practice and not worth a "+N" indicator for a small calendar cell. When a filter
+     is active (CalendarFilter, mode Browse only), non-matching days hide their dots
+     entirely rather than showing them grayed out. Filler cells (days outside the
+     displayed month) are left blank and disabled by CalendarPickerDialog.DayGridAdapter. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -19,12 +26,41 @@
         android:textSize="14sp"
         tools:text="15" />
 
-    <View
-        android:id="@+id/calendar_day_dot"
-        android:layout_width="5dp"
-        android:layout_height="5dp"
+    <LinearLayout
+        android:id="@+id/calendar_day_dots"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="2dp"
-        android:background="@drawable/calendar_day_dot_shape" />
+        android:orientation="horizontal">
+
+        <View
+            android:id="@+id/calendar_day_dot_1"
+            android:layout_width="5dp"
+            android:layout_height="5dp"
+            android:background="@drawable/calendar_day_dot_shape" />
+
+        <View
+            android:id="@+id/calendar_day_dot_2"
+            android:layout_width="5dp"
+            android:layout_height="5dp"
+            android:layout_marginStart="2dp"
+            android:background="@drawable/calendar_day_dot_shape" />
+
+        <View
+            android:id="@+id/calendar_day_dot_3"
+            android:layout_width="5dp"
+            android:layout_height="5dp"
+            android:layout_marginStart="2dp"
+            android:background="@drawable/calendar_day_dot_shape" />
+
+        <View
+            android:id="@+id/calendar_day_dot_4"
+            android:layout_width="5dp"
+            android:layout_height="5dp"
+            android:layout_marginStart="2dp"
+            android:background="@drawable/calendar_day_dot_shape" />
+
+    </LinearLayout>
 
 </FrameLayout>

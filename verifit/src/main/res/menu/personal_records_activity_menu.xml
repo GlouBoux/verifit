@@ -17,4 +17,16 @@
 <!--        app:showAsAction="never">-->
 <!--    </item>-->
 
+    <!-- "Goals" (Vague 4 du plan de migration, item 14, retour Romain 08/09/2026 :
+         "passe a la vague 4") - ouvre GoalsActivity depuis l'ecran Personal Records,
+         meme regroupement Records/Stats/Goals que le popup FitNotes de reference
+         (ici trois points d'entree distincts plutot qu'un vrai widget a onglets -
+         reduction de perimetre assumee, pas de refonte de navigation pour ce
+         chantier). -->
+    <item
+        android:id="@+id/goals"
+        android:title="Goals"
+        app:showAsAction="never">
+    </item>
+
 </menu>

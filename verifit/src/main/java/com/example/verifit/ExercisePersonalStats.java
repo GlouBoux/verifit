@@ -9,6 +9,8 @@ public class ExercisePersonalStats {
     String exerciseName;
     String exerciseCategory;
     Boolean isFavorite;
+    Double totalWorkouts; // "Statistics par periode" (Vague 4, item 13) - nombre de
+                          // seances distinctes contenant l'exercice sur la periode.
     Double totalSets;
     Double totalReps;
     Double totalVolume;
@@ -60,6 +62,14 @@ public class ExercisePersonalStats {
 
     public void setExerciseName(String exerciseName) {
         this.exerciseName = exerciseName;
+    }
+
+    public Double getTotalWorkouts() {
+        return totalWorkouts;
+    }
+
+    public void setTotalWorkouts(Double totalWorkouts) {
+        this.totalWorkouts = totalWorkouts;
     }
 
     public Double getTotalSets() {
@@ -193,6 +203,7 @@ public class ExercisePersonalStats {
     public ExercisePersonalStats()
     {
         this.exerciseName = "";
+        this.totalWorkouts = 0.0;
         this.totalSets = 0.0;
         this.isFavorite = false;
         this.totalReps = 0.0;

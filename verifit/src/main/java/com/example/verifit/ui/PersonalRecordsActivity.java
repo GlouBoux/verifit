@@ -143,6 +143,14 @@ public class PersonalRecordsActivity extends AppCompatActivity {
             Intent in = new Intent(this,SettingsActivity.class);
             startActivity(in);
         }
+
+        // "Goals" (Vague 4 du plan de migration, item 14, retour Romain 08/09/2026 :
+        // "passe a la vague 4").
+        else if(item.getItemId() == R.id.goals)
+        {
+            Intent in = new Intent(this,GoalsActivity.class);
+            startActivity(in);
+        }
         return super.onOptionsItemSelected(item);
     }
 }

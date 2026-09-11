@@ -73,6 +73,20 @@ public class WorkoutReportGenerator
             }
         }
 
+        // "Total Volume"/"Total Sets" (Vague 4 du plan de migration, item 12 - lignes
+        // optionnelles de FitNotes ajoutees a l'export existant, retour Romain
+        // 07/09/2026 : "seance entiere, pas de selection fine" tranchait deja contre un
+        // ecran de selection, mais ces deux lignes de resume restaient a evaluer).
+        // Toujours affichees (pas de reglage on/off dedie, pas d'ecran Settings pour ce
+        // choix cote Verifit aujourd'hui) - omises pour un jour "coquille vide" (Comment
+        // a Workout sur un jour sans aucune serie loggee) ou elles n'auraient aucun sens.
+        int totalSets = day.getSets() != null ? day.getSets().size() : 0;
+        if (totalSets > 0)
+        {
+            report.append("\n").append("Total Volume: ").append(day.getDayVolume()).append(" kgs\n");
+            report.append("Total Sets: ").append(totalSets);
+        }
+
         return report.toString().trim();
     }
 

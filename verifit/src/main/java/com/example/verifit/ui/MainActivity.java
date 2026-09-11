@@ -233,6 +233,7 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
                 sharedPreferences.save("offline", "mode");
                 dataStorage.loadWorkoutData(getApplicationContext());
                 dataStorage.loadKnownExercisesData(getApplicationContext());
+                dataStorage.loadGoalsData(getApplicationContext()); // "Goals" (Vague 4, item 14)
                 initViewPager();
             }
             // Caching: Update screen with local data
@@ -342,6 +343,9 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
         // Get Known Exercises from shared preferences
         dataStorage.loadKnownExercisesData(getApplicationContext());
+
+        // Get Goals from shared preferences ("Goals", Vague 4, item 14)
+        dataStorage.loadGoalsData(getApplicationContext());
 
         // After Loading Data Initialize ViewPager
         initViewPager();
@@ -699,12 +703,20 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     // this replaced couldn't do. Picking a day opens it directly via openDay() above.
     private void showDatePickerForNavigation()
     {
-        new CalendarPickerDialog(this, dataStorage, dateSelected, new CalendarPickerDialog.OnDaySelectedListener() {
+        CalendarPickerDialog dialog = new CalendarPickerDialog(this, dataStorage, dateSelected, new CalendarPickerDialog.OnDaySelectedListener() {
             @Override
             public void onDaySelected(String dateKey) {
                 openDay(dateKey);
             }
-        }).show();
+        });
+        // Vague 3 du plan de migration, item 10/11 (retour 08/09/2026) : Category Dots
+        // multicolores + Filter + List View - uniquement ici, le seul vrai point
+        // d'entree "parcourir le calendrier" de l'app (voir CalendarPickerDialog,
+        // commentaire de classe). Jamais active sur les autres appels de
+        // CalendarPickerDialog (Copy/Move/Copy Previous Workout), de simples
+        // selecteurs de jour source.
+        dialog.enableBrowsingFeatures();
+        dialog.show();
     }
 
     // --- Multi-select delete + drag reorder sur l'onglet Workout (retour Romain

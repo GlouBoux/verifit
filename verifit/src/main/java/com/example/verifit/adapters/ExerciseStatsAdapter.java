@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.verifit.ExercisePersonalStats;
 import com.example.verifit.R;
 import com.example.verifit.model.WorkoutSet;
+import com.example.verifit.ui.ExerciseStatsPeriodDialog;
 import com.example.verifit.ui.MainActivity;
 import com.example.verifit.ui.PersonalRecordsActivity;
 import com.example.verifit.ui.RepRangeRecordsActivity;
@@ -170,6 +171,16 @@ public class ExerciseStatsAdapter extends RecyclerView.Adapter<ExerciseStatsAdap
                 if(item.getItemId() == R.id.charts)
                 {
                     System.out.println("Charts Clicked");
+                }
+
+                // "Statistics par periode" (Vague 4 du plan de migration, item 13,
+                // retour Romain 08/09/2026 : "passe a la vague 4") - ouvre le
+                // selecteur de periode (Week/Month/Year/All/Custom) pour cet exercice.
+                else if(item.getItemId() == R.id.statistics)
+                {
+                    String exercise_name = exercisePersonalStats.get(position).getExerciseName();
+
+                    new ExerciseStatsPeriodDialog(view.getContext(), exercise_name).show();
                 }
 
                 // Retour Romain 06/09/2026 : "Un PR c'est un record pour ce rep range

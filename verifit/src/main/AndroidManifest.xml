@@ -76,6 +76,12 @@
             android:name=".ui.PersonalRecordsActivity"
             android:label="Personal Records"
             android:parentActivityName=".ui.ChartsActivity" />
+        <!-- "Goals" (Vague 4 du plan de migration, item 14, retour Romain 08/09/2026 :
+             "passe a la vague 4"). -->
+        <activity
+            android:name=".ui.GoalsActivity"
+            android:label="Goals"
+            android:parentActivityName=".ui.PersonalRecordsActivity" />
         <activity
             android:name=".ui.DiscrepancyHistoryActivity"
             android:label="Ecarts Prevu/Realise"

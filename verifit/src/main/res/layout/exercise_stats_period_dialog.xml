@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Statistics par periode" (Vague 4 du plan de migration, item 13, retour Romain
+     08/09/2026 : "passe a la vague 4"). Dialogue entierement nouveau (voir le
+     commentaire d'en-tete de ExerciseStatsPeriodDialog.java pour le pourquoi) -
+     layout volontairement en LinearLayout simple plutot que le ConstraintLayout a
+     marges absolues de exercise_history_stats_dialog.xml (plus facile a faire
+     evoluer si une statistique est ajoutee/retiree plus tard). -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:maxHeight="520dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/stats_period_exercise_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Exercise Name"
+            android:textColor="@color/colorPrimary"
+            android:textSize="22sp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="12dp"
+            android:background="@color/colorPrimary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Period"
+            android:textColor="@color/core_black"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/stats_period_spinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/stats_period_custom_range"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/stats_period_start_date"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:text="Start date" />
+
+            <Button
+                android:id="@+id/stats_period_end_date"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:text="End date" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="12dp"
+            android:background="@color/core_grey_05" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Total Workouts"
+                android:textColor="@color/core_black"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/stats_period_total_workouts"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Total Sets"
+                android:textColor="@color/core_black"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/stats_period_total_sets"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Total Reps"
+                android:textColor="@color/core_black"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/stats_period_total_reps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Total Volume"
+                android:textColor="@color/core_black"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/stats_period_total_volume"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Max Weight"
+                android:textColor="@color/core_black"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/stats_period_max_weight"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Max Reps"
+                android:textColor="@color/core_black"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/stats_period_max_reps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Max Set Volume"
+                android:textColor="@color/core_black"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/stats_period_max_set_volume"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/stats_period_1rm_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Estimated 1RM"
+                android:textColor="@color/core_black"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/stats_period_1rm_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/stats_period_close"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginTop="16dp"
+            android:text="Close" />
+
+    </LinearLayout>
+
+</ScrollView>
