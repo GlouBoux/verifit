@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Vague IHM, IHM-6 (11/09/2026) : les 4 items pointaient tous vers la meme
+         icone ic_create_24px (crayon), copier-coller jamais corrige lors de la
+         creation de ce menu (Vague 4). Chaque item a maintenant une icone qui
+         correspond a son action, meme registre que exercises_activity_floating_context_menu.xml
+         (une icone distincte par item). -->
     <item
         android:id="@+id/favorite"
         android:title="Toggle Favorite"
-        android:icon="@drawable/ic_create_24px">
+        android:icon="@drawable/ic_star_fill0_wght400_grad0_opsz24">
     </item>
 
     <item
         android:id="@+id/charts"
         android:title="Charts"
-        android:icon="@drawable/ic_create_24px">
+        android:icon="@drawable/ic_pie_chart_24px">
     </item>
 
     <!-- "Statistics par periode" (Vague 4 du plan de migration, item 13, retour
@@ -19,7 +24,7 @@
     <item
         android:id="@+id/statistics"
         android:title="Statistics"
-        android:icon="@drawable/ic_create_24px">
+        android:icon="@drawable/ic_assessment_24px">
     </item>
 
     <!-- Retour Romain 06/09/2026 : "Un PR c'est un record pour ce rep range (reps)
@@ -28,7 +33,7 @@
     <item
         android:id="@+id/rep_range_history"
         android:title="Historique par nombre de reps"
-        android:icon="@drawable/ic_create_24px">
+        android:icon="@drawable/ic_history_24px">
     </item>
 
 
