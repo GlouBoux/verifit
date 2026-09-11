@@ -3,6 +3,7 @@
      d'un objectif (GoalDialog.java). Champ exercice en AutoCompleteTextView, meme
      motif que calendar_filter_dialog.xml (item 11). -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -69,35 +70,53 @@
             android:hint="e.g. 100"
             android:inputType="numberDecimal" />
 
+        <!-- Vague IHM, IHM-5 (11/09/2026) : les trois Button bruts remplaces par des
+             MaterialButton coins arrondis 10dp, sans majuscules, meme convention que
+             le reste de l'app - Save en fond colorPrimary/texte blanc (action
+             principale, comme bt_edit_exercise), Cancel en fond blanc/texte
+             colorPrimary (comme bt_close/bt_cancel partout ailleurs), Delete en fond
+             rouge (comme bt_yes3, delete_exercise_dialog.xml). Namespace
+             xmlns:app ajoute a la racine (absent jusqu'ici, meme correctif que
+             calendar_filter_dialog.xml lors d'IHM-3). -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:orientation="horizontal">
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/goal_dialog_delete"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Delete"
-                android:visibility="gone" />
+                android:textAllCaps="false"
+                android:visibility="gone"
+                app:backgroundTint="@color/red"
+                app:cornerRadius="10dp" />
 
             <View
                 android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:layout_weight="1" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/goal_dialog_cancel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Cancel" />
+                android:layout_marginEnd="8dp"
+                android:text="Cancel"
+                android:textAllCaps="false"
+                android:textColor="@color/colorPrimary"
+                app:backgroundTint="@color/core_white"
+                app:cornerRadius="10dp" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/goal_dialog_save"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Save" />
+                android:text="Save"
+                android:textAllCaps="false"
+                app:cornerRadius="10dp" />
         </LinearLayout>
 
     </LinearLayout>

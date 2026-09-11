@@ -6,6 +6,10 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
+    <!-- Vague IHM, IHM-5 (11/09/2026) : app:cardCornerRadius="5dp" et android:elevation="8dp"
+         retires - ces deux attributs explicites ecrasaient la redefinition CardView.Light
+         (8dp/1dp) posee lors d'IHM-1, rendant cette carte visuellement differente (coins
+         moins arrondis, elevation plus forte) de toutes les autres cartes de l'app. -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cardview_exercise_history"
         style="@style/CardView.Light"
@@ -15,8 +19,6 @@
         android:layout_marginTop="15dp"
         android:layout_marginRight="15dp"
         android:backgroundTint="@color/custom_row"
-        android:elevation="8dp"
-        app:cardCornerRadius="5dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">

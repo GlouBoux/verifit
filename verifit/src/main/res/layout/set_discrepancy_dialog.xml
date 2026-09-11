@@ -43,12 +43,19 @@
         android:textSize="16sp"
         android:textStyle="bold" />
 
+    <!-- Vague IHM, IHM-5 (11/09/2026) : meme correctif que bt_close_pr_history
+         (rep_range_history_dialog.xml) - convention MaterialButton "Close"
+         fond blanc/texte colorPrimary, coins arrondis 10dp, sans majuscules. -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_close_discrepancy"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
         android:layout_marginTop="20dp"
-        android:text="Fermer" />
+        android:text="Fermer"
+        android:textAllCaps="false"
+        android:textColor="@color/colorPrimary"
+        app:backgroundTint="@color/core_white"
+        app:cornerRadius="10dp" />
 
 </LinearLayout>

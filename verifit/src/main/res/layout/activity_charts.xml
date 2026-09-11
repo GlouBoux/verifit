@@ -33,7 +33,6 @@
                 android:layout_marginRight="15dp"
                 android:layout_marginBottom="15dp"
                 android:backgroundTint="@color/custom_row"
-                app:cardCornerRadius="5dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
@@ -89,7 +88,7 @@
                         android:layout_marginRight="10dp"
                         android:background="@android:color/transparent"
                         android:clickable="true"
-                        android:tint="@color/colorAccent"
+                        android:tint="@color/colorPrimary"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         app:srcCompat="@drawable/ic_more_vert_24px" />
@@ -117,8 +116,7 @@
                 android:layout_marginLeft="15dp"
                 android:layout_marginRight="15dp"
                 android:layout_marginBottom="15dp"
-                android:backgroundTint="@color/custom_row"
-                app:cardCornerRadius="5dp">
+                android:backgroundTint="@color/custom_row">
 
 
                 <androidx.constraintlayout.widget.ConstraintLayout
@@ -181,7 +179,7 @@
                         android:layout_marginRight="10dp"
                         android:background="@android:color/transparent"
                         android:clickable="true"
-                        android:tint="@color/colorAccent"
+                        android:tint="@color/colorPrimary"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         app:srcCompat="@drawable/ic_more_vert_24px" />
@@ -200,8 +198,7 @@
                 android:layout_marginLeft="15dp"
                 android:layout_marginRight="15dp"
                 android:layout_marginBottom="15dp"
-                android:backgroundTint="@color/custom_row"
-                app:cardCornerRadius="5dp">
+                android:backgroundTint="@color/custom_row">
 
 
                 <androidx.constraintlayout.widget.ConstraintLayout
@@ -264,7 +261,7 @@
                         android:layout_marginRight="10dp"
                         android:background="@android:color/transparent"
                         android:clickable="true"
-                        android:tint="@color/colorAccent"
+                        android:tint="@color/colorPrimary"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         app:srcCompat="@drawable/ic_more_vert_24px" />
@@ -284,7 +281,6 @@
                 android:layout_marginRight="15dp"
                 android:layout_marginBottom="15dp"
                 android:backgroundTint="@color/custom_row"
-                app:cardCornerRadius="5dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@id/cardview_viewpager">
@@ -350,7 +346,7 @@
                         android:layout_marginRight="10dp"
                         android:background="@android:color/transparent"
                         android:clickable="true"
-                        android:tint="@color/colorAccent"
+                        android:tint="@color/colorPrimary"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         app:srcCompat="@drawable/ic_more_vert_24px" />
@@ -369,7 +365,6 @@
                 android:layout_marginBottom="15dp"
                 android:backgroundTint="@color/custom_row"
                 android:visibility="invisible"
-                app:cardCornerRadius="5dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="@id/cardview_viewpager">
@@ -435,7 +430,7 @@
                         android:layout_marginRight="10dp"
                         android:background="@android:color/transparent"
                         android:clickable="true"
-                        android:tint="@color/colorAccent"
+                        android:tint="@color/colorPrimary"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         app:srcCompat="@drawable/ic_more_vert_24px" />

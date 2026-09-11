@@ -47,6 +47,11 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp" />
 
+        <!-- Vague IHM, IHM-5 (11/09/2026) : les deux Button bruts (rendu systeme par
+             defaut) remplaces par des MaterialButton coins arrondis 10dp, sans
+             majuscules, fond blanc/texte colorPrimary (meme convention que le bouton
+             Reset de calendar_filter_dialog.xml : boutons utilitaires cote a cote,
+             pas une action de confirmation). -->
         <LinearLayout
             android:id="@+id/stats_period_custom_range"
             android:layout_width="match_parent"
@@ -55,21 +60,29 @@
             android:orientation="horizontal"
             android:visibility="gone">
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/stats_period_start_date"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="4dp"
                 android:layout_weight="1"
-                android:text="Start date" />
+                android:text="Start date"
+                android:textAllCaps="false"
+                android:textColor="@color/colorPrimary"
+                app:backgroundTint="@color/core_white"
+                app:cornerRadius="10dp" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/stats_period_end_date"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:layout_weight="1"
-                android:text="End date" />
+                android:text="End date"
+                android:textAllCaps="false"
+                android:textColor="@color/colorPrimary"
+                app:backgroundTint="@color/core_white"
+                app:cornerRadius="10dp" />
         </LinearLayout>
 
         <View
@@ -247,13 +260,19 @@
                 android:text="0.0" />
         </LinearLayout>
 
-        <Button
+        <!-- Vague IHM, IHM-5 (11/09/2026) : meme correctif que bt_close_pr_history -
+             convention MaterialButton "Close" fond blanc/texte colorPrimary. -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/stats_period_close"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end"
             android:layout_marginTop="16dp"
-            android:text="Close" />
+            android:text="Close"
+            android:textAllCaps="false"
+            android:textColor="@color/colorPrimary"
+            app:backgroundTint="@color/core_white"
+            app:cornerRadius="10dp" />
 
     </LinearLayout>
 

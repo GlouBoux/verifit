@@ -65,13 +65,23 @@
             android:layout_height="wrap_content"
             android:orientation="vertical" />
 
+        <!-- Vague IHM, IHM-5 (11/09/2026) : textAllCaps="false" + cornerRadius="10dp" +
+             fond blanc/texte colorPrimary ajoutes pour rejoindre la convention
+             MaterialButton "Close" du reste de l'app (voir bt_close, exercise_dialog.xml) -
+             bouton restait en style Material par defaut (coins peu arrondis, fond
+             colorPrimary, texte tout en majuscules), alors que les boutons "Close/Cancel"
+             de dismiss sont partout ailleurs en fond blanc/texte colorPrimary. -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/bt_close_pr_history"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end"
             android:layout_marginTop="20dp"
-            android:text="OK" />
+            android:text="OK"
+            android:textAllCaps="false"
+            android:textColor="@color/colorPrimary"
+            app:backgroundTint="@color/core_white"
+            app:cornerRadius="10dp" />
 
     </LinearLayout>
 
