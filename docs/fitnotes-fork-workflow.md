@@ -91,6 +91,36 @@ depuis l'API 31. Ça ne bloque ni le bouton Run d'Android Studio ni `assembleDeb
 ne construisent pas l'APK de test), donc ce n'est pas un problème pour tester l'app au
 quotidien — seulement pour `./gradlew build` ou `connectedAndroidTest` tels quels.
 
+## Limite technique : profondeur de dossier pour le pont fichiers (07/09/2026)
+
+Découvert en démarrant la Vague 1 du plan de migration sur le clone
+`FitNotes_Fork_Migration` : l'outil que Claude utilise pour lire un fichier depuis ta
+machine (le "pont") refuse un fichier situé à plus de 7 dossiers sous le dossier
+connecté depuis l'appli Claude desktop — accorder l'accès à un sous-dossier via une
+simple demande en session ne crée pas un nouveau point de départ pour ce calcul, la
+profondeur reste toujours comptée depuis le dossier connecté d'origine.
+
+Avec `FitNotes_Fork_Migration` (ou `FitNotes_Fork`) comme dossier connecté, ça bloque
+tout fichier Java dans un sous-package du module Android — `ui/` notamment
+(`AddExerciseActivity.java`, `MainActivity.java`, `DayActivity.java`,
+`SettingsActivity.java`, `ChartsActivity.java`...), mais aussi `adapters/`, `model/`,
+`verifitrs/`, `webdav/` — puisque `verifit/src/main/java/com/example/verifit/ui/`
+est déjà à la limite (8 dossiers sous la racine du dépôt).
+
+**Fix recommandé, à faire une fois pour toutes** : depuis l'appli Claude desktop,
+connecter directement le dossier du package Java comme dossier connecté séparé (en plus
+de `FitNotes_Fork`) :
+
+```
+C:\Users\Brutus\Desktop\Training\FitNotes_Fork_Migration\verifit\src\main\java\com\example\verifit
+```
+
+Avec ce dossier comme racine, `ui/AddExerciseActivity.java` n'est plus qu'à 1 niveau de
+profondeur — largement dans la limite, pour ce fichier comme pour tous les autres
+sous-packages actuels et futurs. (Si le clone de migration est un jour abandonné au
+profit d'un nouveau dossier de travail, reconnecter simplement le même chemin relatif
+dans le nouveau dossier.)
+
 ## Répartition claire des responsabilités
 
 - **Claude** : comprendre le besoin, lire/écrire le code, expliquer les causes de bug,

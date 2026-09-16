@@ -1342,8 +1342,13 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         bt_clear.setText("Clear");
 
-        // Update Recycler View
-        AddExerciseActivity.workoutSetAdapter2.notifyDataSetChanged();
+        // Update Recycler View - refreshPRSets() recalcule aussi le badge trophee
+        // "Personal Record" (retour Romain) puis appelle notifyDataSetChanged() lui-meme -
+        // updateTodaysExercises() etant le point de passage commun a tout ajout/edition/
+        // suppression de serie sur cet ecran (clickSave, deleteSetLogic, undoDeleteSet,
+        // editSet/cancelEditSet, suppression multiple...), c'est l'unique endroit a
+        // toucher pour que ce badge reste a jour partout.
+        AddExerciseActivity.workoutSetAdapter2.refreshPRSets();
     }
 
     // Initialize Recycler View Object

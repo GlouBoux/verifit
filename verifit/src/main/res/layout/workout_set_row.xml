@@ -77,48 +77,108 @@
                 app:layout_constraintEnd_toStartOf="@+id/textView7"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <!-- marginEnd agrandi de 40dp a 88dp (16/09/2026) : ce TextView et
+                 set_badges_container (plus bas) sont chacun ancres INDEPENDAMMENT sur
+                 le bord droit du parent (app:layout_constraintEnd_toEndOf="parent"),
+                 sans etre chaines l'un a l'autre - ils se partageaient donc le meme
+                 espace sans jamais se voir. Tant que la zone de badges restait etroite
+                 (un seul badge de 16dp), le chevauchement passait inapercu ; il est
+                 devenu visible/genant en regroupant les 3 badges dans un conteneur de
+                 84dp au total (12dp de marge + jusqu'a 24+4+24+4+16dp d'icones) - "reps"
+                 pouvait alors deborder SOUS le conteneur de badges (dessine apres donc
+                 par-dessus), au point de fausser la zone de tap reellement disponible
+                 pour le trophee. 88dp reserve large pour ne plus jamais chevaucher,
+                 meme quand les 3 badges sont visibles en meme temps. -->
             <TextView
                 android:id="@+id/textView7"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
-                android:layout_marginEnd="40dp"
-                android:layout_marginRight="40dp"
+                android:layout_marginEnd="88dp"
+                android:layout_marginRight="88dp"
                 android:text="reps"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <ImageView
-                android:id="@+id/set_comment_indicator"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
+            <!-- Retour Romain (16/09/2026, apres premier test sur l'appareil) : les 3
+                 badges empiles via des chaines de contraintes ConstraintLayout
+                 (chacun ancre au debut du precedent) se decalaient de facon ambigue
+                 des qu'un badge intermediaire etait GONE (un badge GONE garde sa
+                 position d'ancrage mais une largeur nulle, ce qui glissait les autres
+                 badges vers le milieu de la ligne, pres du texte "reps", au lieu de
+                 rester groupes contre le bord droit). Remplace par un simple
+                 LinearLayout horizontal : chaque enfant GONE est retire du flux sans
+                 decaler bizarrement les autres, et la zone de chaque icone est plus
+                 simple a cibler au tap. -->
+            <LinearLayout
+                android:id="@+id/set_badges_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:layout_marginEnd="12dp"
                 android:layout_marginRight="12dp"
-                android:visibility="gone"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_comment_24px"
-                app:tint="@color/colorPrimary"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent">
 
-            <!-- Badge discret "Ecart Prevu/Realise" (retour Romain 06/09/2026) : visible
-                 uniquement quand le realise (reps/weight) d'une serie importee differe de
-                 sa valeur prevue a l'import. Un tap dessus ouvre le detail Prevu/Realise. -->
-            <ImageView
-                android:id="@+id/set_discrepancy_badge"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:layout_marginEnd="8dp"
-                android:layout_marginRight="8dp"
-                android:visibility="gone"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_error_outline_24px"
-                app:tint="@color/red"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@+id/set_comment_indicator"
-                app:layout_constraintTop_toTopOf="parent" />
+                <!-- Badge trophee "Personal Record" (retour Romain : "un tap sur le
+                     trophee d'une serie devrait m'emmener direct sur mon historique de
+                     PR pour ce nombre de reps precis") : visible uniquement quand cette
+                     serie est un record REEL (DataStorage.getRepRangePRSets(), meme
+                     source de verite que le tag [PR] de l'export de seance). Un tap
+                     dessus ouvre directement le popup "Personal Record History"
+                     (rep_range_history_dialog.xml) pour le rep-count exact de cette
+                     serie, sans passer par le tableau general RepRangeRecordsActivity.
+                     Padding (au lieu d'agrandir l'icone elle-meme) pour une zone de tap
+                     plus confortable que les 16dp visuels.
+                     Note (17/09/2026) : l'artefact de diagnostic temporaire (icone 40dp
+                     rouge vif + Toast de debug) introduit le 16/09/2026 pour verifier
+                     qu'un build/deploiement etait bien pris en compte a ete retire ici -
+                     il s'est avere que ce depot n'est en realite PAS celui que Romain
+                     build/utilise au quotidien (voir FitNotes_Fork_Migration\verifit,
+                     et la note en tete de fitnotes-fork-todo.md). Le correctif metier
+                     (matching par cle valeur + ce listener de clic) reste en place ici
+                     au cas ou ce depot redevienne actif un jour. -->
+                <ImageView
+                    android:id="@+id/set_pr_badge"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:padding="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"
+                    android:visibility="gone"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_emoji_events_24px"
+                    app:tint="@color/core_yellow" />
+
+                <!-- Badge discret "Ecart Prevu/Realise" (retour Romain 06/09/2026) :
+                     visible uniquement quand le realise (reps/weight) d'une serie
+                     importee differe de sa valeur prevue a l'import. Un tap dessus ouvre
+                     le detail Prevu/Realise. -->
+                <ImageView
+                    android:id="@+id/set_discrepancy_badge"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:padding="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginRight="4dp"
+                    android:visibility="gone"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_error_outline_24px"
+                    app:tint="@color/red" />
+
+                <ImageView
+                    android:id="@+id/set_comment_indicator"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:visibility="gone"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_comment_24px"
+                    app:tint="@color/colorPrimary" />
+
+            </LinearLayout>
 
             <View
                 android:id="@+id/blue_line"

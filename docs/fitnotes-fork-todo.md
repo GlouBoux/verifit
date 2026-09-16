@@ -1,6 +1,262 @@
-# TODO — FitNotes\_Fork
+# TODO — FitNotes_Fork
+
+## ⚠️ Point de vigilance permanent : deux dépôts `verifit` distincts sur la machine (17/09/2026)
+
+En creusant le bug du trophée (item juste en dessous), découverte qu'il existe **deux
+clones git distincts** de verifit sur le Bureau de Romain, faciles à confondre :
+
+1. **`FitNotes_Fork\verifit`** (ce dépôt-ci, celui dont ce fichier `docs/fitnotes-fork-todo.md`
+   fait le suivi) - `applicationId` par défaut.
+2. **`FitNotes_Fork\FitNotes_Fork_Migration\verifit`** - second clone (`applicationId
+   com.whatever.verifit.dev`), créé pour le chantier de migration/reskin (voir
+   `fitnotes-migration-plan.md`, Projet Claude). **C'est ce second dépôt que Romain build
+   et utilise réellement au quotidien actuellement** - pas celui-ci.
+
+**Incident survenu à cause de cette confusion** : une session entière (16-17/09/2026) a
+été passée à corriger et re-corriger le bug "trophée PR" (badge/clic, voir item
+ci-dessous) sur `FitNotes_Fork\verifit`, y compris un artefact de diagnostic explicite
+(trophée rouge géant) - sans que Romain ne voie jamais le moindre changement, malgré
+plusieurs Clean/Rebuild et même une réinstallation complète de l'app. Cause : tous ces
+correctifs étaient appliqués sur le dépôt inactif. Le vrai correctif a ensuite été
+localisé et appliqué dans `FitNotes_Fork_Migration\verifit`.
+
+**Reste à trancher avec Romain** : `FitNotes_Fork\verifit` est-il un reliquat obsolète
+(dans ce cas à supprimer, pour éviter que ce problème ne se reproduise), ou sert-il
+encore à autre chose ? En attendant sa réponse : **toujours vérifier explicitement
+quel dépôt est concerné avant de coder ou de préparer un message de commit lié à
+Vérifit** - ne jamais supposer que `FitNotes_Fork\verifit` est le dépôt actif juste
+parce que c'est celui qui n'a pas de sous-dossier de migration.
 
 ## Codé, en attente de test réel (06/09/2026)
+
+- [x] **Trophée sur chaque série -> tap = historique de PR direct, sans écran
+  intermédiaire (16/09/2026)** (retour Romain, poursuite du point d'accès trophée déjà
+  en place dans la barre d'outils de `AddExerciseActivity` - voir item "Historique des
+  PR par nombre de reps" plus bas) : "taper l'icône trophée d'une série ouvre
+  directement le popup Personal Record History pour le rep-count exact de cette série
+  [...] sans passer par un écran intermédiaire."
+  **Point important constaté en début de session** : le récapitulatif transmis pour
+  reprendre ce sujet affirmait qu'un badge visuel `set_pr_badge` avait déjà été ajouté
+  le 11/09/2026 sur `workout_set_row.xml` (purement visuel, clic pas encore branché).
+  Vérification faite en lisant le code réel (`workout_set_row.xml`, `WorkoutSetAdapter`,
+  `AddExerciseWorkoutSetAdapter`, `DataStorage`) : **ce badge n'existait pas du tout** -
+  ni dans le layout ni dans les adapters - et aucun fichier du dépôt n'a de date de
+  modification autour du 11/09/2026 (le dernier changement réel remontait au
+  07/09/2026). Ce récapitulatif provenait d'une session sans accès au dépôt (chat
+  mobile/web) - la mention du badge déjà en place était donc erronée. Le badge a été
+  conçu et codé intégralement dans cette session, pas seulement son clic.
+  Implémentation :
+  - Nouvel `ImageView` `set_pr_badge` dans `workout_set_row.xml` (icône
+    `ic_emoji_events_24px`, teinte `core_yellow`, même composant partagé que le badge
+    d'écart Prévu/Réalisé) - visible uniquement si la série est un PR RÉEL au sens de
+    `DataStorage.getRepRangePRSets()` (même source de vérité que le tag `[PR]` de
+    l'export de séance).
+  - `WorkoutSetAdapter` (onglet Workout, `DayActivity`, ET l'onglet "Historique"/
+    `ExerciseHistoryExerciseAdapter` qui réutilise ce même adapter en interne pour sa
+    liste de séries par jour - les 3 emplacements demandés sont donc couverts par un
+    seul adapter modifié) : `prSets` calculé une seule fois au constructeur (l'adapter
+    est recréé à chaque bind).
+  - `AddExerciseWorkoutSetAdapter` (écran de saisie/Sessions, adapter unique qui vit
+    toute la durée de l'écran) : nouvelle méthode `refreshPRSets()`, appelée depuis
+    `AddExerciseActivity.updateTodaysExercises()` (point de passage commun à tout
+    ajout/édition/suppression de série sur cet écran) pour garder le badge à jour sans
+    recréer l'adapter.
+  - Un tap sur le trophée (indépendant du tap/long-press du reste de la ligne) ouvre
+    directement `rep_range_history_dialog.xml` pour le nombre de reps exact de la
+    série - `showPersonalRecordHistoryDialog()`, dupliquée dans les deux adapters (même
+    convention que `showSetCommentDialog()`/`showDiscrepancyDialog()` déjà dupliquées)
+    plutôt que de toucher à l'API de `RepRangeHistoryAdapter` (reste inchangé, toujours
+    utilisé par `RepRangeRecordsActivity` pour le tableau complet).
+  - L'icône trophée de la barre d'outils de `AddExerciseActivity` (qui ouvre le tableau
+    complet `RepRangeRecordsActivity`) reste inchangée - les deux points d'accès
+    coexistent, comme prévu.
+  Vérifié côté Claude (pas de build/émulateur disponible) : équilibre accolades/
+  parenthèses des 3 fichiers Java touchés (`WorkoutSetAdapter.java`,
+  `AddExerciseWorkoutSetAdapter.java`, `AddExerciseActivity.java`), XML bien formé
+  (`workout_set_row.xml`).
+
+  **Retour du premier test réel par Romain (16/09/2026, 4 captures d'écran, exercice
+  "Assisted Baby Cross Hold" du lundi 14/09/2026)** : "Je ne vois rien de tout ça quand
+  je build l'app. Quand je clique sur le trophée il ne se passe rien. Par ailleurs il
+  faudrait que le trophée apparaissent également sur le résumé d'un jour comme sur ce
+  screenshot." Trois constats distincts :
+  1. Sur l'onglet Workout (jour du 14/09, `ViewPagerExerciseAdapter`/`WorkoutSetAdapter`) :
+     **aucun badge trophée visible du tout**, alors que 3 des 5 séries affichées (79kg×10,
+     75kg×20, 70kg×30) sont bien des PR réels d'après la logique implémentée.
+  2. Sur l'écran de saisie (`AddExerciseActivity`/`AddExerciseWorkoutSetAdapter`, même
+     exercice/mêmes données) : le badge apparaît bien sur exactement les 3 bonnes séries,
+     mais **teinté en bleu/cyan au lieu du jaune `core_yellow`** prévu, et **le tap ne
+     déclenche rien**.
+  3. Nouvelle demande : le trophée doit aussi apparaître sur le "résumé d'un jour".
+
+  **Investigation menée côté Claude** : mesure au pixel (Python/Pillow) de la couleur
+  réellement affichée sur les captures de Romain - RGB (51, 181, 230) / `#33B5E6`, ce qui
+  n'est PAS `core_yellow` (`#ffd624`) mais correspond de très près à `colorPrimary`, la
+  teinte du badge voisin `set_comment_indicator` (l'icône commentaire) dans la même
+  rangée. Relecture complète du code livré (fichier par fichier, sur les copies
+  réellement présentes sur l'appareil) : le contenu des 2 adapters et de
+  `workout_set_row.xml` correspond exactement à ce qui a été commis, aucune incohérence
+  d'id (`findViewById`) trouvée, chaîne de références `WorkoutSet` (mêmes objets entre
+  `DataStorage.workoutDays`, `WorkoutExercise.getSets()` et les listes des adapters)
+  retracée et confirmée correcte. Aucun bug trouvé dans le code source lui-même.
+
+  **Hypothèse retenue** : un problème de build incrémental Android Studio/Gradle,
+  probablement lié aux constantes `R.id.*`. Ces constantes sont écrites en dur (valeurs
+  entières figées) dans le bytecode Java au moment de la compilation - contrairement à
+  Jetpack Compose, elles ne sont PAS résolues dynamiquement à l'exécution. Si un build
+  incrémental recompile les classes Java modifiées sans régénérer et recompiler
+  entièrement `R.java`/les ressources en cohérence (situation connue avec aapt2 sur des
+  builds partiels), l'entier associé à `R.id.set_pr_badge` dans le bytecode déjà compilé
+  peut, une fois de nouvelles vues XML ajoutées (ce qui décale la numérotation), pointer
+  au runtime vers une AUTRE vue que celle voulue - typiquement une vue voisine dans le
+  même layout. Le fait que la couleur observée soit exactement celle du badge voisin
+  (`set_comment_indicator`, teinte `colorPrimary`) colle précisément à ce scénario : sur
+  cet écran, le code semble bien s'exécuter (bonnes séries repérées, badge affiché) mais
+  la référence de vue récupérée par `findViewById(R.id.set_pr_badge)` ne serait plus la
+  bonne, ce qui expliquerait à la fois la couleur et le clic sans effet (le vrai
+  `OnClickListener` du trophée serait posé sur une vue qui n'est pas celle affichée à cet
+  endroit). Un id devenu obsolète expliquerait aussi, séparément, une absence totale
+  d'affichage sur un autre écran si `findViewById` y renvoie `null`-like/une vue
+  toujours `GONE`.
+  **Recommandation donnée à Romain** : faire un **Clean Project** puis un **Rebuild
+  Project** complets dans Android Studio (menu Build), ou en ligne de commande
+  `gradlew clean assembleDebug`, avant de retester - un build propre régénère
+  entièrement `R.java` et recompile tout le bytecode en cohérence, ce qui doit éliminer
+  ce type de désynchronisation. Si le problème persiste après un Clean+Rebuild complet,
+  l'hypothèse sera écartée et l'investigation reprendra sur d'autres pistes.
+
+  **Sur la demande "résumé d'un jour" (point 3)** : cet écran (`DayActivity`, ouvert
+  depuis le calendrier) est géré par `DayExerciseAdapter`, qui réutilise en interne ce
+  même `WorkoutSetAdapter` et le même layout `workout_set_row.xml` pour afficher les
+  séries de chaque exercice - stricement le même mécanisme que l'onglet Workout. Une
+  fois le point 1 confirmé résolu par un Clean Rebuild, le trophée devrait donc
+  apparaître automatiquement là aussi, sans code supplémentaire nécessaire - à
+  reconfirmer visuellement par Romain une fois le nouveau build en main plutôt que
+  supposé réglé d'office.
+
+  **Amélioration de robustesse apportée en parallèle** (indépendante du bug ci-dessus,
+  committée sur l'appareil) : les 3 badges de fin de ligne (trophée PR, écart
+  Prévu/Réalisé, commentaire) étaient chacun ancrés en `ConstraintLayout` sur le
+  précédent - un badge `GONE` garde son point d'ancrage mais une largeur nulle, ce qui
+  pouvait décaler les badges suivants vers le milieu de la ligne (près du texte "reps")
+  au lieu de rester groupés contre le bord droit. Remplacé par un simple `LinearLayout`
+  horizontal (`set_badges_container`) dans `workout_set_row.xml` : un badge `GONE` y est
+  proprement retiré du flux sans décaler les autres, et la zone de tap des deux badges
+  cliquables (trophée, écart Prévu/Réalisé) a été agrandie de 16dp à 24dp (padding
+  interne, icône visuelle inchangée) pour un ciblage plus confortable au doigt.
+
+  **État : en attente du Clean Rebuild + nouveau test par Romain** (les 3 points
+  ci-dessus, plus la confirmation que le résumé de jour affiche bien le trophée).
+
+  **Retour de Romain après Clean Rebuild** : "Non toujours rien après clean et
+  rebuild." → l'hypothèse du build incrémental est donc INVALIDÉE, le problème est
+  dans le code/les données, pas dans le build.
+
+  **Vraie cause trouvée pour le point 1 (absence totale du badge sur Workout/
+  Historique/résumé de jour)** : `WorkoutDay` a DEUX listes de `WorkoutSet` - `Sets`
+  (la liste plate du jour, lue par `DataStorage.calculateRepRangeHistory()`) et
+  `Exercises[].Sets` (une liste DÉRIVÉE, reconstruite par `WorkoutDay.UpdateData()` à
+  partir de `Sets`, normalement constituée des MÊMES références d'objet Java). Le
+  problème : `DataStorage.saveWorkoutData()` sérialise les DEUX listes en JSON (Gson),
+  et Gson NE PRÉSERVE AUCUN PARTAGE DE RÉFÉRENCE à la désérialisation
+  (`loadWorkoutData()`) - `Sets` et `Exercises[].Sets` redeviennent donc deux listes de
+  `WorkoutSet` totalement INDÉPENDANTES en mémoire dès qu'on relance l'app après une
+  sauvegarde, même si elles représentent les mêmes séries (mêmes date/reps/poids). Or
+  `WorkoutSetAdapter` (onglet Workout, écran du jour, Historique) lit ses séries via
+  `WorkoutExercise.getSets()` - c'est-à-dire `Exercises[].Sets` - alors que le badge
+  était calculé avec un `HashSet<WorkoutSet>` basé sur l'IDENTITÉ DE RÉFÉRENCE
+  (`WorkoutSet` ne redéfinit pas `equals()`/`hashCode()`) construit à partir de
+  `calculateRepRangeHistory()` (donc de `Sets`). Après un redémarrage à froid, ces
+  deux jeux d'objets ne se recoupent plus JAMAIS - d'où l'absence SYSTÉMATIQUE du
+  badge sur ces trois écrans, quel que soit le build. L'écran de saisie
+  (`AddExerciseActivity`, point 2) construit lui `Todays_Exercise_Sets` directement
+  depuis `WorkoutDay.getSets()` (pas depuis `Exercises[].getSets()`, voir
+  `updateTodaysExercises()`) - il n'est donc PAS touché par ce problème de
+  duplication, ce qui explique pourquoi le badge y apparaît sur les bonnes lignes.
+  **Corrigé** : remplacement du matching par identité d'objet par un matching par
+  CLÉ VALEUR (stable à travers un cycle de sérialisation/désérialisation) :
+  - `DataStorage.repRangePRKey(date, reps, weight)` (nouvelle méthode statique) et
+    `DataStorage.getRepRangePRKeys(exerciseName)` (nouvelle méthode, calque de
+    `getRepRangePRSets()` mais retournant un `HashSet<String>` de clés
+    `"date#reps#weight"` plutôt qu'un `HashSet<WorkoutSet>`) - `getRepRangePRSets()`
+    elle-même n'a pas été touchée (toujours utilisée par le tag `[PR]` de l'export de
+    séance, qui fonctionne déjà).
+  - `WorkoutSetAdapter` et `AddExerciseWorkoutSetAdapter` : `prSets`/`computePrSets()`
+    remplacés par `prSetKeys`/`computePrSetKeys()` + nouvelle méthode
+    `isPersonalRecord(WorkoutSet)` construisant la clé de la série affichée et la
+    cherchant dans `prSetKeys` - même mécanique dans les deux adapters (harmonisation,
+    celui de l'écran de saisie n'avait pas ce bug mais pouvait diverger à l'avenir).
+
+  **Piste retenue pour le point 2 (mauvaise couleur + tap sans effet sur l'écran de
+  saisie)**, bug distinct du point 1 : `textView7` (le libellé "reps") et
+  `set_badges_container` (le conteneur des 3 badges) sont chacun ancrés
+  INDÉPENDAMMENT sur le bord droit du parent, sans être chaînés l'un à l'autre - ils
+  pouvaient se chevaucher sans que ConstraintLayout ne le sache, le conteneur de
+  badges (dessiné après, donc par-dessus) pouvant réserver jusqu'à 84dp alors que
+  "reps" n'était repoussé que de 40dp. **Corrigé** : `marginEnd` de `textView7` porté
+  à 88dp.
+
+  **Romain (16/09/2026) : "Non ça ne fonctionne toujours pas, même après avoir clean
+  le projet et rebuild."** Aucun changement visible constaté malgré DEUX passes de
+  correctifs très différents (hypothèse build incrémental, puis la vraie cause
+  Gson/clé valeur + le chevauchement de layout) - suspicion forte que Romain ne
+  regarde en fait pas le nouveau build (APK pas réinstallé après le Rebuild, qui
+  compile mais n'installe pas sur l'appareil/l'émulateur - "Rebuild Project" ≠
+  "Run"/"Install"). **Demande explicite de Romain** : "on peut s'en assurer si tu
+  introduis un petit artefact - par exemple mettre les trophées en rouge - pour
+  vérifier que je regarde bien le fix. C'est une technique que j'aime bien utiliser
+  pour m'assurer que je 'regarde' bien un fix."
+  **Artefact de diagnostic ajouté (16/09/2026)** :
+  - `workout_set_row.xml` : `set_pr_badge` passé de 24dp à **40dp** et de
+    `app:tint="@color/core_yellow"` à **`app:tint="#FF0000"`** (rouge vif, couleur
+    volontairement hors charte).
+  - `WorkoutSetAdapter.java`/`AddExerciseWorkoutSetAdapter.java` : `Toast` de debug
+    ("DEBUG: trophee tape...") ajouté au clic sur le trophée, avant l'ouverture du
+    dialogue - permet de savoir si le tap atteint bien le listener même si le
+    dialogue lui-même ne s'ouvre pas.
+
+  **Romain (16/09/2026, test le plus rigoureux : désinstallation complète de l'app +
+  Clean Project + Run/Build bouton vert = réinstallation garantie)** : "Non toujours
+  rien. [...] là j'ai bien le trophée sur le résumé d'un jour. Mais pas en rouge et en
+  cliquant dessus ça ouvre le commentaire. Vérifie que tu livre bien sur ma machine
+  également" (4 captures d'écran : trophée bleu clairement visible, ni rouge ni géant).
+  Cette fois la preuve est définitive : l'artefact de diagnostic (impossible à manquer
+  s'il avait été pris en compte) n'apparaît toujours pas → **le problème n'a jamais été
+  le build/déploiement, ni un bug de code sur ce dépôt** : Romain ne build tout
+  simplement PAS ce dépôt-ci au quotidien.
+
+  **VRAIE CAUSE DE TOUTE LA CONFUSION, trouvée le 17/09/2026 : deux dépôts `verifit`
+  distincts sur la machine.** Voir la note en tête de ce fichier
+  ("⚠️ Point de vigilance permanent"). Romain build et utilise en réalité
+  `FitNotes_Fork\FitNotes_Fork_Migration\verifit` - un second clone créé pour le
+  chantier de migration/reskin, avec son propre badge PR déjà développé
+  indépendamment (ajouté le 11/09/2026, recoloré en bleu le 16/09/2026 - décision de
+  reskin assumée, pas un bug) mais dont le clic n'avait jamais été câblé.
+  **Diagnostic confirmé en lisant le code réel de ce second dépôt** :
+  `WorkoutSetAdapter`/`AddExerciseWorkoutSetAdapter` y récupèrent bien la vue
+  `prBadge` (`findViewById(R.id.set_pr_badge)`) et gèrent sa visibilité, mais
+  n'avaient **aucun `OnClickListener`** dessus - le tap retombait donc sur le
+  `OnClickListener` de la carte entière (commentaire sur l'onglet Workout/résumé de
+  jour, sélection/édition sur l'écran de saisie), exactement comme Romain l'avait
+  lui-même suspecté dès son premier retour ("Vérifie que ce n'est pas quelque chose
+  d'aussi simple que le bouton/le trophée est derrière la ligne clickable").
+  **Corrigé dans `FitNotes_Fork_Migration\verifit`** (17/09/2026) : ajout d'un
+  `OnClickListener` propre à `prBadge` + nouvelle méthode
+  `showPersonalRecordHistoryDialog(int position)` (reprenant exactement la logique de
+  `RepRangeHistoryAdapter.showHistoryDialog()`, filtrée sur le nombre de reps exact de
+  la série tapée) dans `WorkoutSetAdapter.java` ET `AddExerciseWorkoutSetAdapter.java`
+  - `ExerciseHistoryExerciseAdapter` de ce dépôt réutilise aussi `WorkoutSetAdapter` en
+  interne, donc les 3 emplacements (Workout, résumé de jour, Historique) sont bien
+  couverts par ce seul correctif. Aucune modification de `DataStorage`/du layout n'a
+  été nécessaire dans ce dépôt : la visibilité du badge (couleur bleue incluse) y
+  fonctionnait déjà correctement, contrairement à `FitNotes_Fork\verifit`. **En
+  attente de test réel par Romain sur ce second dépôt.**
+  **Nettoyage effectué sur `FitNotes_Fork\verifit` (ce dépôt-ci, 17/09/2026)** :
+  artefact de diagnostic retiré (`set_pr_badge` revenu à 24dp/`core_yellow`, Toasts de
+  debug supprimés) puisqu'il s'est avéré ne jamais avoir été vu par Romain - le
+  correctif métier (matching par clé valeur + listener de clic + dialogue PR) reste en
+  place ici au cas où ce dépôt redevienne actif un jour (voir la note en tête de ce
+  fichier sur la question de sa suppression).
 
 - [x] **Popup "Set Added/Updated/Deleted+Undo/Restored" affichée en haut de l'écran
   plutôt qu'en bas - CODÉ, PAS ENCORE REBUILDÉ/RETESTÉ (07/09/2026)** (retour Romain
@@ -755,7 +1011,7 @@
   avant de s'expand à nouveau". Ce qu'il voulait : que ça reste replié après le drag,
   jusqu'à un tap manuel pour rouvrir. Remplacé par un suivi persistant par NOM
   (`collapsedExerciseNames`, même mécanique que la sélection) : `setDragging(true)`
-  replie et mémorise toutes les séries au début du geste, `setDragging(false)` (fin du
+  replie et mémorise toutes les séries au début du geste ; `setDragging(false)` (fin du
   geste) ne les rouvre plus - elles ne se rouvrent qu'en tapant dessus (comportement
   identique au repli manuel classique). Sur l'onglet Workout, comme le tap sur une série
   naviguait jusqu'ici toujours directement vers l'écran de log (pas de repli manuel
@@ -929,6 +1185,16 @@
 
 ## Prochain chantier majeur
 
+- [ ] **Migration de features FitNotes -> Vérifit (07/09/2026)** : suite au
+  dépouillement complet du Help FitNotes (Workout Tracking, Workout Tools, Home Screen,
+  Progress Tracking, Exercises, Routines, Calendar - docs `fitnotes-features-*.md`),
+  plan de migration écrit dans `docs/fitnotes-migration-plan.md` : stratégie (second
+  `git clone` sur une nouvelle branche, `applicationId` distinct pour tester en
+  parallèle du daily-driver) + feuille de route en 5 vagues (petits gains isolés ->
+  Supersets -> séance/calendrier -> partage/stats -> Routines/graphs). Pas encore
+  démarré.
+
+
 - [x] **Intégrer le générateur de séances (`workout_engine.py`)** — livré côté Coaching
   05/09/2026 : `build_session_import_json` génère le fichier au format "Import Session"
   déjà supporté par l'app (aucune modif Android nécessaire), échauffement et holds
@@ -942,5 +1208,5 @@
 
 * * *
 
-*Ce fichier est aussi tenu à jour dans le projet Claude "FitNotes\_Fork" ; les deux
+*Ce fichier est aussi tenu à jour dans le projet Claude "FitNotes_Fork" ; les deux
 copies sont synchronisées à chaque session.*

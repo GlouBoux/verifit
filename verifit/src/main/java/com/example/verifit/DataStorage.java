@@ -547,6 +547,57 @@ public class DataStorage {
         return prSets;
     }
 
+    // Cle robuste (valeur, pas identite d'objet Java) identifiant une serie reelle de
+    // calculateRepRangeHistory() - necessaire pour le badge trophee (retour Romain
+    // 16/09/2026 : badge totalement absent sur l'onglet Workout/l'ecran du jour/
+    // l'Historique malgre des PR reels).
+    //
+    // Cause trouvee : WorkoutDay a DEUX listes de WorkoutSet - Sets (la liste plate,
+    // lue par calculateRepRangeHistory() ci-dessus) et Exercises[].Sets (une liste
+    // DERIVEE, recalculee par WorkoutDay.UpdateData() a partir de Sets et normalement
+    // constituee des MEMES references d'objet). Le probleme : WorkoutDay serialise les
+    // DEUX listes en JSON (DataStorage.saveWorkoutData()), et Gson ne preserve aucun
+    // partage de reference a la DEserialisation (DataStorage.loadWorkoutData()) - Sets
+    // et Exercises[].Sets redeviennent donc deux listes de WorkoutSet totalement
+    // INDEPENDANTES en memoire des qu'on relance l'app apres une sauvegarde, meme si
+    // elles representent les memes series (memes date/reps/poids). Les ecrans qui
+    // lisent via WorkoutExercise.getSets() - c'est-a-dire Exercises[].Sets - (onglet
+    // Workout, ecran du jour, Historique - tous via WorkoutSetAdapter) recoivent donc
+    // des objets DIFFERENTS de ceux que calculateRepRangeHistory() a utilises pour
+    // construire prSets, et un HashSet<WorkoutSet> base sur l'identite de reference
+    // (WorkoutSet ne redefinit pas equals()/hashCode()) echoue alors SYSTEMATIQUEMENT -
+    // d'ou l'absence totale du badge, pas un cas isole. L'ecran de saisie
+    // (AddExerciseActivity/AddExerciseWorkoutSetAdapter), qui construit
+    // Todays_Exercise_Sets directement depuis WorkoutDay.getSets() (pas depuis
+    // Exercises[].getSets()), n'est lui pas touche par ce probleme - d'ou le badge
+    // correct a cet endroit precis.
+    // Plutot que de corriger la duplication Sets/Exercises elle-meme (plus risque, plus
+    // de code impacte), matching par VALEUR ici : une cle stable qui survit a un
+    // redemarrage a froid, contrairement a la reference d'objet.
+    public static String repRangePRKey(String date, int reps, Double weight)
+    {
+        return date + "#" + reps + "#" + weight;
+    }
+
+    public HashSet<String> getRepRangePRKeys(String exerciseName)
+    {
+        HashSet<String> prKeys = new HashSet<String>();
+
+        for (ArrayList<RepRangePREvent> events : calculateRepRangeHistory(exerciseName).values())
+        {
+            for (RepRangePREvent event : events)
+            {
+                if (!event.isDeduced())
+                {
+                    WorkoutSet source = event.getSourceSet();
+                    prKeys.add(repRangePRKey(source.getDate(), (int) Math.round(source.getReps()), source.getWeight()));
+                }
+            }
+        }
+
+        return prKeys;
+    }
+
     // Saves Workout_Days Array List in shared preferences
     // For some reason when I pass the context it works so let's roll with it :D
     public void saveWorkoutData(Context ct)
