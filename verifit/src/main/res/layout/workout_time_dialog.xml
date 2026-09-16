@@ -108,22 +108,22 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_workout_time_toggle"
+        style="@style/Widget.Verifit.Button.Flat"
+        android:textColor="@color/colorPrimary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
         android:text="Stop Timer"
-        android:textAllCaps="false"
-        app:cornerRadius="10dp" />
+        android:textAllCaps="false" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_workout_time_close"
+        style="@style/Widget.Verifit.Button.Flat"
+        android:textColor="@color/colorPrimary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="Close"
-        android:textAllCaps="false"
-        android:textColor="@color/colorPrimary"
-        app:backgroundTint="@color/core_white"
-        app:cornerRadius="10dp" />
+        android:textAllCaps="false" />
 
 </LinearLayout>

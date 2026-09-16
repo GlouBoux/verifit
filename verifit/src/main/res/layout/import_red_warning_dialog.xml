@@ -28,6 +28,8 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_yes3"
+        style="@style/Widget.Verifit.Button.Flat"
+        android:textColor="@color/red"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="100dp"
@@ -38,8 +40,6 @@
         android:layout_marginBottom="30dp"
         android:text="Delete"
         android:textAllCaps="false"
-        app:backgroundTint="@color/red"
-        app:cornerRadius="10dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/bt_no3"
         app:layout_constraintStart_toStartOf="parent"
@@ -47,6 +47,8 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_no3"
+        style="@style/Widget.Verifit.Button.Flat"
+        android:textColor="@color/core_black"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
@@ -56,9 +58,6 @@
         android:layout_marginRight="100dp"
         android:text="Cancel"
         android:textAllCaps="false"
-        android:textColor="@color/core_black"
-        app:backgroundTint="@color/core_white"
-        app:cornerRadius="10dp"
         app:iconTint="@color/almostWhite"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/bt_yes3"

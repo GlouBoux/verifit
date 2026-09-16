@@ -141,7 +141,10 @@
                  son nombre de reps exact (DataStorage.getRepRangePRSets(), meme logique
                  que le tag "[PR]" deja utilise par l'export texte de seance - aucune
                  nouvelle regle de detection, juste un nouvel affichage). Trophee comme
-                 FitNotes (Training_Track_Filled_With_Comments_Annotated.png). -->
+                 FitNotes (Training_Track_Filled_With_Comments_Annotated.png). Couleur
+                 alignee sur le bleu FitNotes le 16/09/2026 (retour Romain, decision 2 du
+                 chantier reskin) - remplace le jaune core_yellow d'origine ; coherent
+                 avec pr_button (diary_exercise_row.xml), deja en colorPrimary. -->
             <ImageView
                 android:id="@+id/set_pr_badge"
                 android:layout_width="16dp"
@@ -149,7 +152,7 @@
                 android:visibility="gone"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_emoji_events_24px"
-                app:tint="@color/core_yellow"
+                app:tint="@color/colorPrimary"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="@+id/guideline_pr_badge"
                 app:layout_constraintTop_toTopOf="parent" />

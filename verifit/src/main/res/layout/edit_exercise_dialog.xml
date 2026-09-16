@@ -49,6 +49,8 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_login_signup"
+        style="@style/Widget.Verifit.Button.Flat"
+        android:textColor="@color/colorPrimary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="100dp"
@@ -59,7 +61,6 @@
         android:layout_marginBottom="30dp"
         android:text="Save"
         android:textAllCaps="false"
-        app:cornerRadius="10dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/bt_cancel"
         app:layout_constraintStart_toStartOf="parent"
@@ -67,6 +68,8 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_cancel"
+        style="@style/Widget.Verifit.Button.Flat"
+        android:textColor="@color/colorPrimary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
@@ -76,9 +79,6 @@
         android:layout_marginRight="100dp"
         android:text="Cancel"
         android:textAllCaps="false"
-        android:textColor="@color/colorPrimary"
-        app:backgroundTint="@color/core_white"
-        app:cornerRadius="10dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/bt_login_signup"
         app:layout_constraintTop_toBottomOf="@+id/blue_line" />

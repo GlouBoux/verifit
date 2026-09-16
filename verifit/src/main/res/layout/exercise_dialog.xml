@@ -44,6 +44,8 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_close"
+        style="@style/Widget.Verifit.Button.Flat"
+        android:textColor="@color/colorPrimary"
         android:layout_width="120dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
@@ -53,9 +55,6 @@
         android:layout_marginRight="100dp"
         android:text="Close"
         android:textAllCaps="false"
-        android:textColor="@color/colorPrimary"
-        app:backgroundTint="@color/core_white"
-        app:cornerRadius="10dp"
         app:iconTint="@color/colorPrimary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/bt_edit_exercise"
@@ -337,6 +336,8 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_edit_exercise"
+        style="@style/Widget.Verifit.Button.Flat"
+        android:textColor="@color/colorPrimary"
         android:layout_width="120dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="100dp"
@@ -347,7 +348,6 @@
         android:layout_marginBottom="20dp"
         android:text="Edit"
         android:textAllCaps="false"
-        app:cornerRadius="10dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/bt_close"
         app:layout_constraintStart_toStartOf="parent"

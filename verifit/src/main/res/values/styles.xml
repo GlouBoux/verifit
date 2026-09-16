@@ -34,4 +34,24 @@
         <item name="cardElevation">1dp</item>
     </style>
 
+    <!-- Vague IHM reskin (16/09/2026) - boutons de pied de dialogue "plats" facon FitNotes.
+         Constate sur les 78 nouvelles captures Dark recues de Romain (et confirme en
+         Light) : les paires/triades de boutons en pied de dialogue (Cancel/Save,
+         Edit/Close, Cancel/Add To Workout, Delete/Cancel/Save...) sont plates et sans
+         fond (texte seul), separees par une ligne de separation - a l'inverse des
+         boutons persistants d'ecran (ex. SAVE/CLEAR de l'onglet Track, qui ne sont pas
+         dans une boite de dialogue) qui restent pleins/proéminents, et des boutons
+         "Close"/"OK" isoles (un seul bouton, sans binome) qui restent pleins en
+         colorPrimary (correctif IHM-5, inchange). Remplace app:backgroundTint +
+         app:cornerRadius="10dp" sur les boutons de dialogue concernes ; la couleur du
+         texte reste pilotee au cas par cas par bouton (colorPrimary pour une action
+         normale, red pour une action destructive Delete/Overwrite, core_black pour
+         Cancel dans les dialogues de suppression deja calibres sur des captures
+         reelles). -->
+    <style name="Widget.Verifit.Button.Flat" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
 </resources>
