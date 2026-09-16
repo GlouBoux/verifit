@@ -2,6 +2,13 @@
 .gradle/
 build/
 
+# Trouve le 16/09/2026 dans verifit/ : sorties de build (App Bundles debug/release)
+# et un dossier bin/ qui duplique tout le module (src/, build.gradle, .idea...) -
+# probablement un vieux export/artefact IDE, jamais couvert par .gitignore jusqu'ici.
+verifit/bin/
+verifit/debug/
+verifit/release/
+
 # Local configuration file (sdk path, etc)
 local.properties
 
