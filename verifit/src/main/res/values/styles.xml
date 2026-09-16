@@ -1,6 +1,17 @@
 <resources>
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.MaterialComponents.Light.DarkActionBar">
+    <!-- Base application theme.
+         Vague IHM-Dark (11/09/2026) : parent bascule de Theme.MaterialComponents.
+         Light.DarkActionBar vers Theme.MaterialComponents.DayNight.DarkActionBar.
+         Le suffixe "Light" forcait l'app en mode jour EN PERMANENCE, quel que soit le
+         reglage du telephone - values-night/colors.xml (nouveau, memes noms de
+         couleurs que values/colors.xml) restait donc inerte. Avec DayNight, l'app
+         suit desormais le mode sombre/clair du systeme automatiquement. Etape
+         suivante (bloquee pour l'instant, voir plan de migration) : un vrai bouton
+         Light/Dark dans les Reglages de l'app (comme FitNotes), qui forcera le choix
+         via AppCompatDelegate.setDefaultNightMode() independamment du systeme - pas
+         necessaire pour que le suivi automatique du systeme fonctionne des
+         maintenant. -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vague IHM-Dark (11/09/2026) - palette Dark. Chaque couleur ci-dessous redefinit le
+     MEME nom que values/colors.xml : grace a la qualification de ressources Android,
+     n'importe quel layout/color-selector/drawable qui reference @color/xxx recoit
+     automatiquement cette valeur quand l'app tourne en mode nuit (une fois
+     AppTheme bascule sur un parent DayNight, voir values/styles.xml) - aucun layout
+     n'a besoin d'etre touche individuellement, a condition qu'il utilise deja un nom
+     de couleur (@color/core_black, @color/core_white...) plutot qu'un hex en dur, ce
+     qui est le cas partout dans l'app (verifie lors de l'audit IHM-Dark).
+
+     Cinq couleurs viennent directement des captures reelles envoyees par Romain
+     (FitNotes en theme Dark, re-echantillonnees pixel par pixel - voir la section
+     "Captures recues de Romain" du plan de migration) : fond #222222, surface/carte
+     #333333, ligne mise en avant #326070, accent bleu #33b5e6, accent teal (Save)
+     #2b9780. Les autres valeurs (greys intermediaires, rouge, jaune) sont deduites en
+     gardant le meme ROLE que la couleur en theme Light plutot qu'une simple inversion
+     de luminosite - le detail de chaque choix est dans le plan de migration
+     (section "Vague IHM-Dark"). -->
+<resources>
+    <!-- Accent bleu FitNotes Dark reel (capture Romain), remplace le bleu Light #0074bd. -->
+    <color name="colorPrimary">#33b5e6</color>
+    <color name="colorPrimaryLight">#6cd4f0</color>
+    <color name="colorPrimaryDark">#1f8ab5</color>
+
+    <!-- colorAccent pilote les widgets sans tinting explicite (CheckBox, Spinner,
+         SeekBar, soulignement EditText focus) - #262626 (gris quasi noir) serait
+         invisible sur fond sombre. Remplace par l'accent teal "Save" observe dans les
+         captures Dark de Romain, qui reste une teinte distincte du bleu primaire
+         (meme intention qu'en Light : deux teintes differentes). -->
+    <color name="colorAccent">#2b9780</color>
+
+    <!-- Rouge adouci (Material red A200) plutot que #FF0000 pur, moins agressif sur
+         fond quasi noir (boutons Delete). -->
+    <color name="red">#ff5252</color>
+    <!-- Jaune du badge PR : deja tres lisible sur fond sombre, inchange. -->
+    <color name="core_yellow">#ffd624</color>
+
+    <!-- Role "structurel" (fond ecran / surface carte), pas de simple inversion -
+         valeurs directement reprises des captures Romain. -->
+    <color name="almostWhite">#2a2a2a</color>
+    <!-- Surface/carte (CardView.custom_row, boutons secondaires fond blanc/texte
+         colorPrimary...). Corrige le 16/09/2026 : #333333 (premiere estimation, non
+         echantillonnee) etait visiblement trop clair compare aux 78 nouvelles captures
+         reelles - pixels precisement echantillonnes sur plusieurs dialogues/cartes
+         (Rest Timer, Set Calculator, cartes Goals) : #282828 a #2c2c2c de facon
+         constante. Valeur ajustee sur #2c2c2c (milieu de la fourchette mesuree). -->
+    <color name="core_white">#2c2c2c</color>
+    <!-- Texte principal sur fond sombre (remplace le texte noir). -->
+    <color name="core_black">#e8e8e8</color>
+
+    <!-- Texte secondaire/attenue (ex. labels muets, dates) + separateurs discrets -
+         role "texte", pas "structure", malgre sa clarte en theme Light. -->
+    <color name="core_grey_02">#9a9a9a</color>
+    <!-- Fond d'ecran (derriere les cartes). -->
+    <color name="core_grey_05">#222222</color>
+    <!-- Separateurs discrets / etats "pressed" (custom_button1/2/3, custom_row). -->
+    <color name="core_grey_10">#454545</color>
+    <color name="core_grey_20">#505050</color>
+    <color name="core_grey_30">#5c5c5c</color>
+    <!-- Icone/texte d'onglet non selectionne (BottomNavigationView) : ce gris moyen
+         reste suffisamment lisible sur fond sombre, inchange. -->
+    <color name="core_grey_40">#919191</color>
+    <!-- Texte secondaire/legende (ex. "Start Time"/"End Time" du dialogue Workout
+         Time) : etait un gris fonce lisible sur blanc, doit s'eclaircir pour rester
+         lisible sur fond sombre. -->
+    <color name="core_grey_55">#b0b0b0</color>
+
+    <!-- Surbrillance de la ligne en cours d'edition (retour Romain 07/09/2026) -
+         reprend la couleur "ligne mise en avant" du tiroir de navigation FitNotes Dark
+         (capture Romain), plutot que la version pale #CFEFFB (illisible/trop
+         eblouissante sur fond sombre). -->
+    <color name="row_highlight">#326070</color>
+
+</resources>
