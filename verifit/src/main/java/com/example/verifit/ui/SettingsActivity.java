@@ -33,6 +33,7 @@ import com.example.verifit.LoadingDialog;
 import com.example.verifit.R;
 import com.example.verifit.SharedPreferences;
 import com.example.verifit.SnackBarWithMessage;
+import com.example.verifit.ThemeHelper;
 import com.example.verifit.verifitrs.UsersApi;
 import com.example.verifit.verifitrs.WorkoutSetsApi;
 import com.example.verifit.webdav.CheckWebdavThread;
@@ -167,6 +168,23 @@ public class SettingsActivity extends AppCompatActivity {
                     return false;
                 }
             });
+
+            // Retour Romain 16/09/2026 : "le bouton Light/Dark/Système dans les
+            // Réglages, comme FitNotes". La ListPreference "theme" (root_preferences.xml)
+            // persiste deja sa valeur toute seule (comportement par defaut d'une
+            // Preference) ; on applique juste le changement immediatement, sans attendre
+            // un redemarrage de l'app - voir ThemeHelper pour le detail des modes, et
+            // VerifitApplication pour l'application au demarrage du process.
+            Preference themePreference = findPreference("theme");
+            if (themePreference != null) {
+                themePreference.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                    @Override
+                    public boolean onPreferenceChange(Preference preference, Object newValue) {
+                        ThemeHelper.applyTheme(newValue.toString());
+                        return true;
+                    }
+                });
+            }
 
             // Make password not shown when typing
             EditTextPreference preference = findPreference("webdavpassword");
@@ -399,10 +417,10 @@ public class SettingsActivity extends AppCompatActivity {
             }
 
             // General
-            else if (key.equals("theme"))
-            {
-                Toast.makeText(getContext(), "Dark Theme not implemented yet", Toast.LENGTH_SHORT).show();
-            }
+            // "theme" (Light/Dark/Système) : plus besoin de cas ici - c'est une
+            // ListPreference standard, elle affiche son propre dialogue de choix toute
+            // seule. Voir le OnPreferenceChangeListener pose dans onCreatePreferences()
+            // pour l'application immediate du changement (ThemeHelper).
             else if (key.equals("github"))
             {
                 Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/MakisChristou/verifit"));

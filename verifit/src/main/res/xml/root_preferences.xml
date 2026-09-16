@@ -105,11 +105,19 @@
 
     <PreferenceCategory app:title="General">
 
-<!--        <Preference-->
-<!--            app:key="theme"-->
-<!--            app:summary="Light"-->
-<!--            app:title="Theme"-->
-<!--            app:useSimpleSummaryProvider="false" />-->
+        <!-- Retour Romain 16/09/2026 : bouton Light/Dark/Système comme FitNotes.
+             Preference existait deja en commentaire (placeholder), remplacee ici par
+             une vraie ListPreference. Persiste automatiquement dans les preferences
+             par defaut de l'app (androidx.preference) sous la cle "theme" - lue par
+             ThemeHelper au demarrage (VerifitApplication) et appliquee immediatement
+             au changement (SettingsActivity). -->
+        <ListPreference
+            app:key="theme"
+            app:title="Theme"
+            app:entries="@array/theme_entries"
+            app:entryValues="@array/theme_values"
+            app:defaultValue="system"
+            app:useSimpleSummaryProvider="true" />
 
         <Preference
             app:key="github"

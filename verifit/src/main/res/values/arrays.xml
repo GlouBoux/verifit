@@ -9,4 +9,19 @@
         <item>reply</item>
         <item>reply_all</item>
     </string-array>
+
+    <!-- Preference "Theme" (Reglages > General, retour Romain 16/09/2026 : "le bouton
+         Light/Dark/Système dans les Réglages, comme FitNotes") - voir ThemeHelper.java
+         et VerifitApplication.java pour l'application reelle du choix. -->
+    <string-array name="theme_entries">
+        <item>Light</item>
+        <item>Dark</item>
+        <item>System Default</item>
+    </string-array>
+
+    <string-array name="theme_values">
+        <item>light</item>
+        <item>dark</item>
+        <item>system</item>
+    </string-array>
 </resources>
