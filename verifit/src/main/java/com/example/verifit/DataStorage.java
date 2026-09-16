@@ -664,6 +664,43 @@ public class DataStorage {
         return prSets;
     }
 
+    // Meme chose que getRepRangePRSets() mais avec un matching par CLE VALEUR
+    // ("date#reps#weight") plutot que par identite d'objet Java (retour Romain
+    // 17/09/2026 : trophee disparu sur le resume du jour/onglet Workout pour une
+    // journee vieille de quelques jours). Cause : WorkoutDay.Sets (lu ici, via
+    // calculateRepRangeHistory()) et WorkoutDay.Exercises[].Sets (lu par
+    // WorkoutSetAdapter, via WorkoutExercise.getSets()) sont deux listes distinctes
+    // qui redeviennent des objets WorkoutSet INDEPENDANTS en memoire des qu'un cycle
+    // de sauvegarde/chargement (Gson) a eu lieu depuis - Gson ne preserve aucun
+    // partage de reference a la deserialisation. Un HashSet<WorkoutSet> base sur
+    // l'identite (WorkoutSet ne redefinit pas equals()/hashCode()) echoue donc
+    // silencieusement pour toute journee ayant deja survecu a un redemarrage de
+    // l'app, ce qui explique que le badge n'apparaissait plus que par coincidence
+    // (journee du jour meme, jamais encore rechargee).
+    public static String repRangePRKey(String date, int reps, Double weight)
+    {
+        return date + "#" + reps + "#" + weight;
+    }
+
+    public HashSet<String> getRepRangePRKeys(String exerciseName)
+    {
+        HashSet<String> prKeys = new HashSet<String>();
+
+        for (ArrayList<RepRangePREvent> events : calculateRepRangeHistory(exerciseName).values())
+        {
+            for (RepRangePREvent event : events)
+            {
+                if (!event.isDeduced())
+                {
+                    WorkoutSet source = event.getSourceSet();
+                    prKeys.add(repRangePRKey(source.getDate(), (int) Math.round(source.getReps()), source.getWeight()));
+                }
+            }
+        }
+
+        return prKeys;
+    }
+
     // Saves Workout_Days Array List in shared preferences
     // For some reason when I pass the context it works so let's roll with it :D
     public void saveWorkoutData(Context ct)

@@ -51,13 +51,34 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
     // constructeur ici : refreshPRSets() doit etre appelee explicitement (voir
     // AddExerciseActivity.initrecyclerView()/updateTodaysExercises()) a chaque fois que
     // Todays_Exercise_Sets change (nouvelle serie, edition, suppression).
-    private Set<WorkoutSet> prSets = new HashSet<>();
+    //
+    // Matching par CLE VALEUR (DataStorage.repRangePRKey()), pas par identite d'objet
+    // Java - harmonisation avec WorkoutSetAdapter (retour Romain 17/09/2026 : trophee
+    // disparu sur le resume du jour, cf. le commentaire detaille sur
+    // DataStorage.getRepRangePRKeys()). Todays_Exercise_Sets est ici construit
+    // directement depuis WorkoutDay.getSets() (voir
+    // AddExerciseActivity.updateTodaysExercises()), la meme liste que celle lue par
+    // calculateRepRangeHistory() - cet adapter n'etait donc pas touche par le bug
+    // d'identite en pratique, mais matcher par valeur ici aussi evite toute
+    // divergence de comportement future entre les deux adapters.
+    private HashSet<String> prSetKeys = new HashSet<>();
 
     public void refreshPRSets(String exerciseName)
     {
-        prSets = (exerciseName != null)
-                ? MainActivity.dataStorage.getRepRangePRSets(exerciseName)
-                : new HashSet<WorkoutSet>();
+        prSetKeys = (exerciseName != null)
+                ? MainActivity.dataStorage.getRepRangePRKeys(exerciseName)
+                : new HashSet<String>();
+    }
+
+    // true si cette serie precise est un PR reel - voir le commentaire sur prSetKeys.
+    private boolean isPersonalRecord(WorkoutSet set)
+    {
+        if (set.getDate() == null || set.getReps() == null || set.getWeight() == null)
+        {
+            return false;
+        }
+        return prSetKeys.contains(com.example.verifit.DataStorage.repRangePRKey(
+                set.getDate(), (int) Math.round(set.getReps()), set.getWeight()));
     }
 
     public interface OnSelectionChangedListener {
@@ -202,8 +223,21 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         // detection que le tag "[PR]" de l'export texte (DataStorage.getRepRangePRSets(),
         // comparaison par reference puisque WorkoutSet ne redefinit pas equals()).
         holder.prBadge.setVisibility(
-            prSets.contains(Workout_Sets.get(position)) ? View.VISIBLE : View.GONE
+            isPersonalRecord(Workout_Sets.get(position)) ? View.VISIBLE : View.GONE
         );
+
+        // Retour Romain 16/09/2026 : un tap sur le trophee doit ouvrir directement le
+        // popup "Personal Record History" pour le nombre de reps exact de cette serie,
+        // sans passer par l'ecran RepRangeRecordsActivity. Listener propre au badge
+        // (independant du tap/long-press du reste de la carte ci-dessous) - jusqu'ici
+        // le trophee n'avait aucun OnClickListener, donc le tap retombait sur celui de
+        // la carte (selection/edition de la serie).
+        holder.prBadge.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showPersonalRecordHistoryDialog(holder.getAdapterPosition());
+            }
+        });
 
         // Surbrillance de la ligne actuellement en edition (retour Romain 07/09/2026,
         // "je ne sais pas sur quelle ligne je me trouve et je dois regarder weight and
@@ -387,6 +421,101 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
     {
         int repsRounded = (int) Math.round(reps);
         return weight + " kg x " + repsRounded + " reps";
+    }
+
+    // Popup "Personal Record History" pour le nombre de reps exact de cette serie
+    // (retour Romain 16/09/2026, poursuite du point d'acces trophee deja en place dans
+    // la barre d'outils d'AddExerciseActivity qui ouvre RepRangeRecordsActivity pour le
+    // tableau complet - les deux points d'acces coexistent). Reprend exactement la
+    // logique de RepRangeHistoryAdapter.showHistoryDialog(), dupliquee ici (meme
+    // convention que showSetCommentDialog()/showDiscrepancyDialog() ci-dessus) plutot
+    // que de toucher a l'API de RepRangeHistoryAdapter (reste inchange, toujours
+    // utilise par RepRangeRecordsActivity pour le tableau complet).
+    public void showPersonalRecordHistoryDialog(int position)
+    {
+        if (position < 0 || position >= Workout_Sets.size())
+        {
+            return;
+        }
+
+        WorkoutSet workoutSet = Workout_Sets.get(position);
+        if (workoutSet.getExerciseName() == null || workoutSet.getReps() == null)
+        {
+            return;
+        }
+
+        int reps = (int) Math.round(workoutSet.getReps());
+        java.util.TreeMap<Integer, ArrayList<com.example.verifit.RepRangePREvent>> history =
+                MainActivity.dataStorage.calculateRepRangeHistory(workoutSet.getExerciseName());
+        ArrayList<com.example.verifit.RepRangePREvent> events = history.get(reps);
+        if (events == null || events.isEmpty())
+        {
+            return;
+        }
+
+        com.example.verifit.RepRangeHistoryRow row = new com.example.verifit.RepRangeHistoryRow(reps, events);
+
+        LayoutInflater inflater = LayoutInflater.from(ct);
+        View view = inflater.inflate(R.layout.rep_range_history_dialog, null);
+        AlertDialog alertDialog = new AlertDialog.Builder(ct).setView(view).create();
+
+        TextView title = view.findViewById(R.id.tv_pr_history_title);
+        android.widget.LinearLayout currentContainer = view.findViewById(R.id.container_current_record);
+        android.widget.LinearLayout previousContainer = view.findViewById(R.id.container_previous_records);
+        TextView previousLabel = view.findViewById(R.id.tv_previous_records_label);
+        MaterialButton closeButton = view.findViewById(R.id.bt_close_pr_history);
+
+        title.setText(row.getReps() + " RM");
+
+        ArrayList<com.example.verifit.RepRangePREvent> allEvents = row.getAllEvents();
+
+        View currentRow = inflater.inflate(R.layout.rep_range_history_entry_row, currentContainer, false);
+        bindPersonalRecordRow(currentRow.findViewById(R.id.tv_entry_reps), currentRow.findViewById(R.id.tv_entry_weight),
+                currentRow.findViewById(R.id.tv_entry_date), row.getReps(), row.getCurrentEvent());
+        currentContainer.addView(currentRow);
+
+        if (allEvents.size() <= 1)
+        {
+            previousLabel.setVisibility(View.GONE);
+            previousContainer.setVisibility(View.GONE);
+        }
+        else
+        {
+            for (int i = allEvents.size() - 2; i >= 0; i--)
+            {
+                com.example.verifit.RepRangePREvent previousEvent = allEvents.get(i);
+                View previousRow = inflater.inflate(R.layout.rep_range_history_entry_row, previousContainer, false);
+                bindPersonalRecordRow(previousRow.findViewById(R.id.tv_entry_reps), previousRow.findViewById(R.id.tv_entry_weight),
+                        previousRow.findViewById(R.id.tv_entry_date), previousEvent.getSourceReps(), previousEvent);
+                previousContainer.addView(previousRow);
+            }
+        }
+
+        closeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                alertDialog.dismiss();
+            }
+        });
+
+        alertDialog.show();
+    }
+
+    // Meme rendu qu'une ligne de RepRangeHistoryAdapter (grisee si l'evenement est
+    // deduit par transitivite plutot que reel).
+    private void bindPersonalRecordRow(TextView repsView, TextView weightView, TextView dateView, int displayReps, com.example.verifit.RepRangePREvent event)
+    {
+        repsView.setText(displayReps + " RM");
+        weightView.setText(String.format("%.1f", event.getWeight()) + " kgs");
+        dateView.setText(event.getDate());
+
+        int color = event.isDeduced()
+                ? androidx.core.content.ContextCompat.getColor(ct, R.color.core_grey_40)
+                : androidx.core.content.ContextCompat.getColor(ct, R.color.core_black);
+
+        repsView.setTextColor(color);
+        weightView.setTextColor(color);
+        dateView.setTextColor(color);
     }
 
     @Override
