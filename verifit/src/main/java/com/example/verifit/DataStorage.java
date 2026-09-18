@@ -357,12 +357,26 @@ public class DataStorage {
 
             String Comment = "";
 
-            if(row.length == 6)
+            if(row.length >= 6)
             {
                 Comment = row[5];
             }
 
+            // Colonne "Is Completed" (Mark Sets Complete, retour Romain 17/09/2026) -
+            // absente d'un CSV genere avant l'ajout de cette fonctionnalite (5 ou 6
+            // colonnes) : reste a false par defaut, coherent avec la decision 1 de
+            // claude/fitnotes-feature-mark-sets-complete.md. Presente (7e colonne) pour
+            // un CSV issu du script scripts/convert_fitnotes_to_verifit_csv.py mis a
+            // jour, ou d'un export Verifit (writeFile() ci-dessous) - voir la decision
+            // migration du meme document.
+            boolean isCompleted = false;
+            if(row.length >= 7)
+            {
+                isCompleted = Boolean.parseBoolean(row[6]);
+            }
+
             WorkoutSet workoutSet = new WorkoutSet(Date,Exercise,Category,Double.parseDouble(Weight),Double.parseDouble(Reps),Comment);
+            workoutSet.setCompleted(isCompleted);
             sets.add(workoutSet);
         }
     }
@@ -925,7 +939,10 @@ public class DataStorage {
                 Log.d(TAG, "saveFile: file path - " + file.getAbsolutePath());
                 outputStream = new FileOutputStream(file);
             }
-            outputStream.write("Date,Exercise,Category,Weight (kg),Reps,Comment\n".getBytes());
+            // 7e colonne "Is Completed" (Mark Sets Complete, retour Romain 17/09/2026) -
+            // voir csvToSets() ci-dessus, qui la lit en retombant sur false si absente
+            // (retro-compatibilite avec un CSV genere avant cet ajout).
+            outputStream.write("Date,Exercise,Category,Weight (kg),Reps,Comment,Is Completed\n".getBytes());
 
             for(int i = 0; i < workoutDays.size(); i++)
             {
@@ -939,7 +956,8 @@ public class DataStorage {
                         String exerciseCategory = workoutDays.get(i).getExercises().get(j).getSets().get(k).getCategory();
                         Double Weight = workoutDays.get(i).getExercises().get(j).getSets().get(k).getWeight();
                         Double Reps = workoutDays.get(i).getExercises().get(j).getSets().get(k).getReps();
-                        outputStream.write((Date + "," + exerciseName+ "," + exerciseCategory + "," + Weight + "," + Reps + "," + exerciseComment + "\n").getBytes());
+                        boolean isCompleted = workoutDays.get(i).getExercises().get(j).getSets().get(k).isCompleted();
+                        outputStream.write((Date + "," + exerciseName+ "," + exerciseCategory + "," + Weight + "," + Reps + "," + exerciseComment + "," + isCompleted + "\n").getBytes());
                     }
                 }
             }

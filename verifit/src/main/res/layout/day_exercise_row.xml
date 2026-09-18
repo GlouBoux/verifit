@@ -60,6 +60,32 @@
                 app:layout_constraintStart_toEndOf="@+id/imageView2"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <!-- Indicateur de progression "X / Y series" (Mark Sets Complete, retour
+                 Romain 17/09/2026) - resume du jour / panneau de navigation, seul
+                 ecran a afficher cet indicateur agrege (voir decision 3 du document
+                 de cadrage). Simplifie par rapport a l'anneau de la maquette (texte +
+                 couleur plutot qu'un drawable d'anneau dessine a la main) - pas de SDK
+                 Android cote Claude pour verifier visuellement un rendu plus complexe
+                 avant que Romain ne puisse builder ; reprend telle quelle la
+                 formulation validee sur la maquette ("X / Y series", "- termine",
+                 "- a venir"). Voir DayExerciseAdapter.bindCompletionProgress(). -->
+            <TextView
+                android:id="@+id/tv_completion_progress"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginLeft="10dp"
+                android:layout_marginEnd="10dp"
+                android:layout_marginRight="10dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="0 / 0 series"
+                android:textColor="@color/core_grey_40"
+                android:textSize="13sp"
+                app:layout_constraintEnd_toStartOf="@+id/drag_handle"
+                app:layout_constraintStart_toEndOf="@+id/imageView2"
+                app:layout_constraintTop_toBottomOf="@+id/tv_date" />
+
             <ImageView
                 android:id="@+id/imageView2"
                 android:layout_width="wrap_content"
@@ -98,7 +124,7 @@
                 android:visibility="visible"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tv_date" />
+                app:layout_constraintTop_toBottomOf="@+id/tv_completion_progress" />
 
             <ImageButton
                 android:id="@+id/editButton"

@@ -71,4 +71,10 @@
          eblouissante sur fond sombre). -->
     <color name="row_highlight">#326070</color>
 
+    <!-- Indicateur de progression par exercice sur le resume du jour (Mark Sets
+         Complete, retour Romain 17/09/2026) - meme role qu'en theme clair, valeur
+         reprise telle quelle de la maquette validee (Tweak "dark" de l'artefact
+         "Checkbox series - Mark Sets Complete"). -->
+    <color name="completed_green">#43A047</color>
+
 </resources>

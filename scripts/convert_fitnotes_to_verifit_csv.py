@@ -47,9 +47,15 @@ Notes techniques (pourquoi le script est ecrit ainsi) :
   passant au constructeur de WorkoutSet - un CSV avec Reps avant Weight
   importerait donc TOUTES les series avec poids et repetitions inverses.
   Ne change JAMAIS cet ordre sans avoir aussi corrige ce bug cote app.
-- Seules les series "completes" et basees sur poids x repetitions sont
-  gardees (is_complete=1 et unit=0 dans FitNotes) - Verifit n'a pas de
-  notion de serie planifiee/incomplete ni de serie basee sur temps/distance.
+- Seules les series basees sur poids x repetitions sont gardees (unit=0 dans
+  FitNotes) - Verifit n'a pas de notion de serie basee sur temps/distance.
+  Une serie encore planifiee/non terminee (is_complete=0) N'EST PLUS ecartee
+  depuis le 17/09/2026 (retour Romain, "si fitnotes dit que is_complete, on
+  importe is_complete") : elle est desormais gardee, avec son etat reel
+  reporte dans la 7e colonne "Is Completed" (true si is_complete=1, false
+  sinon) - voir WorkoutSet.isCompleted() / DataStorage.csvToSets() cote app,
+  qui lit cette colonne (absente = false, retro-compatible avec un CSV
+  genere avant cet ajout).
 - Les commentaires FitNotes (table Comment, owner_type_id=1) sont rattaches
   a leur serie par _id de training_log et concatenes avec " / " si plusieurs
   existent pour la meme serie (rare, mais pour ne rien perdre silencieusement).
@@ -92,11 +98,12 @@ def convert(backup_path, output_path, since_date):
 
     query = """
         select t._id as tid, t.date, t.metric_weight, t.reps, t.exercise_id,
-               e.name as exercise_name, e.category_id, c.name as category_name
+               t.is_complete, e.name as exercise_name, e.category_id,
+               c.name as category_name
         from training_log t
         join exercise e on e."_id" = t.exercise_id
         join Category c on c."_id" = e.category_id
-        where t.is_complete = 1 and t.unit = 0
+        where t.unit = 0
     """
     params = ()
     if since_date:
@@ -115,6 +122,8 @@ def convert(backup_path, output_path, since_date):
         comments_by_tid.setdefault(owner_id, []).append(comment)
 
     kept = 0
+    completed_count = 0
+    not_completed_count = 0
     comments_attached = 0
     exercises_seen = set()
     dates_seen = set()
@@ -123,7 +132,7 @@ def convert(backup_path, output_path, since_date):
         # IMPORTANT : voir le commentaire en tete de fichier - ne pas changer
         # cet ordre de colonnes (Weight avant Reps) sans corriger d'abord le
         # bug correspondant dans DataStorage.csvToSets().
-        f.write("Date,Exercise,Category,Weight (kg),Reps,Comment\n")
+        f.write("Date,Exercise,Category,Weight (kg),Reps,Comment,Is Completed\n")
         for r in rows:
             date = r["date"]
             exercise = sanitize(r["exercise_name"])
@@ -134,23 +143,20 @@ def convert(backup_path, output_path, since_date):
             comment = sanitize(" / ".join(raw_comments)) if raw_comments else ""
             if raw_comments:
                 comments_attached += 1
+            is_completed = "true" if r["is_complete"] == 1 else "false"
+            if r["is_complete"] == 1:
+                completed_count += 1
+            else:
+                not_completed_count += 1
 
-            f.write(f"{date},{exercise},{category},{weight},{reps},{comment}\n")
+            f.write(f"{date},{exercise},{category},{weight},{reps},{comment},{is_completed}\n")
             kept += 1
             exercises_seen.add(exercise)
             dates_seen.add(date)
 
-    incomplete_query = "select count(*) from training_log where is_complete = 0"
-    time_distance_query = "select count(*) from training_log where is_complete = 1 and unit != 0"
+    time_distance_query = "select count(*) from training_log where unit != 0"
     if since_date:
-        incomplete_query += " and date >= ?"
         time_distance_query += " and date >= ?"
-        cur.execute(incomplete_query, params)
-    else:
-        cur.execute(incomplete_query)
-    dropped_incomplete = cur.fetchone()[0]
-
-    if since_date:
         cur.execute(time_distance_query, params)
     else:
         cur.execute(time_distance_query)
@@ -158,15 +164,16 @@ def convert(backup_path, output_path, since_date):
 
     con.close()
 
-    print(f"Sets ecrites             : {kept}")
-    print(f"Exercices distincts      : {len(exercises_seen)}")
-    print(f"Jours distincts          : {len(dates_seen)}")
+    print(f"Sets ecrites               : {kept}")
+    print(f"  dont terminees (is_complete=1)  : {completed_count}")
+    print(f"  dont planifiees (is_complete=0) : {not_completed_count}")
+    print(f"Exercices distincts        : {len(exercises_seen)}")
+    print(f"Jours distincts            : {len(dates_seen)}")
     if dates_seen:
-        print(f"Plage de dates           : {min(dates_seen)} -> {max(dates_seen)}")
-    print(f"Series avec commentaire  : {comments_attached}")
-    print(f"Ecartees (incompletes)   : {dropped_incomplete}")
-    print(f"Ecartees (temps/distance): {dropped_time_distance}")
-    print(f"Fichier genere           : {output_path}")
+        print(f"Plage de dates             : {min(dates_seen)} -> {max(dates_seen)}")
+    print(f"Series avec commentaire    : {comments_attached}")
+    print(f"Ecartees (temps/distance)  : {dropped_time_distance}")
+    print(f"Fichier genere             : {output_path}")
 
     if since_date:
         print()

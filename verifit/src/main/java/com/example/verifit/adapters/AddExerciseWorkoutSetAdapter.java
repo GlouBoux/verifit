@@ -162,6 +162,19 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         WorkoutSet moved = Workout_Sets.remove(fromPosition);
         Workout_Sets.add(toPosition, moved);
         notifyItemMoved(fromPosition, toPosition);
+
+        // Retour Romain 18/09/2026 : le numero de serie affiche (tv_set_number,
+        // calcule depuis la position) doit rester juste PENDANT le glisser-deposer,
+        // pas seulement une fois le geste termine. notifyItemMoved() seul anime le
+        // deplacement mais ne redeclenche PAS onBindViewHolder pour les lignes
+        // intermediaires dont la position a change sans qu'elles soient elles-memes
+        // la ligne deplacee (comportement standard RecyclerView) - sans ce
+        // notifyItemRangeChanged, leur numero resterait affiche a l'ancienne valeur
+        // jusqu'a un rebind sans rapport (save/update/delete plus tard, ou recyclage
+        // en sortie/entree d'ecran).
+        int rangeStart = Math.min(fromPosition, toPosition);
+        int rangeCount = Math.abs(toPosition - fromPosition) + 1;
+        notifyItemRangeChanged(rangeStart, rangeCount);
     }
 
     @NonNull
@@ -182,8 +195,47 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         // Double -> Integer -> String
         holder.tv_reps.setText(String.valueOf(Workout_Sets.get(position).getReps().intValue()));
 
+        // Numero de serie (retour Romain 18/09/2026, "pertinent si on en a beaucoup
+        // d'affiche et qu'on ne sait plus combien de serie on a deja fait") - calcule
+        // depuis la position AFFICHEE, jamais stocke : reste automatiquement correct
+        // apres une suppression (notifyDataSetChanged, deja appele partout ailleurs
+        // dans cet adapter) et pendant un glisser-deposer (voir moveItem() plus bas,
+        // qui force desormais le rebind de la plage concernee pour la meme raison).
+        holder.tv_set_number.setText(String.valueOf(position + 1));
+
         holder.checkbox.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
         holder.checkbox.setChecked(selectedPositions.contains(position));
+
+        // "Serie faite" (retour Romain 17/09/2026, voir
+        // claude/fitnotes-feature-mark-sets-complete.md) : meme emplacement que la case
+        // de selection multiple ci-dessus, donc masquee pendant qu'elle est affichee.
+        // OnClickListener (pas OnCheckedChangeListener) : ce dernier se redeclencherait
+        // a tort a chaque recyclage de vue lors du setChecked() programmatique
+        // ci-dessous (bug classique RecyclerView), alors qu'un OnClickListener ne
+        // reagit qu'a un vrai tap utilisateur.
+        holder.completedCheckbox.setVisibility(selectionMode ? View.GONE : View.VISIBLE);
+        holder.completedCheckbox.setChecked(Workout_Sets.get(position).isCompleted());
+        holder.completedCheckbox.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                int adapterPosition = holder.getAdapterPosition();
+                if (adapterPosition == RecyclerView.NO_POSITION)
+                {
+                    return;
+                }
+
+                boolean isCompleted = holder.completedCheckbox.isChecked();
+                Workout_Sets.get(adapterPosition).setCompleted(isCompleted);
+
+                MainActivity.autoBackupRequired = true;
+                com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(ct);
+                sharedPreferences.save("true", "autoBackupRequired");
+
+                MainActivity.dataStorage.saveWorkoutData(ct);
+            }
+        });
 
         // Retour Romain 05/09/2026 : cet écran (AddExerciseActivity, atteint aussi
         // depuis l'onglet Sessions) n'affichait pas du tout l'icône de commentaire par
@@ -528,8 +580,10 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
     {
         TextView tv_reps;
         TextView tv_weight;
+        TextView tv_set_number;
         CardView cardView;
         CheckBox checkbox;
+        CheckBox completedCheckbox;
         ImageView commentIndicator;
         ImageView discrepancyBadge;
         ImageView prBadge;
@@ -540,8 +594,10 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
 
             tv_reps = itemView.findViewById(R.id.set_reps);
             tv_weight = itemView.findViewById(R.id.tv_date);
+            tv_set_number = itemView.findViewById(R.id.tv_set_number);
             cardView = itemView.findViewById(R.id.cardview_set);
             checkbox = itemView.findViewById(R.id.set_checkbox);
+            completedCheckbox = itemView.findViewById(R.id.set_completed_checkbox);
             commentIndicator = itemView.findViewById(R.id.set_comment_indicator);
             discrepancyBadge = itemView.findViewById(R.id.set_discrepancy_badge);
             prBadge = itemView.findViewById(R.id.set_pr_badge);

@@ -43,6 +43,18 @@ public class WorkoutSet {
     // notee dans docs/fitnotes-fork-todo.md).
     private Long timestamp;
 
+    // "Serie faite" - checkbox de suivi (retour Romain 17/09/2026, "meme systeme de
+    // checkbox que sur FitNotes pour tracker les series deja faites et a faire", voir
+    // claude/fitnotes-feature-mark-sets-complete.md). Primitif (pas Boolean) : Gson
+    // retombe naturellement sur `false` pour toute serie deja sauvegardee avant l'ajout
+    // de ce champ (saisie manuelle historique, import CSV, import de seance generee) -
+    // coherent avec la decision 1 de ce document ("toujours decochee a la creation").
+    // Seule exception volontaire : un backup FitNotes reimporte via le CSV enrichi
+    // (colonne "Is Completed", voir DataStorage.csvToSets()/scripts/
+    // convert_fitnotes_to_verifit_csv.py) peut arriver directement a true, pour
+    // refleter fidelement l'etat reel de l'epoque plutot que de tout remettre a zero.
+    private boolean isCompleted;
+
 
     public WorkoutSet()
     {
@@ -96,6 +108,7 @@ public class WorkoutSet {
     public void setPlannedReps(Double PlannedReps) {this.plannedReps = PlannedReps;}
     public void setPlannedWeight(Double PlannedWeight) {this.plannedWeight = PlannedWeight;}
     public void setTimestamp(Long Timestamp) {this.timestamp = Timestamp;}
+    public void setCompleted(boolean isCompleted) {this.isCompleted = isCompleted;}
 
 
     // Getters
@@ -125,6 +138,7 @@ public class WorkoutSet {
     public Double getPlannedReps() {return this.plannedReps;}
     public Double getPlannedWeight() {return this.plannedWeight;}
     public Long getTimestamp() {return this.timestamp;}
+    public boolean isCompleted() {return this.isCompleted;}
 
     // Vrai si cette serie a un horodatage reel connu (saisie manuelle depuis l'ajout de
     // ce champ) - faux pour tout ce qui a ete importe (CSV historique ou seance

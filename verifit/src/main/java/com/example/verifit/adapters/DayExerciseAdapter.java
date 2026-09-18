@@ -270,6 +270,10 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
         holder.imageView.setVisibility(selectionMode ? View.GONE : View.VISIBLE);
         holder.checkbox.setChecked(selectedExerciseNames.contains(Exercises.get(position).getExercise()));
 
+        // Indicateur de progression "X / Y series" (Mark Sets Complete, retour Romain
+        // 17/09/2026) - voir bindCompletionProgress() plus bas.
+        bindCompletionProgress(holder, Exercises.get(position));
+
         // Retour Romain 05/09/2026 : la poignée de réorganisation reste disponible
         // PENDANT la sélection multiple aussi (avant, elle disparaissait en sélection -
         // ça empêchait de réordonner et sélectionner dans la même passe, "mode reorg" et
@@ -330,6 +334,45 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
         }
     }
 
+    // Indicateur agrege "X / Y series" pour cet exercice (Mark Sets Complete, retour
+    // Romain 17/09/2026 - "voir en un coup d'oeil [...] combien de series sur le total
+    // prevu sont deja cochees pour chaque exercice"). Reprend la formulation validee sur
+    // la maquette ("X / Y series", "- termine" une fois complet, "- a venir" tant
+    // qu'aucune serie n'est cochee) - voir claude/fitnotes-feature-mark-sets-complete.md,
+    // decision 3 : seul le resume du jour affiche cet indicateur, pas l'ecran de saisie.
+    private void bindCompletionProgress(MyViewHolder holder, WorkoutExercise exercise)
+    {
+        int total = exercise.getSets().size();
+        int completed = 0;
+        for (com.example.verifit.model.WorkoutSet set : exercise.getSets())
+        {
+            if (set.isCompleted())
+            {
+                completed++;
+            }
+        }
+
+        String suffix = "";
+        int textColor;
+        if (total > 0 && completed == total)
+        {
+            suffix = " - termine";
+            textColor = androidx.core.content.ContextCompat.getColor(ct, R.color.completed_green);
+        }
+        else if (completed == 0)
+        {
+            suffix = total > 0 ? " - a venir" : "";
+            textColor = androidx.core.content.ContextCompat.getColor(ct, R.color.core_grey_40);
+        }
+        else
+        {
+            textColor = androidx.core.content.ContextCompat.getColor(ct, R.color.core_grey_40);
+        }
+
+        holder.tv_completion_progress.setText(completed + " / " + total + " series" + suffix);
+        holder.tv_completion_progress.setTextColor(textColor);
+    }
+
     // Simple
     public void setCategoryIconTint(MyViewHolder holder, String exercise_name)
     {
@@ -387,6 +430,7 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
     public class MyViewHolder extends  RecyclerView.ViewHolder
     {
         TextView tv_exercise_name;
+        TextView tv_completion_progress;
         RecyclerView recyclerView;
         ImageButton editButton;
         View blue_line;
@@ -399,6 +443,7 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
         public MyViewHolder(@NonNull View itemView) {
             super(itemView);
             tv_exercise_name = itemView.findViewById(R.id.tv_date);
+            tv_completion_progress = itemView.findViewById(R.id.tv_completion_progress);
             recyclerView = itemView.findViewById(R.id.recycler_view_day);
             editButton = itemView.findViewById(R.id.editButton);
             blue_line = itemView.findViewById(R.id.blue_line);

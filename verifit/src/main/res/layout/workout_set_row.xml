@@ -22,85 +22,78 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <CheckBox
-                android:id="@+id/set_checkbox"
+            <!-- Retour Romain 18/09/2026 ("je veux que ce soit aligne, comme si c'etait
+                 un tableau excel") : les versions precedentes chainaient chaque element au
+                 precedent (un LinearLayout "a slots fixes" pour les badges, puis
+                 start_toEndOf en cascade) - meme avec des slots supposes fixes, Romain a
+                 constate que meme deux lignes avec EXACTEMENT la meme configuration de
+                 badges (aucun trophee sur aucune des deux) n'etaient pas alignees entre
+                 elles, ce qu'aucune histoire de badge visible/invisible n'explique. Plutot
+                 que de continuer a chercher LEQUEL des elements en chaine deraille,
+                 refonte complete en colonnes ABSOLUES : une Guideline verticale par
+                 colonne, chaque element du tableau ancre DIRECTEMENT sur SA Guideline
+                 (jamais sur le widget voisin) - aucune colonne ne peut plus jamais deriver
+                 en fonction du contenu ou de la visibilite d'une autre. C'est exactement
+                 le modele d'un tableau/tableur : des colonnes a position fixe, remplies
+                 indépendamment les unes des autres. -->
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/gl_col_comment"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_marginLeft="8dp"
-                android:clickable="false"
-                android:focusable="false"
-                android:visibility="gone"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                android:orientation="vertical"
+                app:layout_constraintGuide_begin="8dp" />
 
-            <TextView
-                android:id="@+id/tv_date"
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/gl_col_discrepancy"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="40dp"
-                android:layout_marginLeft="40dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginBottom="10dp"
-                android:text="300"
-                android:textColor="@color/core_black"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                android:orientation="vertical"
+                app:layout_constraintGuide_begin="32dp" />
 
-            <TextView
-                android:id="@+id/textView2"
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/gl_col_pr"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="5dp"
-                android:layout_marginLeft="5dp"
-                android:layout_marginTop="5dp"
-                android:text="kg"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toEndOf="@+id/tv_date"
-                app:layout_constraintTop_toTopOf="parent" />
+                android:orientation="vertical"
+                app:layout_constraintGuide_begin="56dp" />
 
-            <TextView
-                android:id="@+id/set_reps"
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/gl_col_number"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="5dp"
-                android:layout_marginRight="5dp"
-                android:text="20"
-                android:textColor="@color/core_black"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@+id/textView7"
-                app:layout_constraintTop_toTopOf="parent" />
+                android:orientation="vertical"
+                app:layout_constraintGuide_begin="80dp" />
 
-            <TextView
-                android:id="@+id/textView7"
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/gl_col_weight_start"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="5dp"
-                android:layout_marginEnd="40dp"
-                android:layout_marginRight="40dp"
-                android:text="reps"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                android:orientation="vertical"
+                app:layout_constraintGuide_begin="104dp" />
+
+            <!-- Fin de la colonne poids / debut de la colonne reps - largeur de colonne
+                 poids fixe a 90dp (104dp -> 194dp). Si "300.5 kg" s'avere trop juste ou
+                 trop large a l'usage, dis-le moi : cette seule valeur controle toute la
+                 colonne, sur toutes les lignes a la fois. -->
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/gl_col_weight_end"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_begin="194dp" />
 
             <ImageView
                 android:id="@+id/set_comment_indicator"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:layout_marginEnd="12dp"
-                android:layout_marginRight="12dp"
-                android:visibility="gone"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:padding="2dp"
+                android:scaleType="centerInside"
+                android:visibility="invisible"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_comment_24px"
                 app:tint="@color/colorPrimary"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="@+id/gl_col_comment"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <!-- Badge discret "Ecart Prevu/Realise" (retour Romain 06/09/2026) : visible
@@ -108,54 +101,186 @@
                  sa valeur prevue a l'import. Un tap dessus ouvre le detail Prevu/Realise. -->
             <ImageView
                 android:id="@+id/set_discrepancy_badge"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:layout_marginEnd="8dp"
-                android:layout_marginRight="8dp"
-                android:visibility="gone"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:padding="2dp"
+                android:scaleType="centerInside"
+                android:visibility="invisible"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_error_outline_24px"
                 app:tint="@color/red"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@+id/set_comment_indicator"
+                app:layout_constraintStart_toStartOf="@+id/gl_col_discrepancy"
                 app:layout_constraintTop_toTopOf="parent" />
-
-            <!-- Retour Romain 11/09/2026 : le badge PR d'origine (chaine avec les badges
-                 commentaire/ecart a droite) chevauchait le mot "reps" des que 2-3 badges
-                 etaient visibles en meme temps sur la meme ligne. Deplace ici, ancre sur
-                 une Guideline a position FIXE (independante de la largeur du nombre de
-                 reps, qui est lui-meme ancre par sa DROITE - width wrap_content - et
-                 grandit donc vers la GAUCHE entre 1 et 2+ chiffres) : contrairement a un
-                 ancrage relatif a set_reps, la position du trophee ne bouge jamais, que
-                 ce soit 1 ou 11 reps. Place dans l'espace vide entre le bloc poids/kg et
-                 le nombre de reps. -->
-            <androidx.constraintlayout.widget.Guideline
-                android:id="@+id/guideline_pr_badge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                app:layout_constraintGuide_end="130dp" />
 
             <!-- Badge "Personal Record" (Vague IHM, IHM-2, retour Romain 11/09/2026 :
                  "ajoute le badge PR") - visible quand cette serie est un record reel pour
                  son nombre de reps exact (DataStorage.getRepRangePRSets(), meme logique
-                 que le tag "[PR]" deja utilise par l'export texte de seance - aucune
-                 nouvelle regle de detection, juste un nouvel affichage). Trophee comme
-                 FitNotes (Training_Track_Filled_With_Comments_Annotated.png). Couleur
-                 alignee sur le bleu FitNotes le 16/09/2026 (retour Romain, decision 2 du
-                 chantier reskin) - remplace le jaune core_yellow d'origine ; coherent
-                 avec pr_button (diary_exercise_row.xml), deja en colorPrimary. -->
+                 que le tag "[PR]" deja utilise par l'export texte de seance). -->
             <ImageView
                 android:id="@+id/set_pr_badge"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:visibility="gone"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:padding="2dp"
+                android:scaleType="centerInside"
+                android:visibility="invisible"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_emoji_events_24px"
                 app:tint="@color/colorPrimary"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="@+id/guideline_pr_badge"
+                app:layout_constraintStart_toStartOf="@+id/gl_col_pr"
                 app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- Numero de la serie (retour Romain 18/09/2026, "pertinent si on en a
+                 beaucoup d'affiche et qu'on ne sait plus combien de serie on a deja
+                 fait") - calcule depuis la position dans la liste AFFICHEE
+                 (position + 1 dans onBindViewHolder), jamais stocke sur WorkoutSet :
+                 un reordonnement ou une suppression change la position, donc le
+                 numero affiche se corrige automatiquement au prochain rebind, sans
+                 donnee a mettre a jour explicitement. Largeur FIXE + texte aligne a
+                 droite pour qu'un 2e chiffre (10+) ne decale jamais le poids qui
+                 suit. -->
+            <TextView
+                android:id="@+id/tv_set_number"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:text="1"
+                android:textColor="@color/core_grey_40"
+                android:textSize="14sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="@+id/gl_col_number"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- Colonne poids : largeur FIXE (gl_col_weight_start -> gl_col_weight_end),
+                 le couple poids/"kg" est centre a l'interieur (android:gravity="center")
+                 - largeur identique sur TOUTES les lignes, independamment de tout le
+                 reste (badges, case a cocher...), exactement comme une colonne de
+                 tableur. -->
+            <LinearLayout
+                android:id="@+id/ll_weight_frame"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:gravity="center"
+                android:orientation="horizontal"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/gl_col_weight_end"
+                app:layout_constraintStart_toStartOf="@+id/gl_col_weight_start"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <TextView
+                    android:id="@+id/tv_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="300"
+                    android:textColor="@color/core_black"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/textView2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:layout_marginLeft="5dp"
+                    android:text="kg" />
+
+            </LinearLayout>
+
+            <!-- Colonne reps : debut fixe (gl_col_weight_end), fin fixe (debut de
+                 ll_checkbox_slot, lui-meme toujours a la meme position - largeur fixe,
+                 jamais gone) - "reps" reste toujours aligne a droite dans cette colonne,
+                 quel que soit le nombre de chiffres. -->
+            <LinearLayout
+                android:id="@+id/ll_reps_frame"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:gravity="center_vertical|end"
+                android:orientation="horizontal"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/ll_checkbox_slot"
+                app:layout_constraintStart_toStartOf="@+id/gl_col_weight_end"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <TextView
+                    android:id="@+id/set_reps"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="5dp"
+                    android:layout_marginRight="5dp"
+                    android:text="20"
+                    android:textColor="@color/core_black"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/textView7"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="reps" />
+
+            </LinearLayout>
+
+            <!-- BUG corrige le 18/09/2026 (Romain : "toujours pas fonctionne [...]
+                 verifie que tu pousses bien au bon endroit") : la case "Serie faite" ne
+                 s'affichait quasiment jamais a l'ecran malgre un visibility=VISIBLE
+                 correct cote adapter. Cause reelle : set_checkbox et
+                 set_completed_checkbox sont MUTUELLEMENT EXCLUSIVES - l'une des deux est
+                 TOUJOURS "gone" (set_checkbox l'est meme en usage normal, hors mode
+                 selection multiple), et une contrainte ancree directement sur une vue
+                 gone ignore sa propre marge - ll_reps_frame venait s'etendre jusqu'au
+                 bord de la carte, exactement ou l'autre case (bien visible) etait aussi
+                 dessinee. Corrige en regroupant les deux cases dans ce conteneur
+                 ll_checkbox_slot, largeur FIXE (40dp), JAMAIS gone lui-meme - seuls ses
+                 deux enfants basculent gone/visible - donc toujours a la meme position,
+                 peu importe laquelle des deux cases est affichee. -->
+            <FrameLayout
+                android:id="@+id/ll_checkbox_slot"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_marginRight="8dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <!-- Case a cocher de selection multiple ("supprimer plusieurs series",
+                     retour Romain 05/09/2026). Toujours mutuellement exclusive avec
+                     set_completed_checkbox ci-dessous, meme emplacement pour les deux. -->
+                <CheckBox
+                    android:id="@+id/set_checkbox"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:visibility="gone" />
+
+                <!-- "Serie faite" (Mark Sets Complete, retour Romain 17/09/2026, "meme
+                     systeme de checkbox que sur FitNotes"). Meme emplacement que
+                     set_checkbox ci-dessus (mutuellement exclusifs, comme
+                     imageView2/exercise_checkbox dans day_exercise_row.xml) : masquee en
+                     mode selection multiple (AddExerciseWorkoutSetAdapter), visible
+                     sinon. Visibilite par defaut "gone" ici - c'est WorkoutSetAdapter
+                     (onglet Workout / DayActivity / Historique, ecrans en lecture seule
+                     pour cette v1, voir la decision 2 du document de cadrage) qui ne la
+                     rend jamais visible, en ne touchant simplement jamais a ce champ.
+                     Pas de style personnalise : CheckBox theme par defaut (colorAccent),
+                     comme les autres cases a cocher deja presentes dans l'app
+                     (selection Routines "Log All", dialogues Toolbar Settings...) -
+                     coherent en clair comme en sombre sans code supplementaire. -->
+                <CheckBox
+                    android:id="@+id/set_completed_checkbox"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:visibility="gone" />
+
+            </FrameLayout>
 
             <View
                 android:id="@+id/blue_line"
@@ -165,7 +290,7 @@
                 android:background="@color/core_grey_02"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/tv_date" />
+                app:layout_constraintTop_toBottomOf="@+id/ll_weight_frame" />
 
 
         </androidx.constraintlayout.widget.ConstraintLayout>

@@ -91,6 +91,13 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
         int reps = (int)Math.round(Workout_Sets.get(position).getReps());
         holder.tv_reps.setText(String.valueOf(reps));
 
+        // Numero de serie (retour Romain 18/09/2026, "pertinent si on en a beaucoup
+        // d'affiche et qu'on ne sait plus combien de serie on a deja fait") - calcule
+        // depuis la position AFFICHEE. Pas de souci de rafraichissement ici : cet
+        // adapter est recree entierement (new WorkoutSetAdapter(...)) a chaque bind
+        // cote DayExerciseAdapter, donc toujours a jour.
+        holder.tv_set_number.setText(String.valueOf(position + 1));
+
         // Small indicator so a set with its own comment is visible at a glance,
         // without having to open it - useful for reviewing imported data too.
         String comment = Workout_Sets.get(position).getComment();
@@ -397,6 +404,7 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
     {
         TextView tv_reps;
         TextView tv_weight;
+        TextView tv_set_number;
         CardView cardView;
         ImageView commentIndicator;
         ImageView discrepancyBadge;
@@ -408,6 +416,7 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
 
             tv_reps = itemView.findViewById(R.id.set_reps);
             tv_weight = itemView.findViewById(R.id.tv_date);
+            tv_set_number = itemView.findViewById(R.id.tv_set_number);
             cardView = itemView.findViewById(R.id.cardview_set);
             commentIndicator = itemView.findViewById(R.id.set_comment_indicator);
             discrepancyBadge = itemView.findViewById(R.id.set_discrepancy_badge);

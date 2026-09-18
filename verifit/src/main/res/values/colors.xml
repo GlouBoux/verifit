@@ -24,4 +24,11 @@
          teinte derivee de colorPrimaryLight. -->
     <color name="row_highlight">#CFEFFB</color>
 
+    <!-- Indicateur de progression par exercice sur le resume du jour (Mark Sets
+         Complete, retour Romain 17/09/2026) - "X / Y series - termine" une fois
+         toutes les series cochees (voir DayExerciseAdapter). Valeur reprise telle
+         quelle de la maquette validee (artefact "Checkbox series - Mark Sets
+         Complete"), aucune couleur "succes" n'existait avant dans l'app. -->
+    <color name="completed_green">#2E7D32</color>
+
 </resources>
