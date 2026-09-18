@@ -18,6 +18,13 @@
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
     <string name="API_ENDPOINT">https://verifit.xyz</string>
 
+    <!-- Volet de navigation entre exercices (retour Romain 18/09/2026) - description
+         d'accessibilite de l'icone hamburger de AddExerciseActivity (ActionBarDrawerToggle,
+         voir initNavPanel()). Jamais affichees a l'ecran, seulement lues par les lecteurs
+         d'ecran. -->
+    <string name="nav_panel_open">Open exercise navigation panel</string>
+    <string name="nav_panel_close">Close exercise navigation panel</string>
+
     <string-array name="Categories">
         <item>Chest</item>
         <item>Back</item>

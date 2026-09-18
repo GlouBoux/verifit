@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Une ligne du volet de navigation entre exercices (retour Romain 18/09/2026) - voir
+     nav_panel_drawer_content.xml / NavPanelExerciseAdapter. Calquee sur day_exercise_row.xml
+     (meme icone de poignee ic_menu_24px, meme role pour drag_handle) mais simplifiee :
+     pas de carte, pas de mode selection multiple, pas de repli - juste nom + nombre de
+     series (US-4 du cadrage) et surbrillance de l'exercice courant (US-5,
+     NavPanelExerciseAdapter.bindHighlight() - reutilise @color/row_highlight, deja la
+     couleur "ligne mise en avant" du tiroir FitNotes Dark, voir values-night/colors.xml). -->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_panel_row_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="56dp"
+    android:paddingStart="20dp"
+    android:paddingLeft="20dp"
+    android:paddingEnd="8dp"
+    android:paddingRight="8dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp">
+
+    <TextView
+        android:id="@+id/tv_nav_panel_exercise_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/core_black"
+        android:textSize="15sp"
+        app:layout_constraintEnd_toStartOf="@+id/nav_panel_drag_handle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="Assisted HSPU PW" />
+
+    <TextView
+        android:id="@+id/tv_nav_panel_exercise_set_count"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/core_grey_40"
+        android:textSize="13sp"
+        app:layout_constraintEnd_toStartOf="@+id/nav_panel_drag_handle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tv_nav_panel_exercise_name"
+        tools:text="5 sets" />
+
+    <ImageView
+        android:id="@+id/nav_panel_drag_handle"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:contentDescription="@null"
+        android:padding="4dp"
+        android:tint="@color/core_grey_55"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_menu_24px" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,8 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<!-- Volet de navigation entre exercices (retour Romain 18/09/2026, "le meme que sur
+     FitNotes [...] naviguer entre les series au sein d'une seance" - voir
+     claude/fitnotes-feature-navigation-panel.md pour le cadrage/les User Stories, et la
+     maquette associee, artefact "Volet de navigation entre exercices"). Racine
+     transformee de ConstraintLayout en DrawerLayout : le ConstraintLayout d'origine
+     (ecran de saisie, inchange) devient le premier enfant (contenu principal), le
+     second enfant (gravity="start") est le contenu du volet lui-meme -
+     nav_panel_drawer_content.xml, layout dedie plutot qu'un contenu inline ici pour
+     rester lisible. Ouverture par bouton toolbar (hamburger, AddExerciseActivity.
+     initNavPanel()/ActionBarDrawerToggle) ET par swipe depuis le bord gauche
+     (comportement natif de DrawerLayout avec gravity="start", aucun code
+     supplementaire necessaire) - Architecture "relance d'ecran" (Intent + finish())
+     pour changer d'exercice depuis le volet, comme le fait deja
+     advanceToNextSupersetExerciseIfApplicable() pour l'auto-avancement de superset. -->
+<androidx.drawerlayout.widget.DrawerLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+<androidx.constraintlayout.widget.ConstraintLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.AddExerciseActivity">
@@ -253,3 +272,11 @@
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <include
+        layout="@layout/nav_panel_drawer_content"
+        android:layout_width="300dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start" />
+
+</androidx.drawerlayout.widget.DrawerLayout>

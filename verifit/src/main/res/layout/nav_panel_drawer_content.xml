@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Contenu du volet de navigation entre exercices (retour Romain 18/09/2026) - voir
+     claude/fitnotes-feature-navigation-panel.md et le commentaire en tete de
+     activity_add_exercise.xml. Inclus (gravity="start") comme second enfant du
+     DrawerLayout de AddExerciseActivity - jamais utilise seul.
+     Structure calquee sur la maquette validee (artefact "Volet de navigation entre
+     exercices", artboard "Volet_Ouvert") : en-tete "N EXERCISES", liste des exercices
+     de la seance (NavPanelExerciseAdapter, reorganisable par glisser-deposer comme
+     DayActivity/DayExerciseAdapter), puis "ADD EXERCISE" et "HOME" en pied de volet. -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/core_white"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/tv_nav_panel_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="20dp"
+        android:paddingLeft="20dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="20dp"
+        android:paddingRight="20dp"
+        android:paddingBottom="8dp"
+        android:textAllCaps="true"
+        android:textColor="@color/core_grey_55"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        tools:text="9 EXERCISES" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_view_nav_panel"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/core_grey_10" />
+
+    <LinearLayout
+        android:id="@+id/row_nav_panel_add_exercise"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="20dp"
+        android:paddingLeft="20dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="20dp"
+        android:paddingRight="20dp"
+        android:paddingBottom="16dp">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:contentDescription="@null"
+            android:tint="@color/colorPrimary"
+            app:srcCompat="@drawable/ic_add_24px" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:layout_marginLeft="24dp"
+            android:text="ADD EXERCISE"
+            android:textColor="@color/colorPrimary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/core_grey_10" />
+
+    <LinearLayout
+        android:id="@+id/row_nav_panel_home"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="20dp"
+        android:paddingLeft="20dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="20dp"
+        android:paddingRight="20dp"
+        android:paddingBottom="16dp">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:contentDescription="@null"
+            android:tint="@color/core_grey_55"
+            app:srcCompat="@drawable/ic_home_24px" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:layout_marginLeft="24dp"
+            android:text="HOME"
+            android:textColor="@color/core_black"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+</LinearLayout>

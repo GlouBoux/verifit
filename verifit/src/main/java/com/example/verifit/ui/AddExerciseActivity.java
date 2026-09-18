@@ -2,10 +2,13 @@ package com.example.verifit.ui;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -53,6 +56,7 @@ import com.example.verifit.SnackBarWithMessage;
 import com.example.verifit.WorkoutReportGenerator;
 import com.example.verifit.adapters.AddExerciseWorkoutSetAdapter;
 import com.example.verifit.adapters.ExerciseHistoryExerciseAdapter;
+import com.example.verifit.adapters.NavPanelExerciseAdapter;
 import com.example.verifit.R;
 import com.example.verifit.model.SupersetGroup;
 import com.example.verifit.model.WorkoutDay;
@@ -191,6 +195,18 @@ public class AddExerciseActivity extends AppCompatActivity {
     private ItemTouchHelper itemTouchHelper;
     private int dragStartPosition = -1;
 
+    // Volet de navigation entre exercices (retour Romain 18/09/2026) - voir
+    // claude/fitnotes-feature-navigation-panel.md et le commentaire en tete de
+    // activity_add_exercise.xml. initNavPanel()/refreshNavPanel()/persistNavPanelOrder()
+    // plus bas regroupent toute la logique du volet.
+    private DrawerLayout drawerLayout;
+    private ActionBarDrawerToggle navPanelDrawerToggle;
+    private RecyclerView recyclerViewNavPanel;
+    private NavPanelExerciseAdapter navPanelExerciseAdapter;
+    private TextView tvNavPanelHeader;
+    private ItemTouchHelper navPanelItemTouchHelper;
+    private int navPanelDragStartPosition = -1;
+
 
 
     // Comment Items
@@ -250,6 +266,10 @@ public class AddExerciseActivity extends AppCompatActivity {
         // Self Explanatory I guess
         initrecyclerView();
 
+        // Volet de navigation entre exercices (retour Romain 18/09/2026) - voir le
+        // commentaire sur les champs drawerLayout/... plus haut.
+        initNavPanel();
+
         // User can modify data structures, possible race condition, thus temporary disable autobackup
         MainActivity.inAddExerciseActivity = true;
 
@@ -271,6 +291,10 @@ public class AddExerciseActivity extends AppCompatActivity {
         // entre-temps) et relancer le defilement de l'affichage.
         refreshSessionTimerBar();
         sessionTimerTicker.start();
+
+        // Volet de navigation : le nombre de series par exercice (et l'exercice
+        // courant surligne) a pu changer entre-temps (retour d'un autre ecran).
+        refreshNavPanel();
     }
 
     @Override
@@ -279,6 +303,20 @@ public class AddExerciseActivity extends AppCompatActivity {
         // Chrono de session : plus la peine de faire defiler un affichage qui n'est plus
         // visible - la valeur reelle reste sur WorkoutDay, pas sur ce Handler.
         sessionTimerTicker.stop();
+    }
+
+    // Retour Romain 18/09/2026 (implicite, comportement standard d'un volet de
+    // navigation) : un appui sur "retour" alors que le volet est ouvert le referme
+    // d'abord, plutot que de quitter l'ecran directement.
+    @Override
+    public void onBackPressed()
+    {
+        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START))
+        {
+            drawerLayout.closeDrawer(GravityCompat.START);
+            return;
+        }
+        super.onBackPressed();
     }
 
     // Save / Update
@@ -593,6 +631,7 @@ public class AddExerciseActivity extends AppCompatActivity {
         runOnUiThread(()->{
             updateTodaysExercises();
             refreshSessionTimerBar();
+            refreshNavPanel();
             autoStartRestTimerIfEnabled();
 
             if (advanceToNextSupersetExerciseIfApplicable())
@@ -612,11 +651,13 @@ public class AddExerciseActivity extends AppCompatActivity {
     // l'exercice courant appartient a un groupe de superset actif (AutoAdvance a
     // true, voir DayActivity.groupSelectedExercises()) pour le jour affiche,
     // relance cet ecran directement sur le PROCHAIN exercice du groupe (en
-    // bouclant sur le premier apres le dernier). Verifit n'a pas d'ecran
-    // "Navigation Panel" comme FitNotes permettant de changer d'exercice sans
-    // changer d'ecran (voir le plan de migration, section Vague 2) - on relance
-    // donc une nouvelle instance de AddExerciseActivity plutot que de basculer en
-    // place, en demarrant la suivante puis en finissant l'instance courante : la
+    // bouclant sur le premier apres le dernier). Meme lorsque le Navigation Panel
+    // existe desormais (retour Romain 18/09/2026, voir switchToExercise()
+    // ci-dessous qui reutilise exactement ce meme patron de relance), ni lui ni
+    // Verifit n'offrent de bascule d'exercice EN PLACE (sans changer d'ecran) - on
+    // relance donc une nouvelle instance de AddExerciseActivity plutot que de
+    // basculer en place, en demarrant la suivante puis en finissant l'instance
+    // courante : la
     // pile de retour ne grossit donc pas a chaque serie (chaque exercice du
     // superset REMPLACE le precedent, exactement comme si l'utilisateur avait tape
     // directement dessus depuis DayActivity), et overridePendingTransition(0, 0)
@@ -651,6 +692,172 @@ public class AddExerciseActivity extends AppCompatActivity {
         overridePendingTransition(0, 0);
         finish();
         return true;
+    }
+
+    // --- Volet de navigation entre exercices (retour Romain 18/09/2026, "le meme que
+    // sur FitNotes [...] naviguer entre les series au sein d'une seance") ---
+    // Voir claude/fitnotes-feature-navigation-panel.md pour le cadrage/les User
+    // Stories et le commentaire en tete de activity_add_exercise.xml pour la
+    // structure de layout.
+
+    // Mise en place du volet (appelee une seule fois, depuis onCreate()) :
+    // ActionBarDrawerToggle relie le DrawerLayout a l'icone hamburger de l'ActionBar
+    // (ouverture au tap, voir onOptionsItemSelected()) - le swipe depuis le bord
+    // gauche fonctionne nativement des qu'un DrawerLayout a un enfant gravity="start"
+    // (activity_add_exercise.xml), aucun code supplementaire necessaire. Les lignes
+    // "ADD EXERCISE"/"HOME" du pied du volet reutilisent exactement les memes
+    // patrons de navigation que le reste de l'app : ExercisesActivity (bouton "+" de
+    // DayActivity) et le retour a MainActivity depuis la barre de navigation basse
+    // (ExercisesActivity.onNavigationItemSelected()), pour rester coherent avec le
+    // reste de l'app plutot que d'inventer un nouveau comportement.
+    private void initNavPanel()
+    {
+        drawerLayout = findViewById(R.id.drawer_layout);
+        tvNavPanelHeader = findViewById(R.id.tv_nav_panel_header);
+        recyclerViewNavPanel = findViewById(R.id.recycler_view_nav_panel);
+        recyclerViewNavPanel.setLayoutManager(new LinearLayoutManager(this));
+
+        navPanelDrawerToggle = new ActionBarDrawerToggle(
+                this, drawerLayout, R.string.nav_panel_open, R.string.nav_panel_close);
+        drawerLayout.addDrawerListener(navPanelDrawerToggle);
+        navPanelDrawerToggle.syncState();
+
+        View rowAddExercise = findViewById(R.id.row_nav_panel_add_exercise);
+        rowAddExercise.setOnClickListener(v -> {
+            drawerLayout.closeDrawer(GravityCompat.START);
+            Intent in = new Intent(AddExerciseActivity.this, ExercisesActivity.class);
+            startActivity(in);
+        });
+
+        View rowHome = findViewById(R.id.row_nav_panel_home);
+        rowHome.setOnClickListener(v -> {
+            drawerLayout.closeDrawer(GravityCompat.START);
+            Intent in = new Intent(AddExerciseActivity.this, MainActivity.class);
+            startActivity(in);
+            overridePendingTransition(0, 0);
+        });
+
+        refreshNavPanel();
+    }
+
+    // Repeuple la liste du volet (nombre d'exercices/de series, exercice courant
+    // surligne) - a appeler a chaque fois que l'etat peut avoir change (onCreate() via
+    // initNavPanel(), onResume(), a chaque serie loggee via updateViewAndShowMessage()).
+    private void refreshNavPanel()
+    {
+        if (drawerLayout == null)
+        {
+            return;
+        }
+
+        int day_position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
+        WorkoutDay day = (day_position >= 0) ? MainActivity.dataStorage.getWorkoutDays().get(day_position) : null;
+        ArrayList<WorkoutExercise> exercises = (day != null) ? day.getExercises() : new ArrayList<>();
+
+        int count = exercises.size();
+        tvNavPanelHeader.setText(count + (count == 1 ? " EXERCISE" : " EXERCISES"));
+
+        if (navPanelExerciseAdapter == null)
+        {
+            navPanelExerciseAdapter = new NavPanelExerciseAdapter(this, exercises, exercise_name);
+            navPanelExerciseAdapter.setOnStartDragListener(viewHolder -> {
+                if (navPanelItemTouchHelper != null)
+                {
+                    navPanelItemTouchHelper.startDrag(viewHolder);
+                }
+            });
+            navPanelExerciseAdapter.setOnExerciseClickListener(this::switchToExercise);
+            recyclerViewNavPanel.setAdapter(navPanelExerciseAdapter);
+
+            // Reorganisation par glisser-depose (drag & drop de la poignee, meme
+            // mecanique que DayActivity/DayExerciseAdapter cote resume du jour - voir
+            // persistNavPanelOrder() ci-dessous) : une seule persistence a la fin du
+            // geste (clearView()), jamais a chaque etape intermediaire (onMove()).
+            navPanelItemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
+                    ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0)
+            {
+                @Override
+                public boolean onMove(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder source, @NonNull RecyclerView.ViewHolder target)
+                {
+                    int from = source.getAdapterPosition();
+                    int to = target.getAdapterPosition();
+
+                    if (navPanelDragStartPosition == -1)
+                    {
+                        navPanelDragStartPosition = from;
+                    }
+
+                    navPanelExerciseAdapter.moveItem(from, to);
+                    return true;
+                }
+
+                @Override
+                public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction)
+                {
+                    // Swipe non utilise - drag uniquement (poignee dediee).
+                }
+
+                @Override
+                public void clearView(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder viewHolder)
+                {
+                    super.clearView(rv, viewHolder);
+
+                    int finalPosition = viewHolder.getAdapterPosition();
+                    if (navPanelDragStartPosition != -1 && finalPosition != -1 && finalPosition != navPanelDragStartPosition)
+                    {
+                        persistNavPanelOrder(navPanelDragStartPosition, finalPosition);
+                    }
+                    navPanelDragStartPosition = -1;
+                }
+            });
+            navPanelItemTouchHelper.attachToRecyclerView(recyclerViewNavPanel);
+        }
+        else
+        {
+            navPanelExerciseAdapter.updateData(exercises, exercise_name);
+        }
+    }
+
+    // Persiste l'ordre final d'un geste de drag dans le volet (meme convention que
+    // DayActivity.persistExerciseOrder()) - une seule fois par geste.
+    private void persistNavPanelOrder(int fromPosition, int toPosition)
+    {
+        int day_position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
+        if (day_position < 0)
+        {
+            return;
+        }
+
+        WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
+        day.moveExercise(fromPosition, toPosition);
+        MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+
+        MainActivity.autoBackupRequired = true;
+        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
+        sharedPreferences.save("true", "autoBackupRequired");
+    }
+
+    // Changement d'exercice depuis le volet (US-6 du cadrage) : tap sur une ligne ->
+    // relance cet ecran sur l'exercice choisi. Reutilise exactement le meme patron de
+    // relance que advanceToNextSupersetExerciseIfApplicable() ci-dessus (Intent +
+    // finish(), overridePendingTransition(0, 0)) plutot que d'en inventer un nouveau -
+    // la pile de retour ne grossit donc pas a chaque changement d'exercice depuis le
+    // volet. Aucun effet si l'exercice tape est deja celui affiche (evite de recharger
+    // l'ecran pour rien, ex. re-tap accidentel sur la ligne surlignee).
+    private void switchToExercise(String exerciseName)
+    {
+        drawerLayout.closeDrawer(GravityCompat.START);
+
+        if (exerciseName == null || exerciseName.equals(exercise_name))
+        {
+            return;
+        }
+
+        Intent intent = new Intent(this, AddExerciseActivity.class);
+        intent.putExtra("exercise", exerciseName);
+        startActivity(intent);
+        overridePendingTransition(0, 0);
+        finish();
     }
 
     // Retrouve le WorkoutDay du jour affiche (peut etre null si aucune serie n'a encore
@@ -1707,6 +1914,15 @@ public class AddExerciseActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item)
     {
+        // Volet de navigation entre exercices (retour Romain 18/09/2026) : l'icone
+        // hamburger (ActionBarDrawerToggle, voir initNavPanel()) remplace l'indicateur
+        // "up" par defaut de l'ecran - a intercepter en premier, avant la chaine
+        // d'items existante ci-dessous.
+        if (navPanelDrawerToggle != null && navPanelDrawerToggle.onOptionsItemSelected(item))
+        {
+            return true;
+        }
+
         // Select sets (multi-delete, retour Romain 05/09/2026)
         if(item.getItemId() == R.id.select_sets)
         {
