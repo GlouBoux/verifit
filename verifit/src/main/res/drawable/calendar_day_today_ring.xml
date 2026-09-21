@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Repere "aujourd'hui" dans la grille du calendrier (retour Romain 21/09/2026, fonction
+     Today) : anneau fin colorPrimary autour du numero du jour courant, distinct du cercle
+     plein du jour selectionne (calendar_day_number_background.xml). Applique par
+     CalendarPickerDialog.DayGridAdapter uniquement quand le jour courant n'est pas selectionne. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@android:color/transparent" />
+    <stroke
+        android:width="2dp"
+        android:color="@color/colorPrimary" />
+</shape>

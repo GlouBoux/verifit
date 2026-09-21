@@ -553,15 +553,27 @@ public class AddExerciseActivity extends AppCompatActivity {
 
     public void updateSet(Integer finalI, Integer finalJ, Double reps, Double weight)
     {
-        MainActivity.dataStorage.getWorkoutDays().get(finalI).getSets().get(finalJ).setReps(reps);
-        MainActivity.dataStorage.getWorkoutDays().get(finalI).getSets().get(finalJ).setWeight(weight);
+        WorkoutSet updatedSet = MainActivity.dataStorage.getWorkoutDays().get(finalI).getSets().get(finalJ);
+
+        // Retour UAT Romain 21/09/2026 (US 1.7) : "j'ai update 8 au lieu de 9 [...] je
+        // dismiss" - le message "Set Updated" n'avait qu'un bouton "Dismiss" qui se
+        // contentait de se fermer, sans annuler la modification. On garde donc les
+        // valeurs d'AVANT pour que le bouton devienne un vrai "Undo" (meme principe que
+        // "Set Deleted" + Undo). Les valeurs prevues (plannedReps/plannedWeight) ne sont
+        // jamais touchees par un Update : l'ecart Prevu/Realise se recalcule tout seul.
+        final Double previousReps = updatedSet.getReps();
+        final Double previousWeight = updatedSet.getWeight();
+
+        updatedSet.setReps(reps);
+        updatedSet.setWeight(weight);
 
         // Manually update data because of bad design choices
         MainActivity.dataStorage.getWorkoutDays().get(finalI).UpdateData();
 
         // Let the user know I guess
         runOnUiThread(() -> {
-            showSnackbarMessage("Set Updated");
+            SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(AddExerciseActivity.this);
+            snackBarWithMessage.showSnackbarWithUndoAtTop("Set Updated", () -> undoUpdateSet(updatedSet, previousReps, previousWeight));
             updateTodaysExercises();
         });
 
@@ -569,6 +581,34 @@ public class AddExerciseActivity extends AppCompatActivity {
         bt_save.setText("Save");
         bt_clear.setText("Clear");
         AddExerciseActivity.isEditMode = false;
+    }
+
+    // Annule un "Set Updated" (bouton "Undo" du message, retour UAT Romain 21/09/2026) :
+    // remet reps/poids d'avant la modification sur le MEME objet WorkoutSet (donc memes
+    // id/commentaire/valeurs prevues), recalcule le jour et sauvegarde tout de suite -
+    // comme undoDeleteSet(), en local uniquement (pas de re-synchronisation vers l'API).
+    private void undoUpdateSet(WorkoutSet set, Double previousReps, Double previousWeight)
+    {
+        set.setReps(previousReps);
+        set.setWeight(previousWeight);
+
+        int day_position = MainActivity.dataStorage.getDayPosition(set.getDate());
+        if (day_position >= 0)
+        {
+            MainActivity.dataStorage.getWorkoutDays().get(day_position).UpdateData();
+        }
+
+        MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+
+        // Let backup service know that something has changed
+        MainActivity.autoBackupRequired = true;
+        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
+        sharedPreferences.save("true", "autoBackupRequired");
+
+        runOnUiThread(() -> {
+            showSnackbarMessage("Set Restored");
+            updateTodaysExercises();
+        });
     }
 
     public void addSetExistingWorkoutDay(WorkoutSet workoutSet, Integer position)
@@ -2954,4 +2994,4 @@ public class AddExerciseActivity extends AppCompatActivity {
         }
     }
 
-}
+}

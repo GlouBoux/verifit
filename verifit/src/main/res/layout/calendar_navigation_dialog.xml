@@ -12,12 +12,22 @@
      en @color/colorPrimary - meme convention deja appliquee en IHM-1/IHM-2 (steppers
      +/- de l'ecran de saisie, icone commentaire) et chez FitNotes lui-meme (fleches
      precedent/suivant en bleu, ic_action_left_blue/right_blue). Rien d'autre change
-     ici : structure et espacements identiques. -->
+     ici : structure et espacements identiques.
+
+     Retour UAT Romain 21/09/2026 (US 1.8) :
+     - fond racine en @color/core_white au lieu de @android:color/white (blanc code en dur :
+       illisible en mode sombre, ou les textes @color/core_black sont clairs) ;
+     - bouton Today dans la barre Browse ;
+     - panneau "Workout" sous la grille (mode Browse uniquement, voir
+       CalendarPickerDialog.updatePanel()) : en-tete cliquable (ouvre le jour), fleches
+       seance precedente/suivante, contenu defilant. La racine passe en match_parent pour
+       que le panneau et la liste occupent la hauteur restante (la fenetre est a hauteur
+       fixe en mode Browse, wrap_content sinon - voir CalendarPickerDialog.onCreate()). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:background="@android:color/white"
+    android:layout_height="match_parent"
+    android:background="@color/core_white"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -112,6 +122,15 @@
             android:visibility="gone" />
 
         <ImageButton
+            android:id="@+id/calendar_today_button"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Today"
+            android:src="@drawable/ic_today_24px"
+            android:tint="@color/colorPrimary" />
+
+        <ImageButton
             android:id="@+id/calendar_toggle_list_view"
             android:layout_width="36dp"
             android:layout_height="36dp"
@@ -139,8 +158,111 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/calendar_day_list"
         android:layout_width="match_parent"
-        android:layout_height="360dp"
+        android:layout_height="0dp"
         android:layout_marginTop="8dp"
+        android:layout_weight="1"
         android:visibility="gone" />
+
+    <!-- Panneau "Workout" (retour UAT 21/09/2026) : resume de la seance du jour selectionne
+         dans la grille. Mode Browse uniquement, GONE par defaut, rempli par
+         CalendarPickerDialog.updatePanel(). Fond core_grey_05 (clair #e9e9e9 / nuit #222222),
+         plus sombre que la surface du dialogue en mode nuit. -->
+    <LinearLayout
+        android:id="@+id/calendar_panel"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_weight="1"
+        android:background="@color/core_grey_05"
+        android:orientation="vertical"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/calendar_panel_prev"
+                android:layout_width="40dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Previous workout"
+                android:src="@drawable/ic_keyboard_arrow_left_24px"
+                android:tint="@color/colorPrimary" />
+
+            <!-- Zone cliquable : ouvre le jour selectionne dans l'app (libelle "Workout"). -->
+            <LinearLayout
+                android:id="@+id/calendar_panel_header"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/calendar_panel_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Workout"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/calendar_panel_date"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/core_black"
+                    android:textSize="13sp"
+                    tools:text="Lundi 21 septembre 2026" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_keyboard_arrow_right_24px"
+                    android:tint="@color/colorPrimary" />
+
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/calendar_panel_next"
+                android:layout_width="40dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Next workout"
+                android:src="@drawable/ic_keyboard_arrow_right_24px"
+                android:tint="@color/colorPrimary" />
+
+        </LinearLayout>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:id="@+id/calendar_panel_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="12dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="12dp" />
+
+        </ScrollView>
+
+    </LinearLayout>
 
 </LinearLayout>

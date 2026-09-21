@@ -3,7 +3,14 @@ package com.example.verifit.ui;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.res.ColorStateList;
+import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ImageSpan;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,6 +23,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -35,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -56,6 +65,17 @@ import java.util.Map;
 //   selecteur de date, sans Filter ni List View (n'a pas de sens quand on choisit un
 //   jour SOURCE precis a copier/deplacer) - mais garde quand meme les points multicolores,
 //   ameliration purement visuelle qui ne genene jamais ce cas d'usage.
+//
+// Retour UAT Romain 21/09/2026 (US 1.8), mode Browse uniquement :
+// - un tap sur un jour SELECTIONNE ce jour sans fermer le calendrier et affiche sous la
+//   grille un "panneau Workout" (resume de la seance : commentaire, duree, exercices et
+//   series avec leurs icones PR / ecart Prevu-Realise / commentaire) - voir updatePanel() ;
+// - l'en-tete du panneau (libelle "Workout") ouvre le jour selectionne dans l'app ; les
+//   fleches de l'en-tete sautent a la seance precedente/suivante (jumpToMatch()) ;
+// - bouton Today (goToToday()) et anneau permanent autour du jour courant ;
+// - la fenetre a une hauteur fixe en mode Browse (le panneau occupe la place restante).
+// Le mode "Pick a day" garde exactement son comportement d'origine : un tap ferme le
+// dialogue et rend la date.
 public class CalendarPickerDialog extends Dialog
 {
     public interface OnDaySelectedListener
@@ -103,6 +123,9 @@ public class CalendarPickerDialog extends Dialog
     private TextView filterResultsText;
     private ImageButton prevMatchButton;
     private ImageButton nextMatchButton;
+    private LinearLayout panelContainer;
+    private TextView panelDate;
+    private LinearLayout panelContent;
     private DayGridAdapter gridAdapter;
     private CalendarListAdapter listAdapter;
 
@@ -198,8 +221,17 @@ public class CalendarPickerDialog extends Dialog
         // ete retesté depuis le rebuild).
         if (getWindow() != null)
         {
-            int dialogWidth = (int) (getContext().getResources().getDisplayMetrics().widthPixels * 0.9);
-            getWindow().setLayout(dialogWidth, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+            DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
+            int dialogWidth = (int) (metrics.widthPixels * 0.9);
+            // Mode Browse : hauteur fixe pour laisser au panneau Workout (ou a la List View)
+            // toute la place restante sous la grille ; sinon on garde WRAP_CONTENT (Pick a day).
+            int dialogHeight = browsingFeaturesEnabled
+                    ? (int) (metrics.heightPixels * 0.9)
+                    : android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
+            getWindow().setLayout(dialogWidth, dialogHeight);
+            // Fond de fenetre explicite (meme couleur que la racine du layout, qui suit le
+            // theme clair/sombre) : evite tout cadre/liseré blanc autour en mode sombre.
+            getWindow().setBackgroundDrawable(new ColorDrawable(ContextCompat.getColor(getContext(), R.color.core_white)));
         }
 
         monthLabel = findViewById(R.id.calendar_month_label);
@@ -213,6 +245,10 @@ public class CalendarPickerDialog extends Dialog
         prevMatchButton = findViewById(R.id.calendar_prev_match);
         nextMatchButton = findViewById(R.id.calendar_next_match);
         ImageButton toggleListViewButton = findViewById(R.id.calendar_toggle_list_view);
+        ImageButton todayButton = findViewById(R.id.calendar_today_button);
+        panelContainer = findViewById(R.id.calendar_panel);
+        panelDate = findViewById(R.id.calendar_panel_date);
+        panelContent = findViewById(R.id.calendar_panel_content);
 
         gridAdapter = new DayGridAdapter();
         gridView.setAdapter(gridAdapter);
@@ -223,11 +259,22 @@ public class CalendarPickerDialog extends Dialog
 
         gridView.setOnItemClickListener((parent, view, position, id) -> {
             String dateKey = gridAdapter.dateKeyAt(position);
-            if(dateKey != null)
+            if(dateKey == null)
             {
-                dismiss();
-                listener.onDaySelected(dateKey);
+                return;
             }
+
+            if(browsingFeaturesEnabled)
+            {
+                // Mode Browse : on selectionne seulement, le panneau Workout se met a jour ;
+                // c'est son en-tete qui ouvre le jour.
+                selectedDateKey = dateKey;
+                refresh();
+                return;
+            }
+
+            dismiss();
+            listener.onDaySelected(dateKey);
         });
 
         prevButton.setOnClickListener(v -> {
@@ -264,6 +311,19 @@ public class CalendarPickerDialog extends Dialog
 
             prevMatchButton.setOnClickListener(v -> jumpToMatch(false));
             nextMatchButton.setOnClickListener(v -> jumpToMatch(true));
+
+            todayButton.setOnClickListener(v -> goToToday());
+
+            findViewById(R.id.calendar_panel_prev).setOnClickListener(v -> jumpToMatch(false));
+            findViewById(R.id.calendar_panel_next).setOnClickListener(v -> jumpToMatch(true));
+            findViewById(R.id.calendar_panel_header).setOnClickListener(v -> {
+                if(selectedDateKey != null)
+                {
+                    String dateKey = selectedDateKey;
+                    dismiss();
+                    listener.onDaySelected(dateKey);
+                }
+            });
         }
 
         refresh();
@@ -291,6 +351,222 @@ public class CalendarPickerDialog extends Dialog
             listRecyclerView.setVisibility(View.GONE);
             gridAdapter.notifyDataSetChanged();
         }
+
+        updatePanel();
+    }
+
+    // Bouton Today (retour UAT 21/09/2026) : revient au mois courant, selectionne
+    // aujourd'hui et met a jour le panneau. Ne ferme pas le calendrier - c'est l'en-tete du
+    // panneau qui ouvre le jour. En List View, fait defiler jusqu'a la seance d'aujourd'hui
+    // ou, a defaut, a la plus recente qui la precede.
+    private void goToToday()
+    {
+        Calendar today = Calendar.getInstance();
+        selectedDateKey = KEY_FORMAT.format(today.getTime());
+        displayedMonth.setTime(today.getTime());
+        refresh();
+
+        if(listViewActive)
+        {
+            listRecyclerView.post(() -> {
+                int position = listAdapter.positionOnOrBefore(selectedDateKey);
+                ((LinearLayoutManager) listRecyclerView.getLayoutManager()).scrollToPositionWithOffset(position, 0);
+            });
+        }
+    }
+
+    private static String todayKey()
+    {
+        return KEY_FORMAT.format(Calendar.getInstance().getTime());
+    }
+
+    // Panneau "Workout" (mode Browse, grille visible) : resume de la seance du jour
+    // selectionne, ou "No workout on this day". L'en-tete (libelle + date) est cliquable
+    // dans onCreate() et ouvre ce jour dans l'app.
+    private void updatePanel()
+    {
+        if(!browsingFeaturesEnabled || panelContainer == null)
+        {
+            return;
+        }
+
+        boolean showPanel = !listViewActive && selectedDateKey != null;
+        panelContainer.setVisibility(showPanel ? View.VISIBLE : View.GONE);
+        if(!showPanel)
+        {
+            return;
+        }
+
+        panelDate.setText(WorkoutReportGenerator.formatDateHeader(selectedDateKey));
+        panelContent.removeAllViews();
+
+        WorkoutDay day = workoutDaysByDate.get(selectedDateKey);
+        if(day == null || day.getExercises() == null || day.getExercises().isEmpty())
+        {
+            panelContent.addView(buildPanelText("No workout on this day", 13, false));
+            return;
+        }
+
+        String comment = day.getComment();
+        if(comment != null && !comment.trim().isEmpty())
+        {
+            panelContent.addView(buildPanelText(comment.trim(), 13, true));
+        }
+
+        String duration = formatSessionDuration(day);
+        if(duration != null)
+        {
+            panelContent.addView(buildPanelText("Duration: " + duration, 12, false));
+        }
+
+        Map<String, HashSet<String>> prKeysByExercise = new HashMap<>();
+        for(WorkoutExercise exercise : day.getExercises())
+        {
+            String name = exercise.getExercise();
+            HashSet<String> prKeys = prKeysByExercise.get(name);
+            if(prKeys == null)
+            {
+                prKeys = dataStorage.getRepRangePRKeys(name);
+                prKeysByExercise.put(name, prKeys);
+            }
+            panelContent.addView(buildPanelExercise(exercise, prKeys));
+        }
+    }
+
+    // Duree du chrono de seance (Workout Time), seulement s'il a ete demarre ET arrete -
+    // un chrono jamais arrete sur un jour passe donnerait une duree absurde.
+    private static String formatSessionDuration(WorkoutDay day)
+    {
+        Long start = day.getSessionStartTimestamp();
+        Long end = day.getSessionEndTimestamp();
+        if(start == null || end == null || end <= start)
+        {
+            return null;
+        }
+        long minutes = (end - start) / 60000L;
+        long hours = minutes / 60;
+        return hours > 0 ? (hours + "h " + (minutes % 60) + "m") : (minutes + "m");
+    }
+
+    private TextView buildPanelText(String text, int sizeSp, boolean italic)
+    {
+        float density = getContext().getResources().getDisplayMetrics().density;
+        TextView view = new TextView(getContext());
+        view.setText(text);
+        view.setTextSize(sizeSp);
+        view.setTextColor(ContextCompat.getColor(getContext(), R.color.core_black));
+        view.setTypeface(null, italic ? Typeface.ITALIC : Typeface.NORMAL);
+        view.setPadding(0, 0, 0, (int) (4 * density));
+        return view;
+    }
+
+    // Un exercice du panneau : point de couleur de categorie + nom, puis toutes ses
+    // series sur une ligne compacte ("80kg x8, 80kg x8...") avec, apres chaque serie
+    // concernee, les memes icones que l'ecran du jour (PR, ecart Prevu/Realise,
+    // commentaire) - memes regles que WorkoutSetAdapter.
+    private View buildPanelExercise(WorkoutExercise exercise, HashSet<String> prKeys)
+    {
+        float density = getContext().getResources().getDisplayMetrics().density;
+
+        LinearLayout block = new LinearLayout(getContext());
+        block.setOrientation(LinearLayout.VERTICAL);
+        block.setPadding(0, (int) (6 * density), 0, (int) (6 * density));
+
+        LinearLayout titleRow = new LinearLayout(getContext());
+        titleRow.setOrientation(LinearLayout.HORIZONTAL);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        View dot = new View(getContext());
+        int dotSizePx = (int) (8 * density);
+        LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSizePx, dotSizePx);
+        dotParams.setMarginEnd((int) (6 * density));
+        dot.setLayoutParams(dotParams);
+        dot.setBackgroundResource(R.drawable.calendar_day_dot_shape);
+        String category = exercise.getSets().isEmpty() ? null : exercise.getSets().get(0).getCategory();
+        if(category != null)
+        {
+            ViewCompat.setBackgroundTintList(dot, ColorStateList.valueOf(CategoryColours.getColour(category)));
+        }
+        titleRow.addView(dot);
+
+        TextView name = new TextView(getContext());
+        name.setText(exercise.getExercise());
+        name.setTextSize(14);
+        name.setTypeface(null, Typeface.BOLD);
+        name.setTextColor(ContextCompat.getColor(getContext(), R.color.core_black));
+        titleRow.addView(name);
+
+        block.addView(titleRow);
+
+        TextView sets = new TextView(getContext());
+        sets.setTextSize(13);
+        sets.setTextColor(ContextCompat.getColor(getContext(), R.color.core_black));
+        sets.setText(buildSetsText(exercise, prKeys));
+        LinearLayout.LayoutParams setsParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        setsParams.setMarginStart(dotSizePx + (int) (6 * density));
+        setsParams.topMargin = (int) (2 * density);
+        sets.setLayoutParams(setsParams);
+        block.addView(sets);
+
+        return block;
+    }
+
+    private CharSequence buildSetsText(WorkoutExercise exercise, HashSet<String> prKeys)
+    {
+        SpannableStringBuilder builder = new SpannableStringBuilder();
+        for(WorkoutSet set : exercise.getSets())
+        {
+            if(builder.length() > 0)
+            {
+                builder.append(",  ");
+            }
+            builder.append(formatNumber(set.getWeight())).append("kg x").append(formatNumber(set.getReps()));
+
+            if(isPersonalRecord(set, prKeys))
+            {
+                appendIcon(builder, R.drawable.ic_emoji_events_24px, R.color.colorPrimary);
+            }
+            if(set.hasDiscrepancy())
+            {
+                appendIcon(builder, R.drawable.ic_error_outline_24px, R.color.red);
+            }
+            if(set.getComment() != null && !set.getComment().trim().isEmpty())
+            {
+                appendIcon(builder, R.drawable.ic_comment_24px, R.color.colorPrimary);
+            }
+        }
+        return builder;
+    }
+
+    // Meme regle que WorkoutSetAdapter.isPersonalRecord() : cle date#reps#poids, stable
+    // apres un cycle sauvegarde/chargement (voir DataStorage.repRangePRKey()).
+    private static boolean isPersonalRecord(WorkoutSet set, HashSet<String> prKeys)
+    {
+        if(set.getDate() == null || set.getReps() == null || set.getWeight() == null)
+        {
+            return false;
+        }
+        return prKeys.contains(DataStorage.repRangePRKey(set.getDate(), (int) Math.round(set.getReps()), set.getWeight()));
+    }
+
+    private void appendIcon(SpannableStringBuilder builder, int drawableRes, int colorRes)
+    {
+        Drawable icon = ContextCompat.getDrawable(getContext(), drawableRes);
+        if(icon == null)
+        {
+            return;
+        }
+        float density = getContext().getResources().getDisplayMetrics().density;
+        icon = DrawableCompat.wrap(icon.mutate());
+        DrawableCompat.setTint(icon, ContextCompat.getColor(getContext(), colorRes));
+        int sizePx = (int) (14 * density);
+        icon.setBounds(0, 0, sizePx, sizePx);
+
+        builder.append(" ");
+        int start = builder.length();
+        builder.append("#"); // remplace par l'image
+        builder.setSpan(new ImageSpan(icon, ImageSpan.ALIGN_BASELINE), start, start + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
     }
 
     private void updateFilterResults()
@@ -540,6 +816,7 @@ public class CalendarPickerDialog extends Dialog
             {
                 // Blank filler cell (previous/next month) - not clickable, nothing shown.
                 dayNumber.setText("");
+                dayNumber.setBackgroundResource(R.drawable.calendar_day_number_background);
                 dayNumber.setSelected(false);
                 for(View dot : dots)
                 {
@@ -556,6 +833,13 @@ public class CalendarPickerDialog extends Dialog
 
             boolean isSelected = dateKey.equals(selectedDateKey);
             dayNumber.setSelected(isSelected); // drives the circle background + text color
+
+            // Jour courant : anneau permanent tant qu'il n'est pas le jour selectionne (le
+            // cercle plein de la selection prend alors le dessus) - fonction Today, 21/09/2026.
+            boolean isToday = dateKey.equals(todayKey());
+            dayNumber.setBackgroundResource(isToday && !isSelected
+                    ? R.drawable.calendar_day_today_ring
+                    : R.drawable.calendar_day_number_background);
 
             List<Integer> colours = shouldShowDots(dateKey) ? dayCategoryColours.get(dateKey) : null;
             for(int i = 0; i < dots.length; i++)
@@ -594,6 +878,20 @@ public class CalendarPickerDialog extends Dialog
             }
             Collections.sort(dateKeys, Collections.reverseOrder());
             notifyDataSetChanged();
+        }
+
+        // Position de la premiere seance datee au plus tard a dateKey (liste triee du plus
+        // recent au plus ancien), ou de la derniere si toutes sont plus recentes.
+        int positionOnOrBefore(String dateKey)
+        {
+            for(int i = 0; i < dateKeys.size(); i++)
+            {
+                if(dateKeys.get(i).compareTo(dateKey) <= 0)
+                {
+                    return i;
+                }
+            }
+            return Math.max(0, dateKeys.size() - 1);
         }
 
         @NonNull

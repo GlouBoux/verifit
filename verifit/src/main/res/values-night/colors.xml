@@ -45,6 +45,7 @@
          (Rest Timer, Set Calculator, cartes Goals) : #282828 a #2c2c2c de facon
          constante. Valeur ajustee sur #2c2c2c (milieu de la fourchette mesuree). -->
     <color name="core_white">#2c2c2c</color>
+    <color name="calendar_day_selected_text">#1a1a1a</color>
     <!-- Texte principal sur fond sombre (remplace le texte noir). -->
     <color name="core_black">#e8e8e8</color>
 
