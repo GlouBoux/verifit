@@ -18,6 +18,7 @@ import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.verifit.R;
+import com.example.verifit.SetCommentSheet;
 import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.ui.AddExerciseActivity;
 import com.example.verifit.ui.MainActivity;
@@ -243,10 +244,19 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         // workout_set_row.xml donc même id set_comment_indicator) - or Romain en a
         // besoin ici aussi. Un tap dessus ouvre/édite le commentaire, même mécanique
         // que WorkoutSetAdapter.showSetCommentDialog().
-        String comment = Workout_Sets.get(position).getComment();
-        holder.commentIndicator.setVisibility(
-            (comment != null && !comment.trim().isEmpty()) ? View.VISIBLE : View.GONE
-        );
+        //
+        // Retour Romain 21/09/2026 : deux etats (bleu = note perso, gris = plan du script
+        // seul, voir SetCommentSheet.bindIndicator()), et l'icone est aussi affichee
+        // (en gris) sur la serie EN COURS D'EDITION meme sans aucun commentaire : c'est
+        // le point d'entree pour ajouter une note a une serie qui n'en a pas (avant, il
+        // n'existait ici que "Comment" de la barre d'outils, qui ecrase le commentaire de
+        // TOUTES les series de l'exercice). Le tap sur la ligne entre bien en mode edition
+        // (editSet() -> notifyDataSetChanged()), ce qui rebind la ligne et fait apparaitre
+        // l'icone.
+        boolean editingThisSet = !selectionMode
+                && AddExerciseActivity.isEditMode
+                && AddExerciseActivity.Clicked_Set == position;
+        SetCommentSheet.bindIndicator(ct, holder.commentIndicator, Workout_Sets.get(position), editingThisSet);
         holder.commentIndicator.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -374,61 +384,23 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
 
     }
 
-    // Ouvre un petit dialogue pour voir/éditer/effacer le commentaire d'une série
-    // précise - copie de WorkoutSetAdapter.showSetCommentDialog() (même dialogue
-    // add_exercise_comment_dialog.xml), adaptée à cet adapter qui n'avait jusqu'ici
-    // aucune notion de commentaire par série (retour Romain 05/09/2026).
-    public void showSetCommentDialog(int position)
+    // Ouvre le panneau de commentaire d'une série précise (SetCommentSheet : bloc "Plan"
+    // du script en lecture seule + champ multiligne "My note"). Avant le 21/09/2026 :
+    // copie du dialogue de WorkoutSetAdapter (add_exercise_comment_dialog.xml), retour
+    // Romain 05/09/2026 - les deux adapters partagent désormais le même helper.
+    public void showSetCommentDialog(final int position)
     {
         if(position < 0 || position >= Workout_Sets.size())
         {
             return;
         }
 
-        LayoutInflater inflater = LayoutInflater.from(ct);
-        View view = inflater.inflate(R.layout.add_exercise_comment_dialog, null);
-        AlertDialog alertDialog = new AlertDialog.Builder(ct).setView(view).create();
-
-        TextView title = view.findViewById(R.id.tv_date);
-        EditText commentInput = view.findViewById(R.id.et_exercise_comment);
-        MaterialButton saveButton = view.findViewById(R.id.bt_save_comment);
-        MaterialButton clearButton = view.findViewById(R.id.bt_clear_comment);
-
-        title.setText("Set comment");
-
-        String existingComment = Workout_Sets.get(position).getComment();
-        if(existingComment != null && !existingComment.equals("null"))
-        {
-            commentInput.setText(existingComment);
-        }
-
-        clearButton.setOnClickListener(new View.OnClickListener() {
+        SetCommentSheet.show(ct, Workout_Sets.get(position), new SetCommentSheet.OnSavedListener() {
             @Override
-            public void onClick(View v) {
-                commentInput.setText("");
-            }
-        });
-
-        saveButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String newComment = commentInput.getText().toString();
-
-                Workout_Sets.get(position).setComment(newComment);
-
-                MainActivity.autoBackupRequired = true;
-                com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(ct);
-                sharedPreferences.save("true", "autoBackupRequired");
-
-                MainActivity.dataStorage.saveWorkoutData(ct);
-
+            public void onSaved() {
                 notifyItemChanged(position);
-                Toast.makeText(ct, "Comment saved", Toast.LENGTH_SHORT).show();
-                alertDialog.dismiss();
             }
         });
-
-        alertDialog.show();
     }
 
     // Detail "Prevu / Realise" (retour Romain 06/09/2026) - copie de

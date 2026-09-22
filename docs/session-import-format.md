@@ -47,7 +47,7 @@ inside the app.
 | `exercises[].comment` | no | Per-exercise comment (e.g. machine settings), stored once per exercise for that day, same as the existing "add exercise" screen. |
 | `exercises[].sets[].weight` | **yes** | kg, numeric. |
 | `exercises[].sets[].reps` | **yes** | numeric. |
-| `exercises[].sets[].comment` | no | Per-set comment. |
+| `exercises[].sets[].comment` | no | Per-set **plan** text (typically the generator's analysis, e.g. `S1 Ancrage — nouveau PR estimé +4.5 kg (+9.9 %) vs 45.5 kg — théorique 50.1 kg — filet 2 reps`). Since 2026-09-21 it is stored in the set's separate, read-only `planComment` field (shown in the "Plan" block of the set comment panel, one ` — ` segment per line) and **never** in the user's own note (`comment`, the "My note" block). Keep this text format stable: `pr_tracking.py` (Coaching repo) parses it with ` — ` / `vs X kg` / `théorique X kg` / `filet N`, and skips sets whose comment is exactly `Échauffement`. |
 
 An exercise entry with no valid sets, or a set missing `weight`/`reps`, is skipped rather
 than failing the whole import — the app reports how many sets were imported/skipped in a

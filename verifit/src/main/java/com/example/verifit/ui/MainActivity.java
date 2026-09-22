@@ -33,6 +33,7 @@ import com.example.verifit.BackupService;
 import com.example.verifit.DataStorage;
 import com.example.verifit.LoadingDialog;
 import com.example.verifit.R;
+import com.example.verifit.SessionImporter;
 import com.example.verifit.SnackBarWithMessage;
 import com.example.verifit.WorkoutReportGenerator;
 import com.example.verifit.model.WorkoutExercise;
@@ -72,6 +73,11 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     public static Boolean inAddExerciseActivity = false;
     public static WebdavAdapter webdavAdapter;
     public static final int READ_REQUEST_CODE = 42;
+    // Request code for the "Import Session" file picker (see fileSearchImportSession()),
+    // meme mecanique que DayActivity.IMPORT_SESSION_REQUEST_CODE mais sa propre valeur -
+    // les deux ecrans sont des Activity separees, pas de conflit possible, mais autant
+    // eviter la confusion en cas de lecture croisee du code.
+    public static final int IMPORT_SESSION_REQUEST_CODE = 78;
     public static String EXPORT_FILENAME = "verifit_backup";
 
     public FloatingActionButton fab;
@@ -450,6 +456,19 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         startActivityForResult(intent,READ_REQUEST_CODE);
     }
 
+    // Opens the system file picker so the user can pick a JSON file describing a
+    // session (see docs/session-import-format.md), same mecanique que
+    // DayActivity.fileSearchImportSession() mais depuis l'onglet Workout (accueil).
+    // "*/*" plutot que "application/json" - certains file providers ne rapportent pas
+    // .json sous ce mime type exact et seraient filtres du picker.
+    public void fileSearchImportSession()
+    {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        startActivityForResult(intent, IMPORT_SESSION_REQUEST_CODE);
+    }
+
     // When File explorer stops this function runs
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data)
@@ -468,7 +487,68 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
                         initViewPager();
                     }
                 }
+                else if (requestCode == IMPORT_SESSION_REQUEST_CODE)
+                {
+                    onImportSessionResult(uri);
+                }
             }
+        }
+    }
+
+    // Traite le fichier JSON choisi par fileSearchImportSession() - meme logique que
+    // DayActivity.onActivityResult() pour IMPORT_SESSION_REQUEST_CODE, mais utilise
+    // dateSelected (le jour actuellement affiche dans le carrousel) au lieu de
+    // date_clicked, et rafraichit via initViewPager() (qui preserve la position
+    // courante, voir son commentaire) plutot que initActivity().
+    private void onImportSessionResult(Uri uri)
+    {
+        if (uri == null)
+        {
+            return;
+        }
+
+        SessionImporter.Result result;
+        try
+        {
+            result = SessionImporter.importFromUri(uri, this, dataStorage, dateSelected);
+        }
+        catch (Exception e)
+        {
+            // Belt-and-suspenders: SessionImporter already catches the JSON parsing
+            // failures we know about, but this is fed by an external file the user
+            // picked (typically from a workout-generator script), so an unexpected
+            // shape should show an error toast instead of crashing the app.
+            Toast.makeText(this, "Import failed: " + e.toString(), Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        if (result.success)
+        {
+            DataStorage.ImportSummary summary = result.summary;
+            String message = summary.setsImported + " set(s) imported into " + summary.date;
+            if (summary.exercisesCreated > 0)
+            {
+                message += " (" + summary.exercisesCreated + " new exercise(s) created)";
+            }
+            if (summary.setsSkipped > 0)
+            {
+                message += " - " + summary.setsSkipped + " incomplete set(s) skipped";
+            }
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+
+            // Unlike DayActivity (a single fixed day), the carousel's current page is
+            // tracked by position, not by date - dateSelected is only kept in sync via
+            // the onPageScrolled callback in initViewPager(). The JSON file is allowed
+            // to carry its own "date" (session-import-format.md), so if it differs from
+            // the day currently shown, the toast above says which date actually
+            // received the import; jumping the carousel there automatically is left for
+            // later if this turns out to matter in practice. initViewPager() here only
+            // refreshes the data - it already preserves whatever page is showing.
+            initViewPager();
+        }
+        else
+        {
+            Toast.makeText(this, "Import failed: " + result.errorMessage, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -535,6 +615,10 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         {
             Intent in = new Intent(this,SettingsActivity.class);
             startActivity(in);
+        }
+        else if(item.getItemId() == R.id.import_session)
+        {
+            fileSearchImportSession();
         }
         else if(item.getItemId() == R.id.select_exercises)
         {

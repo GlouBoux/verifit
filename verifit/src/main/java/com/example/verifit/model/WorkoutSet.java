@@ -9,7 +9,23 @@ public class WorkoutSet {
     private String category;
     private Double reps;
     private Double weight;
+    // "Ma note" : le commentaire que Romain ecrit lui-meme (ou qui vient d'un backup
+    // FitNotes migre). Ne contient plus le texte d'analyse du script generateur depuis
+    // l'ajout de planComment ci-dessous.
     private String comment;
+
+    // "Plan" (retour Romain 21/09/2026, voir claude/verifit-commentaires-serie-
+    // propositions.md) : le commentaire pre-rempli par le script generateur
+    // (workout_engine.py, ex. "S1 Ancrage - nouveau PR estime +4.5 kg ... - filet 2
+    // reps"). Renseigne UNIQUEMENT par DataStorage.mergeImportedSession() a partir du
+    // champ "comment" du JSON d'Import Session (contrat JSON inchange : pr_tracking.py
+    // cote Coaching relit ce texte tel quel), lecture seule dans l'app - jamais
+    // modifie par l'utilisateur, donc jamais melange a sa propre note. Reste null pour
+    // toute serie sans plan (saisie manuelle, import CSV historique, series importees
+    // avant l'ajout de ce champ : leur texte de script reste dans "comment", decision
+    // Romain 21/09/2026 "laisser tel quel"). Gson retombe sur null pour les series
+    // deja sauvegardees sur disque.
+    private String planComment;
 
     private int user_id;
 
@@ -103,6 +119,7 @@ public class WorkoutSet {
         this.weight = Weight;
     }
     public void setComment(String Comment){this.comment = Comment;}
+    public void setPlanComment(String PlanComment) {this.planComment = PlanComment;}
     public void setId(int id) {this.id = id;}
     public void setUser_id(int user_id) {this.user_id = user_id;}
     public void setPlannedReps(Double PlannedReps) {this.plannedReps = PlannedReps;}
@@ -133,6 +150,8 @@ public class WorkoutSet {
         return this.weight;
     }
     public String getComment() {return this.comment;}
+    // Jamais null (voir le commentaire du champ planComment).
+    public String getPlanComment() {return this.planComment == null ? "" : this.planComment;}
     public int getUser_id() {return user_id;}
     public int getId() {return id;}
     public Double getPlannedReps() {return this.plannedReps;}
@@ -148,6 +167,20 @@ public class WorkoutSet {
         return this.timestamp != null;
     }
 
+
+    // Vrai si la serie a un plan du script (planComment non vide).
+    public boolean hasPlanComment()
+    {
+        return !getPlanComment().trim().isEmpty();
+    }
+
+    // Vrai si la serie a une note perso (comment non vide). Tient compte de la chaine
+    // "null" que d'anciennes sauvegardes/exports ont pu ecrire a la place d'un vrai
+    // null (meme garde que WorkoutReportGenerator.formatSetLine()).
+    public boolean hasNote()
+    {
+        return this.comment != null && !this.comment.trim().isEmpty() && !this.comment.equals("null");
+    }
 
     // Other
     public Double getVolume()

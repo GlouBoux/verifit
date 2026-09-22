@@ -278,6 +278,10 @@ public class DataStorage {
         for (WorkoutSet set : setsToCopy)
         {
             WorkoutSet copy = new WorkoutSet(destinationDate, set.getExerciseName(), set.getCategory(), set.getReps(), set.getWeight(), set.getComment());
+            // Le plan du script suit la copie, comme le faisait avant lui le commentaire
+            // unique (sinon "Copy Workout" ferait disparaitre le texte d'analyse d'une
+            // seance importee, alors qu'il etait recopie jusqu'ici).
+            copy.setPlanComment(set.getPlanComment());
             destinationDay.addSet(copy);
         }
 
@@ -375,8 +379,20 @@ public class DataStorage {
                 isCompleted = Boolean.parseBoolean(row[6]);
             }
 
+            // Colonne "Plan Comment" (8e, retour Romain 21/09/2026 - commentaires "plan"
+            // du script separes de la note perso, voir WorkoutSet.planComment) : absente
+            // d'un CSV genere avant cet ajout (7 colonnes ou moins) - reste vide, aucune
+            // valeur inventee. Ecrite par writeFile() ci-dessous, qui remplace virgules
+            // et retours a la ligne dans les commentaires (ce lecteur decoupe sur ",").
+            String PlanComment = "";
+            if(row.length >= 8)
+            {
+                PlanComment = row[7];
+            }
+
             WorkoutSet workoutSet = new WorkoutSet(Date,Exercise,Category,Double.parseDouble(Weight),Double.parseDouble(Reps),Comment);
             workoutSet.setCompleted(isCompleted);
+            workoutSet.setPlanComment(PlanComment);
             sets.add(workoutSet);
         }
     }
@@ -916,6 +932,23 @@ public class DataStorage {
         }
     }
 
+    // Rend un commentaire ecrivable dans une cellule du CSV de backup. Le lecteur
+    // (CSVFile.read()) decoupe naivement chaque ligne sur "," et ne gere ni guillemets ni
+    // retours a la ligne : une virgule decalerait toutes les colonnes suivantes (Is
+    // Completed, Plan Comment) et un retour a la ligne couperait la ligne en deux. Le
+    // champ "My note" de l'app est multiligne depuis le 21/09/2026, donc le cas n'est
+    // plus theorique : virgule -> ";" et retour a la ligne -> " / " (sauvegarde
+    // legerement modifiee dans ces deux cas, mais lisible et sans jamais corrompre les
+    // autres colonnes ; le stockage interne de l'app - Gson - garde le texte exact).
+    private static String csvSafe(String text)
+    {
+        if (text == null || text.equals("null"))
+        {
+            return "";
+        }
+        return text.replace("\r\n", " / ").replace("\n", " / ").replace("\r", " / ").replace(",", ";");
+    }
+
     // Export backup function using Storage Access Framework
     public void writeFile(Context context)
     {
@@ -942,13 +975,25 @@ public class DataStorage {
             // 7e colonne "Is Completed" (Mark Sets Complete, retour Romain 17/09/2026) -
             // voir csvToSets() ci-dessus, qui la lit en retombant sur false si absente
             // (retro-compatibilite avec un CSV genere avant cet ajout).
-            outputStream.write("Date,Exercise,Category,Weight (kg),Reps,Comment,Is Completed\n".getBytes());
+            //
+            // 8e colonne "Plan Comment" (retour Romain 21/09/2026, voir
+            // WorkoutSet.planComment) : le texte pre-rempli par le script generateur,
+            // separe de la note perso ("Comment"). Toujours en DERNIERE colonne : les
+            // colonnes "prevu" (correctif A de verifit-uat-retours-2026-09-21.md) viendront
+            // s'ajouter apres, sans decaler celles-ci.
+            //
+            // La colonne "Comment" contient desormais le commentaire PROPRE de chaque
+            // serie. Elle contenait jusqu'ici celui de l'EXERCICE (WorkoutExercise.
+            // getComment(), copie du commentaire de la derniere serie de l'exercice ce
+            // jour-la, voir WorkoutDay.UpdateData()) : un backup CSV ecrasait donc les
+            // commentaires individuels de toutes les series d'un exercice par celui de la
+            // derniere a la restauration.
+            outputStream.write("Date,Exercise,Category,Weight (kg),Reps,Comment,Is Completed,Plan Comment\n".getBytes());
 
             for(int i = 0; i < workoutDays.size(); i++)
             {
                 for(int j = 0; j < workoutDays.get(i).getExercises().size(); j++)
                 {
-                    String exerciseComment = workoutDays.get(i).getExercises().get(j).getComment();
                     for(int k = 0; k < workoutDays.get(i).getExercises().get(j).getSets().size(); k++)
                     {
                         String Date = workoutDays.get(i).getExercises().get(j).getDate();
@@ -957,7 +1002,9 @@ public class DataStorage {
                         Double Weight = workoutDays.get(i).getExercises().get(j).getSets().get(k).getWeight();
                         Double Reps = workoutDays.get(i).getExercises().get(j).getSets().get(k).getReps();
                         boolean isCompleted = workoutDays.get(i).getExercises().get(j).getSets().get(k).isCompleted();
-                        outputStream.write((Date + "," + exerciseName+ "," + exerciseCategory + "," + Weight + "," + Reps + "," + exerciseComment + "," + isCompleted + "\n").getBytes());
+                        String setComment = csvSafe(workoutDays.get(i).getExercises().get(j).getSets().get(k).getComment());
+                        String setPlanComment = csvSafe(workoutDays.get(i).getExercises().get(j).getSets().get(k).getPlanComment());
+                        outputStream.write((Date + "," + exerciseName+ "," + exerciseCategory + "," + Weight + "," + Reps + "," + setComment + "," + isCompleted + "," + setPlanComment + "\n").getBytes());
                     }
                 }
             }
@@ -1499,7 +1546,13 @@ public class DataStorage {
                     continue;
                 }
 
-                WorkoutSet workoutSet = new WorkoutSet(date, exerciseName, bodyPart, importedSet.getReps(), importedSet.getWeight(), importedSet.getComment());
+                // Le "comment" du JSON (texte d'analyse du script generateur) va dans le
+                // champ "plan" de la serie, PAS dans sa note perso (retour Romain
+                // 21/09/2026 - voir WorkoutSet.planComment) : le contrat JSON reste
+                // inchange, le script n'a pas a changer (pr_tracking.py relit ce meme
+                // texte depuis le plan sauvegarde cote Coaching).
+                WorkoutSet workoutSet = new WorkoutSet(date, exerciseName, bodyPart, importedSet.getReps(), importedSet.getWeight());
+                workoutSet.setPlanComment(importedSet.getComment());
 
                 // "Prevu" (Ecarts Prevu/Realise, retour Romain 06/09/2026) : on fige ici
                 // les valeurs telles qu'importees. reps/weight ci-dessus restent le

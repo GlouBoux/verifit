@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fond du panneau "Set comment" (SetCommentSheet, retour Romain 21/09/2026) : coins
+     arrondis en haut uniquement, couleur de surface des dialogues de l'app (core_white
+     = #ffffff en clair, #2c2c2c en sombre, voir values/ et values-night/colors.xml).
+     Le conteneur natif du BottomSheetDialog est rendu transparent cote code pour que ce
+     fond soit celui qui apparait, et non colorSurface du theme Material. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/core_white" />
+    <corners
+        android:topLeftRadius="16dp"
+        android:topRightRadius="16dp" />
+</shape>

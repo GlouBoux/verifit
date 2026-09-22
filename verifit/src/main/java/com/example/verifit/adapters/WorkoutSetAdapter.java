@@ -14,6 +14,7 @@ import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.verifit.R;
+import com.example.verifit.SetCommentSheet;
 import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.ui.MainActivity;
 import com.google.android.material.button.MaterialButton;
@@ -98,12 +99,11 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
         // cote DayExerciseAdapter, donc toujours a jour.
         holder.tv_set_number.setText(String.valueOf(position + 1));
 
-        // Small indicator so a set with its own comment is visible at a glance,
-        // without having to open it - useful for reviewing imported data too.
-        String comment = Workout_Sets.get(position).getComment();
-        holder.commentIndicator.setVisibility(
-            (comment != null && !comment.trim().isEmpty()) ? View.VISIBLE : View.GONE
-        );
+        // Small indicator so a set with a comment is visible at a glance, without
+        // having to open it - useful for reviewing imported data too. Deux etats
+        // (retour Romain 21/09/2026) : bleu = une note perso, gris = plan du script
+        // seul - voir SetCommentSheet.bindIndicator().
+        SetCommentSheet.bindIndicator(ct, holder.commentIndicator, Workout_Sets.get(position), false);
 
         // Badge discret "Ecart Prevu/Realise" (retour Romain 06/09/2026) : visible
         // uniquement pour une serie importee dont le realise actuel differe de la
@@ -167,62 +167,23 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
 
     }
 
-    // Opens a small dialog to view/edit/clear the comment of one specific set. Reuses
-    // add_exercise_comment_dialog.xml (title + EditText + Save/Clear buttons) - same
-    // shape as the existing exercise-level comment dialog, just scoped to one set.
-    public void showSetCommentDialog(int position)
+    // Opens the comment panel of one specific set (retour Romain 21/09/2026 : le petit
+    // dialogue a une seule ligne qui defilait est remplace par SetCommentSheet - bloc
+    // "Plan" du script en lecture seule + champ multiligne "My note"). Le nom de la
+    // methode est conserve : c'est le meme point d'entree (tap sur la carte).
+    public void showSetCommentDialog(final int position)
     {
         if(position < 0 || position >= Workout_Sets.size())
         {
             return;
         }
 
-        LayoutInflater inflater = LayoutInflater.from(ct);
-        View view = inflater.inflate(R.layout.add_exercise_comment_dialog, null);
-        AlertDialog alertDialog = new AlertDialog.Builder(ct).setView(view).create();
-
-        TextView title = view.findViewById(R.id.tv_date);
-        EditText commentInput = view.findViewById(R.id.et_exercise_comment);
-        MaterialButton saveButton = view.findViewById(R.id.bt_save_comment);
-        MaterialButton clearButton = view.findViewById(R.id.bt_clear_comment);
-
-        title.setText("Set comment");
-
-        String existingComment = Workout_Sets.get(position).getComment();
-        if(existingComment != null && !existingComment.equals("null"))
-        {
-            commentInput.setText(existingComment);
-        }
-
-        clearButton.setOnClickListener(new View.OnClickListener() {
+        SetCommentSheet.show(ct, Workout_Sets.get(position), new SetCommentSheet.OnSavedListener() {
             @Override
-            public void onClick(View v) {
-                commentInput.setText("");
-            }
-        });
-
-        saveButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String newComment = commentInput.getText().toString();
-
-                Workout_Sets.get(position).setComment(newComment);
-
-                // Let the backup service know something changed, same as every other
-                // mutation in the app.
-                MainActivity.autoBackupRequired = true;
-                com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(ct);
-                sharedPreferences.save("true", "autoBackupRequired");
-
-                MainActivity.dataStorage.saveWorkoutData(ct);
-
+            public void onSaved() {
                 notifyItemChanged(position);
-                Toast.makeText(ct, "Comment saved", Toast.LENGTH_SHORT).show();
-                alertDialog.dismiss();
             }
         });
-
-        alertDialog.show();
     }
 
     // Detail "Prevu / Realise" d'une serie importee dont le realise a change depuis

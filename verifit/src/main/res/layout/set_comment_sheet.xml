@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Panneau (bottom sheet) "Set comment" - remplace le dialogue add_exercise_comment_dialog
+     pour les commentaires PAR SERIE (retour Romain 21/09/2026, voir
+     claude/verifit-commentaires-serie-propositions.md). add_exercise_comment_dialog.xml
+     reste en place : il sert toujours au commentaire d'EXERCICE (AddExerciseActivity,
+     action "Comment" de la barre d'outils).
+
+     Deux blocs separes :
+     - "Plan" : le texte du script generateur (WorkoutSet.planComment), lecture seule,
+       pleine largeur, retour a la ligne automatique (un segment par ligne), selectionnable.
+       Masque (avec son separateur) quand la serie n'a pas de plan.
+     - "My note" : le champ multiligne de la note perso (WorkoutSet.comment).
+     Racine en NestedScrollView : un plan long + le clavier ouvert ne doivent jamais
+     masquer les boutons Save/Clear. -->
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/set_comment_sheet_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/tv_sheet_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Set comment"
+            android:textColor="@color/colorPrimary"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tv_sheet_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/core_grey_40"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tv_plan_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="PLAN"
+            android:textColor="@color/core_grey_40"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_plan_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:lineSpacingExtra="3dp"
+            android:textColor="@color/core_black"
+            android:textIsSelectable="true"
+            android:textSize="16sp" />
+
+        <View
+            android:id="@+id/v_plan_divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:background="@color/core_grey_10" />
+
+        <TextView
+            android:id="@+id/tv_note_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="MY NOTE"
+            android:textColor="@color/core_grey_40"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/et_set_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="top|start"
+            android:hint="Write a note..."
+            android:inputType="textMultiLine|textCapSentences"
+            android:maxLines="8"
+            android:minLines="3"
+            android:textColor="@color/core_black"
+            android:textColorHint="@color/core_grey_40"
+            android:textSize="16sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="end"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/bt_clear_set_note"
+                style="@style/Widget.Verifit.Button.Flat"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Clear"
+                android:textAllCaps="false"
+                android:textColor="@color/colorPrimary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/bt_save_set_note"
+                style="@style/Widget.Verifit.Button.Flat"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginLeft="8dp"
+                android:text="Save"
+                android:textAllCaps="false"
+                android:textColor="@color/colorPrimary" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

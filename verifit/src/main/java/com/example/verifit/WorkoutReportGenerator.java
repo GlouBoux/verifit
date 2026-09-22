@@ -167,8 +167,29 @@ public class WorkoutReportGenerator
         StringBuilder line = new StringBuilder("- ").append(weight).append(" kgs x ").append(reps).append(" reps");
 
         boolean isPR = prSets.contains(set);
-        String comment = set.getComment();
-        boolean hasComment = comment != null && !comment.trim().isEmpty() && !comment.equals("null");
+
+        // Plan du script (WorkoutSet.planComment) ET note perso (WorkoutSet.comment) -
+        // retour Romain 21/09/2026, "les deux". Le plan d'abord, tel quel ; la note a la
+        // suite, prefixee "Note : " UNIQUEMENT quand les deux sont presents (pour ne pas
+        // la confondre avec un segment du plan, lui-meme separe par " — "). Seule la
+        // note, ou seul le plan : rendu identique a l'ancien commentaire unique, donc
+        // aucun changement pour les series sans plan (saisie manuelle, anciennes donnees
+        // dont le texte du script est deja dans "comment"). Les retours a la ligne de la
+        // note multiligne sont aplatis : une serie doit rester sur UNE ligne de la liste
+        // "- 40.0 kgs x 4 reps [...]".
+        String plan = set.hasPlanComment() ? flattenLines(set.getPlanComment()) : "";
+        String note = set.hasNote() ? flattenLines(set.getComment()) : "";
+
+        String annotation;
+        if (!plan.isEmpty() && !note.isEmpty())
+        {
+            annotation = plan + " — Note : " + note;
+        }
+        else
+        {
+            annotation = plan.isEmpty() ? note : plan;
+        }
+        boolean hasComment = !annotation.isEmpty();
 
         if (isPR || hasComment)
         {
@@ -183,11 +204,18 @@ public class WorkoutReportGenerator
             }
             if (hasComment)
             {
-                line.append(comment);
+                line.append(annotation);
             }
             line.append("]");
         }
 
         return line.toString();
+    }
+
+    // Aplatit les retours a la ligne d'un commentaire en " / " et retire les espaces de
+    // bord.
+    private static String flattenLines(String text)
+    {
+        return text.trim().replace("\r\n", " / ").replace("\n", " / ").replace("\r", " / ");
     }
 }
