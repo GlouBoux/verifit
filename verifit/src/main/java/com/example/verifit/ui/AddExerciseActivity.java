@@ -50,6 +50,7 @@ import android.widget.Toast;
 import com.example.verifit.KeyboardHider;
 import com.example.verifit.LoadingDialog;
 import com.example.verifit.MonthXAxisFormatter;
+import com.example.verifit.RestTimerBarTicker;
 import com.example.verifit.RestTimerReceiver;
 import com.example.verifit.SessionTimerTicker;
 import com.example.verifit.SnackBarWithMessage;
@@ -155,6 +156,18 @@ public class AddExerciseActivity extends AppCompatActivity {
     private TextView tv_session_timer;
     private SessionTimerTicker sessionTimerTicker;
 
+    // Barre persistante du minuteur de REPOS (retour Romain 24/09/2026 : "je veux voir
+    // le temps restant avant de repartir [...] si je n'ai pas entendu le timer MAIS que
+    // je vois le temps restant c'est ok. Si je n'ai rien entendu MAIS que je ne vois
+    // plus le temps restant alors je peux y retourner.") - distincte du chrono de
+    // SEANCE ci-dessus. S'appuie sur RestTimerReceiver.persistEndTimestamp() plutot que
+    // sur countDownTimer/TimeLeftInMillis (attaches au cycle de vie de cette Activity,
+    // donc perdus en changeant d'exercice via le volet de navigation - voir
+    // RestTimerBarTicker pour le detail).
+    private View restTimerBarContainer;
+    private TextView tvRestTimerBar;
+    private RestTimerBarTicker restTimerBarTicker;
+
     // Chrono dedie a la Duration DANS le dialogue "Workout Time" (retour Romain
     // 07/09/2026, voir showWorkoutTimeDialog()) - independant de sessionTimerTicker
     // ci-dessus (barre persistante) : demarre a l'ouverture du dialogue, arrete a sa
@@ -246,6 +259,19 @@ public class AddExerciseActivity extends AppCompatActivity {
         tv_session_timer = findViewById(R.id.tv_session_timer);
         sessionTimerTicker = new SessionTimerTicker(tv_session_timer);
 
+        // Barre persistante du minuteur de repos (voir le commentaire sur le champ
+        // restTimerBarTicker plus haut) - masquee par defaut (activity_add_exercise.xml,
+        // android:visibility="gone"), affichee/rafraichie par onResume() ci-dessous et a
+        // chaque changement d'etat du minuteur (startTimer()/pauseTimer()/resetTimer()).
+        restTimerBarContainer = findViewById(R.id.rest_timer_bar);
+        tvRestTimerBar = findViewById(R.id.tv_rest_timer_bar);
+        restTimerBarTicker = new RestTimerBarTicker(this, restTimerBarContainer, tvRestTimerBar);
+
+        // Retour Romain 24/09/2026 : "je veux que ca ouvre l'ecran du rest timer si je
+        // clique dessus [...] c'est comme si j'avais clique sur l'icone" - meme
+        // dialogue que l'icone "Timer" de la barre d'outils (menu "...", R.id.timer).
+        restTimerBarContainer.setOnClickListener(v -> setupTimer());
+
         // Dialogue complet "Workout Time" (retour Romain 07/09/2026, apres captures
         // FitNotes fournies) : ouvert en tapant la barre, seul point d'entree pour
         // Stop/Resume depuis que la barre a perdu son propre bouton (voir
@@ -292,6 +318,12 @@ public class AddExerciseActivity extends AppCompatActivity {
         refreshSessionTimerBar();
         sessionTimerTicker.start();
 
+        // Barre du minuteur de repos : relit l'instant de fin persiste (peut avoir ete
+        // demarre/arrete depuis un autre exercice via le volet de navigation - voir
+        // RestTimerBarTicker) et reprend le defilement de l'affichage.
+        restTimerBarTicker.refresh();
+        restTimerBarTicker.start();
+
         // Volet de navigation : le nombre de series par exercice (et l'exercice
         // courant surligne) a pu changer entre-temps (retour d'un autre ecran).
         refreshNavPanel();
@@ -303,6 +335,7 @@ public class AddExerciseActivity extends AppCompatActivity {
         // Chrono de session : plus la peine de faire defiler un affichage qui n'est plus
         // visible - la valeur reelle reste sur WorkoutDay, pas sur ce Handler.
         sessionTimerTicker.stop();
+        restTimerBarTicker.stop();
     }
 
     // Retour Romain 18/09/2026 (implicite, comportement standard d'un volet de
@@ -756,6 +789,21 @@ public class AddExerciseActivity extends AppCompatActivity {
         tvNavPanelHeader = findViewById(R.id.tv_nav_panel_header);
         recyclerViewNavPanel = findViewById(R.id.recycler_view_nav_panel);
         recyclerViewNavPanel.setLayoutManager(new LinearLayoutManager(this));
+
+        // Retour Romain 24/09/2026 : "je dois slide 3/4 fois pour arriver a ouvrir le
+        // volet" - le bouton hamburger de la toolbar (cense ouvrir le volet au tap,
+        // cf commentaire plus haut) ne s'affichait en fait jamais. Cause : l'icone
+        // dessinee par ActionBarDrawerToggle se pose dans le slot "home" de
+        // l'ActionBar, qui reste invisible tant que setDisplayHomeAsUpEnabled()/
+        // setHomeButtonEnabled() n'ont jamais ete appeles sur cette Activity (jamais
+        // le cas ici avant ce correctif) - seul le swipe depuis le bord gauche
+        // (comportement natif du DrawerLayout) fonctionnait donc, d'ou la difficulte
+        // rapportee.
+        if (getSupportActionBar() != null)
+        {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setHomeButtonEnabled(true);
+        }
 
         navPanelDrawerToggle = new ActionBarDrawerToggle(
                 this, drawerLayout, R.string.nav_panel_open, R.string.nav_panel_close);
@@ -2578,6 +2626,9 @@ public class AddExerciseActivity extends AppCompatActivity {
         });
 
         // Minus Button
+        // Retour Romain 24/09/2026 : increment de 10s au lieu de 1s (trop lent a
+        // ajuster pour un temps de repos, qui se regle typiquement par paliers de
+        // 10-30s) - meme logique, juste le pas qui change.
         minus_seconds.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -2586,7 +2637,7 @@ public class AddExerciseActivity extends AppCompatActivity {
                 if(!et_seconds.getText().toString().isEmpty())
                 {
                     Double seconds  = Double.parseDouble(et_seconds.getText().toString());
-                    seconds = seconds - 1;
+                    seconds = seconds - 10;
                     if(seconds < 0)
                     {
                         seconds = 0.0;
@@ -2606,7 +2657,7 @@ public class AddExerciseActivity extends AppCompatActivity {
                 if(!et_seconds.getText().toString().isEmpty())
                 {
                     Double seconds  = Double.parseDouble(et_seconds.getText().toString());
-                    seconds = seconds + 1;
+                    seconds = seconds + 10;
                     if(seconds < 0)
                     {
                         seconds = 0.0;
@@ -2757,16 +2808,43 @@ public class AddExerciseActivity extends AppCompatActivity {
                 // fiable vient de l'alarme systeme programmee ci-dessous par
                 // scheduleTimerAlarm(), qui se declenche independamment (voir son
                 // commentaire), meme si ce CountDownTimer a ete throttle/tue entre
-                // temps.
+                // temps. Cache aussi la barre persistante tout de suite (app restee au
+                // premier plan) plutot que d'attendre RestTimerReceiver.onReceive()
+                // (qui la nettoie de toute facon, y compris si l'app a ete tuee
+                // entre-temps).
                 TimerRunning = false;
                 updateTimerButtonsLabel();
+                RestTimerReceiver.clearPersistedEndTimestamp(AddExerciseActivity.this);
+                RestTimerReceiver.cancelOngoingNotification(AddExerciseActivity.this);
+                restTimerBarTicker.refresh();
             }
         }.start();
 
         TimerRunning = true;
         updateTimerButtonsLabel();
 
-        scheduleTimerAlarm();
+        // Meme instant de fin partage par l'alarme systeme (son fiable), la barre
+        // persistante a l'ecran (RestTimerBarTicker) et la notification en direct
+        // ci-dessous - une seule source, calculee une fois, pour eviter tout ecart
+        // entre les trois.
+        long endTimestamp = System.currentTimeMillis() + TimeLeftInMillis;
+
+        scheduleTimerAlarm(endTimestamp);
+
+        // Barre persistante (retour Romain 24/09/2026) : persiste l'instant de fin pour
+        // que RestTimerBarTicker le retrouve depuis n'importe quel ecran/redemarrage -
+        // voir le commentaire du champ restTimerBarTicker plus haut.
+        RestTimerReceiver.persistEndTimestamp(this, endTimestamp);
+        restTimerBarTicker.refresh();
+
+        // Retour Romain 24/09/2026 (captures de l'appli horloge OnePlus 13, decompte
+        // visible en permanence - barre de statut/ecran verrouille) : notification
+        // "en direct" avec chronometre natif Android (setUsesChronometer/
+        // setChronometerCountDown), silencieuse et non-glissable tant que le repos
+        // tourne - voir RestTimerReceiver.postOngoingNotification() pour le detail.
+        // Remplacee (meme id de notification) par l'alerte "Repos termine" habituelle
+        // quand l'alarme se declenche (RestTimerReceiver.onReceive()).
+        RestTimerReceiver.postOngoingNotification(this, endTimestamp);
     }
 
     // bt_start (bouton du dialogue "Timer" du menu) reste null tant que ce dialogue n'a
@@ -2788,7 +2866,7 @@ public class AddExerciseActivity extends AppCompatActivity {
     // (Android 12+) sans demarche supplementaire, car traite par le systeme comme une
     // vraie alarme (petite icone de reveil dans la barre de statut tant qu'elle est
     // programmee - comportement voulu, gage de fiabilite visible).
-    private void scheduleTimerAlarm()
+    private void scheduleTimerAlarm(long triggerAtMillis)
     {
         if (alarmManager == null)
         {
@@ -2812,8 +2890,6 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         try
         {
-            long triggerAtMillis = System.currentTimeMillis() + TimeLeftInMillis;
-
             int flags = PendingIntent.FLAG_UPDATE_CURRENT;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
             {
@@ -2958,6 +3034,13 @@ public class AddExerciseActivity extends AppCompatActivity {
         cancelTimerAlarm();
         TimerRunning = false;
         updateTimerButtonsLabel();
+
+        // Barre persistante + notification en direct (retour Romain 24/09/2026) : plus
+        // de minuteur en cours, cachees immediatement plutot que d'attendre le prochain
+        // tick/l'alarme.
+        RestTimerReceiver.clearPersistedEndTimestamp(this);
+        RestTimerReceiver.cancelOngoingNotification(this);
+        restTimerBarTicker.refresh();
     }
 
     // Retour Romain 06/09/2026 : "je dois pouvoir lui faire confiance" - Reset ne
@@ -2978,6 +3061,13 @@ public class AddExerciseActivity extends AppCompatActivity {
         {
             cancelTimerAlarm();
         }
+
+        // Barre persistante + notification (retour Romain 24/09/2026) : deja fait par
+        // pauseTimer() ci-dessus si le minuteur tournait - repete ici sans condition pour
+        // couvrir aussi le cas "jamais demarre"/"deja en pause". Sans effet si deja vide.
+        RestTimerReceiver.clearPersistedEndTimestamp(this);
+        RestTimerReceiver.cancelOngoingNotification(this);
+        restTimerBarTicker.refresh();
 
         TimeLeftInMillis = START_TIME_IN_MILLIS;
         updateCountDownText();

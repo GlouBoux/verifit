@@ -63,6 +63,16 @@ public class RestTimerReceiver extends BroadcastReceiver
     private static final String CHANNEL_ID = "rest_timer_channel_v3";
     private static final int NOTIFICATION_ID = 4242;
 
+    // Canal separe pour la notification "en direct" affichee PENDANT le repos (retour
+    // Romain 24/09/2026, captures de l'appli horloge OnePlus 13 : decompte toujours
+    // visible, ecran verrouille compris) - voir postOngoingNotification() plus bas.
+    // Importance LOW et sans son/vibration : c'est un indicateur silencieux, pas une
+    // alerte (l'alerte sonore existe deja a la fin du repos, sur CHANNEL_ID ci-dessus).
+    // Meme NOTIFICATION_ID que la notification de fin : postNotification() la
+    // remplace directement (notify() avec le meme id) au moment ou l'alarme se
+    // declenche, sans doublon dans le volet de notifications.
+    private static final String CHANNEL_ID_ONGOING = "rest_timer_ongoing_channel_v1";
+
     // Cle/valeur par defaut du volume du bip (0-100), partagees avec
     // AddExerciseActivity.setupTimer() (sb_volume) via les memes SharedPreferences que
     // la duree du minuteur ("seconds"). public : AddExerciseActivity vit dans le
@@ -80,6 +90,42 @@ public class RestTimerReceiver extends BroadcastReceiver
     public static final int MIN_DURATION_MS = 150;
     public static final int MAX_DURATION_MS = 2000;
 
+    // Instant de fin du minuteur en cours (epoch millis, 0 = aucun minuteur en cours) -
+    // retour Romain 24/09/2026 : "je veux voir le temps restant avant de repartir
+    // [...] si je n'ai pas entendu le timer MAIS que je vois le temps restant c'est ok.
+    // Si je n'ai rien entendu MAIS que je ne vois plus le temps restant alors je peux y
+    // retourner." Persiste ici (memes SharedPreferences que le reste du minuteur)
+    // plutot que dans un champ de AddExerciseActivity.countDownTimer/TimeLeftInMillis,
+    // qui sont perdus des que l'Activity est recreee - notamment en changeant
+    // d'exercice depuis le volet de navigation (architecture "relance d'ecran",
+    // finish()+startActivity()). RestTimerBarTicker (barre persistante sur l'ecran de
+    // saisie) relit cette valeur a chaque tick pour retrouver le bon temps restant,
+    // quel que soit l'ecran/le redemarrage d'app depuis lequel le minuteur a ete
+    // demarre.
+    public static final String END_TIMESTAMP_PREF_KEY = "rest_timer_end_timestamp";
+
+    // A appeler quand le minuteur demarre (AddExerciseActivity.startTimer()).
+    public static void persistEndTimestamp(Context context, long endTimestampMillis)
+    {
+        SharedPreferences sharedPreferences = context.getSharedPreferences("shared preferences", Context.MODE_PRIVATE);
+        sharedPreferences.edit().putLong(END_TIMESTAMP_PREF_KEY, endTimestampMillis).apply();
+    }
+
+    // A appeler des que le minuteur n'est plus en cours (Pause, Reset, ou repos
+    // termine - voir onReceive() ci-dessous et AddExerciseActivity.pauseTimer()/
+    // resetTimer()/le onFinish() du CountDownTimer).
+    public static void clearPersistedEndTimestamp(Context context)
+    {
+        SharedPreferences sharedPreferences = context.getSharedPreferences("shared preferences", Context.MODE_PRIVATE);
+        sharedPreferences.edit().putLong(END_TIMESTAMP_PREF_KEY, 0L).apply();
+    }
+
+    public static long getPersistedEndTimestamp(Context context)
+    {
+        SharedPreferences sharedPreferences = context.getSharedPreferences("shared preferences", Context.MODE_PRIVATE);
+        return sharedPreferences.getLong(END_TIMESTAMP_PREF_KEY, 0L);
+    }
+
     private static final int SAMPLE_RATE = 44100;
     private static final double BEEP_FREQUENCY_HZ = 880.0; // La5 - clair et reconnaissable
     private static final int FADE_MS = 20; // fondu entree/sortie, evite tout "clic"
@@ -92,6 +138,12 @@ public class RestTimerReceiver extends BroadcastReceiver
     @Override
     public void onReceive(Context context, Intent intent)
     {
+        // Le repos est termine : la barre persistante (RestTimerBarTicker) ne doit plus
+        // rien afficher, y compris si l'app avait ete tuee entre le demarrage du
+        // minuteur et cette alarme (c'est justement le scenario que cette alarme
+        // systeme couvre, independamment du cycle de vie de l'Activity).
+        clearPersistedEndTimestamp(context);
+
         createNotificationChannel(context);
         postNotification(context);
 
@@ -160,6 +212,98 @@ public class RestTimerReceiver extends BroadcastReceiver
         channel.setVibrationPattern(new long[]{0, 200});
         // Pas de son sur le canal : playRestTimerBeep() joue le bip separement, avec un
         // volume controle par l'app plutot que par le volume "notifications" du systeme.
+        channel.setSound(null, null);
+
+        notificationManager.createNotificationChannel(channel);
+    }
+
+    // Notification "en direct" affichee PENDANT que le repos tourne (retour Romain
+    // 24/09/2026, appli horloge OnePlus 13 : decompte toujours visible - barre de
+    // statut, ecran verrouille - qu'on ait entendu le bip ou non). A appeler depuis
+    // AddExerciseActivity.startTimer(), avec le meme instant de fin que l'alarme
+    // systeme et la barre persistante a l'ecran (une seule source de verite, voir son
+    // commentaire).
+    //
+    // setUsesChronometer()/setChronometerCountDown() (API 24+) : chronometre NATIF
+    // Android, dessine et decompte par le systeme lui-meme (aucun code applicatif pour
+    // le faire defiler) - visible dans la barre de statut (petite icone) et sur l'ecran
+    // verrouille selon les reglages de confidentialite des notifications du telephone.
+    // setOngoing(true) : non glissable tant que le repos tourne (comme une alarme en
+    // cours) - Pause/Reset/fin l'annulent explicitement (cancelOngoingNotification()).
+    // Avant l'API 24 (improbable en pratique, minSdk 16 herite du depot d'origine),
+    // pas de chronometre natif : texte statique, la barre dans l'app reste la source
+    // fiable du decompte sur ces vieux appareils.
+    public static void postOngoingNotification(Context context, long endTimestampMillis)
+    {
+        createOngoingNotificationChannel(context);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent contentIntent = PendingIntent.getActivity(
+                context, NOTIFICATION_ID, new Intent(context, MainActivity.class), flags);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_ONGOING)
+                .setSmallIcon(R.drawable.ic_alarm_24px)
+                .setContentTitle("Minuteur de repos")
+                .setContentText("Repos en cours")
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
+                .setContentIntent(contentIntent);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+        {
+            builder.setUsesChronometer(true);
+            builder.setChronometerCountDown(true);
+            builder.setWhen(endTimestampMillis);
+        }
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager != null)
+        {
+            notificationManager.notify(NOTIFICATION_ID, builder.build());
+        }
+    }
+
+    // A appeler des que le minuteur n'est plus en cours SANS que le repos soit termine
+    // (Pause, Reset) - la notification de fin normale (postNotification(), meme id)
+    // reste geree separement par onReceive() quand l'alarme se declenche reellement.
+    public static void cancelOngoingNotification(Context context)
+    {
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager != null)
+        {
+            notificationManager.cancel(NOTIFICATION_ID);
+        }
+    }
+
+    private static void createOngoingNotificationChannel(Context context)
+    {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
+        {
+            return;
+        }
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (notificationManager == null || notificationManager.getNotificationChannel(CHANNEL_ID_ONGOING) != null)
+        {
+            return;
+        }
+
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID_ONGOING, "Minuteur de repos (en cours)", NotificationManager.IMPORTANCE_LOW);
+        channel.setDescription("Decompte affiche pendant que le minuteur de repos tourne "
+                + "(silencieux, sans vibration) - l'alerte sonore a la fin du repos utilise un "
+                + "canal separe.");
+        channel.enableVibration(false);
         channel.setSound(null, null);
 
         notificationManager.createNotificationChannel(channel);

@@ -636,6 +636,14 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         {
             startExerciseSelectionMode();
         }
+        // Retour Romain 24/09/2026 : "je n'ai pas acces a share workout ailleurs que
+        // depuis le calendrier. Ce n'est pas user friendly" - ajoute sur l'onglet
+        // Workout (accueil), l'ecran ouvert par defaut au lancement de l'app, en plus
+        // de DayActivity (voir day_activity_menu.xml/DayActivity.shareWorkout()).
+        else if(item.getItemId() == R.id.share_workout)
+        {
+            shareWorkout();
+        }
         else if(item.getItemId() == R.id.comment_workout)
         {
             showCommentWorkoutDialog();
@@ -741,6 +749,28 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    // "Share workout" (retour Romain 24/09/2026, voir R.id.share_workout ci-dessus) -
+    // meme logique que DayActivity.shareWorkout() (voir ce fichier pour le detail des
+    // choix), adaptee au jour actuellement affiche dans le ViewPager2 (dateSelected)
+    // plutot qu'a date_clicked.
+    private void shareWorkout()
+    {
+        int day_position = dataStorage.getDayPosition(dateSelected);
+        if (day_position < 0)
+        {
+            Toast.makeText(this, "No Logged Exercises", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        WorkoutDay day = dataStorage.getWorkoutDays().get(day_position);
+        String report = WorkoutReportGenerator.generateReport(day);
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, report);
+        startActivity(Intent.createChooser(shareIntent, "Share workout"));
     }
 
     // "Comment a Workout" (Vague 3 du plan de migration, retour Romain 07/09/2026) -

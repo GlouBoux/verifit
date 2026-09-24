@@ -66,6 +66,46 @@
 
     </LinearLayout>
 
+    <!-- Barre persistante du minuteur de REPOS (retour Romain 24/09/2026 : "je veux
+         voir le temps restant avant de repartir [...] si je n'ai pas entendu le timer
+         MAIS que je vois le temps restant c'est ok") - distincte de session_timer_bar
+         ci-dessus (chrono de la seance entiere). Fond legerement plus fonce
+         (core_grey_20 vs core_grey_10) pour bien les distinguer visuellement, comme la
+         version de cette barre construite puis retiree le 06/09/2026 (a l'epoque pour
+         un malentendu sans rapport avec le besoin actuel - voir
+         fitnotes-fork-todo.md). Masquee par defaut : seule
+         AddExerciseActivity.RestTimerBarTicker la rend visible, quand un minuteur de
+         repos est effectivement en cours (voir son commentaire pour le detail de la
+         fiabilite recherchee, y compris apres un changement d'exercice). -->
+    <LinearLayout
+        android:id="@+id/rest_timer_bar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="10dp"
+        android:background="@color/core_grey_20"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/session_timer_bar"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/tv_rest_timer_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textColor="@color/core_black"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            tools:text="01:30" />
+
+    </LinearLayout>
+
     <ImageButton
         android:id="@+id/plus_reps"
         android:layout_width="50dp"
@@ -122,7 +162,7 @@
         android:textColor="@color/core_black"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/session_timer_bar" />
+        app:layout_constraintTop_toBottomOf="@+id/rest_timer_bar" />
 
     <View
         android:id="@+id/blue_line"

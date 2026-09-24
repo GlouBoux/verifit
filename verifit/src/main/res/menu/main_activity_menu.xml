@@ -34,6 +34,18 @@
         app:iconTint="@color/cardview_light_background">
     </item>
 
+    <!-- Retour Romain 24/09/2026 : "je n'ai pas acces a share workout ailleurs que
+         depuis le calendrier. Ce n'est pas user friendly" - meme item que
+         day_activity_menu.xml (id partage @+id/share_workout, deja declare la-bas),
+         ajoute ici sur l'onglet Workout/accueil (voir MainActivity.shareWorkout()). -->
+    <item
+        android:id="@+id/share_workout"
+        android:icon="@drawable/ic_share_24px"
+        android:title="Share workout"
+        app:showAsAction="ifRoom"
+        app:iconTint="@color/cardview_light_background">
+    </item>
+
     <!-- Vague 3 du plan de migration, retour Romain 07/09/2026 - "Comment Workout" de
          l'Overflow Menu FitNotes (Home Screen). Repliee dans le menu "..." plutot que
          toujours visible, comme sur FitNotes - voir
