@@ -216,6 +216,18 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
                 // Or else nothing comes up
                 initViewPager();
             }
+            // Export JSON dedie au pipeline Coaching (retour Romain 24/09/2026, voir
+            // claude/verifit-migration-plan.md story 2.2) - meme mecanique que
+            // "exportcsv" ci-dessus, juste une autre methode DataStorage.
+            else if(whatToDo.equals("exportjson"))
+            {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+                {
+                    dataStorage.writeJsonExport(getApplicationContext());
+                }
+
+                initViewPager();
+            }
             else if(whatToDo.equals("exportwebdav"))
             {
                 // After Loading Data Initialize ViewPager

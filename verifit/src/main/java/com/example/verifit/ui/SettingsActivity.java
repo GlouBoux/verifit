@@ -277,6 +277,15 @@ public class SettingsActivity extends AppCompatActivity {
                 in.putExtra("doit", "exportcsv");
                 startActivity(in);
             }
+            // Export JSON dedie au pipeline Coaching (retour Romain 24/09/2026, voir
+            // claude/verifit-migration-plan.md story 2.2) - meme mecanique que
+            // "exportcsv" ci-dessus.
+            else if (key.equals("exportjson"))
+            {
+                Intent in = new Intent(getActivity(), MainActivity.class);
+                in.putExtra("doit", "exportjson");
+                startActivity(in);
+            }
             else if (key.equals("deletedata"))
             {
                 deleteData();

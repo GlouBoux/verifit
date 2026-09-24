@@ -1018,6 +1018,71 @@ public class DataStorage {
         }
     }
 
+    // Export JSON dedie au pipeline Coaching (workout_engine.py / pr_tracking.py), en
+    // complement de l'export CSV ci-dessus (writeFile()) - retour Romain 24/09/2026,
+    // voir claude/verifit-migration-plan.md, story 2.2 du Groupe 2 ("il n'existe
+    // aujourd'hui aucun chemin d'extraction equivalent a FitNotes pour les donnees
+    // verifit"). Contrairement au CSV, qui n'expose ni plannedWeight/plannedReps ni un
+    // format extensible sans decaler des colonnes (voir le commentaire de writeFile()
+    // ci-dessus sur ce point deja rencontre plusieurs fois), ce JSON expose directement
+    // les memes champs que le modele interne (WorkoutSet), a travers un DTO dedie
+    // (CoachingExportSet) qui isole ce contrat des futurs changements internes.
+    //
+    // Meme mecanique d'ecriture que writeFile() (Storage Access Framework, meme dossier
+    // Documents/Verifit, meme prefixe de nom de fichier EXPORT_FILENAME deja calcule
+    // par MainActivity.setExportBackupName() avant l'appel) - seule differe l'extension
+    // (.json) et le contenu ecrit. Reutilise le flux plat WorkoutDay.getSets() (jamais
+    // WorkoutDay.getExercises()[].getSets(), qui est une liste DERIVEE et sujette au bug
+    // de duplication Gson deja documente plus haut dans ce fichier - voir le commentaire
+    // sur repRangePRKey()) : chaque serie n'est donc jamais lue qu'une seule fois.
+    public void writeJsonExport(Context context)
+    {
+        String fileName = EXPORT_FILENAME + ".json";
+
+        try
+        {
+            OutputStream outputStream;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
+                values.put(MediaStore.MediaColumns.MIME_TYPE, "application/json");
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS+"/Verifit");
+                Uri extVolumeUri = MediaStore.Files.getContentUri("external");
+                Uri fileUri = context.getContentResolver().insert(extVolumeUri, values);
+                outputStream = context.getContentResolver().openOutputStream(fileUri);
+            }
+            else {
+                File root = new File(Environment.getExternalStorageDirectory()+File.separator+"DIRECTORY_NAME", "images");
+                File file = new File(root, fileName);
+                outputStream = new FileOutputStream(file);
+            }
+
+            String exportedAt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
+            CoachingExport export = new CoachingExport(exportedAt);
+
+            for (int i = 0; i < workoutDays.size(); i++)
+            {
+                WorkoutDay day = workoutDays.get(i);
+                ArrayList<CoachingExportSet> exportSets = new ArrayList<CoachingExportSet>();
+                for (int j = 0; j < day.getSets().size(); j++)
+                {
+                    exportSets.add(new CoachingExportSet(day.getSets().get(j)));
+                }
+                export.addDay(new CoachingExportDay(day.getDate(), exportSets));
+            }
+
+            Gson gson = new Gson();
+            outputStream.write(gson.toJson(export).getBytes());
+            outputStream.close();
+            Toast.makeText(context, "Export JSON Coaching enregistré dans " + Environment.DIRECTORY_DOCUMENTS+"/Verifit", Toast.LENGTH_LONG).show();
+        }
+        catch (Exception e)
+        {
+            System.out.println(e.toString());
+            Toast.makeText(context, e.toString(), Toast.LENGTH_LONG).show();
+        }
+    }
+
     // Clears all locally used data structures
     public void clearDataStructures(Context context)
     {

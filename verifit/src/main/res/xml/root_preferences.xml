@@ -45,6 +45,15 @@
             app:title="Export"
             app:useSimpleSummaryProvider="false" />
 
+        <!-- Export JSON dedie au pipeline Coaching (retour Romain 24/09/2026, voir
+             claude/verifit-migration-plan.md story 2.2) - complement de "Export"
+             (CSV) ci-dessus, meme dossier Documents/Verifit. -->
+        <Preference
+            app:key="exportjson"
+            app:summary="Export to phone storage (for Coaching)"
+            app:title="Export JSON"
+            app:useSimpleSummaryProvider="false" />
+
         <Preference
             app:key="deletedata"
             app:summary="Delete all app workout data"
