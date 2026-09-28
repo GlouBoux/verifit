@@ -1061,9 +1061,11 @@ public class AddExerciseActivity extends AppCompatActivity {
         int position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
         WorkoutDay day = (position >= 0) ? MainActivity.dataStorage.getWorkoutDays().get(position) : null;
 
-        if (day == null || day.getSessionStartTimestamp() == null)
+        if (day == null)
         {
-            // Rien a montrer tant qu'aucun chrono n'a demarre.
+            // Rien a montrer tant qu'aucune serie n'a ete logguee ce jour-la (pas de
+            // WorkoutDay du tout - cas different de "chrono pas encore demarre"
+            // ci-dessous, qui doit au contraire ouvrir le dialogue).
             return;
         }
 
@@ -1079,11 +1081,30 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
         tv_date.setText(WorkoutReportGenerator.formatDateHeader(day.getDate()));
-        tv_start.setText(timeFormat.format(new Date(day.getSessionStartTimestamp())));
-        tv_end.setText(day.getSessionEndTimestamp() != null
-                ? timeFormat.format(new Date(day.getSessionEndTimestamp()))
-                : "In progress");
-        bt_toggle.setText(day.isSessionTimerRunning() ? "Stop Timer" : "Resume Timer");
+
+        // BUG corrige (retour Romain 28/09/2026 : "je dois pouvoir le lancer
+        // manuellement") : ce dialogue coupait court AVANT meme d'etre construit des
+        // que SessionStartTimestamp etait null (voir git blame de ce bloc) - or c'est
+        // le SEUL endroit de l'IHM qui expose bt_toggle, lui-meme deja cable sur
+        // toggleSessionTimer() qui sait demarrer le chrono depuis zero. Consequence
+        // concrete : taper la barre de chrono avant le tout premier demarrage ne
+        // faisait donc RIEN DU TOUT (pas meme un dialogue vide), sans aucun moyen de
+        // lancer le chrono a la main. Affiche desormais un etat "pas demarre" avec un
+        // bouton "Start Timer" au lieu de se refermer silencieusement.
+        if (day.getSessionStartTimestamp() == null)
+        {
+            tv_start.setText("Not started");
+            tv_end.setText("-");
+            bt_toggle.setText("Start Timer");
+        }
+        else
+        {
+            tv_start.setText(timeFormat.format(new Date(day.getSessionStartTimestamp())));
+            tv_end.setText(day.getSessionEndTimestamp() != null
+                    ? timeFormat.format(new Date(day.getSessionEndTimestamp()))
+                    : "In progress");
+            bt_toggle.setText(day.isSessionTimerRunning() ? "Stop Timer" : "Resume Timer");
+        }
 
         // Duration : chrono dedie a ce TextView, demarre ici et arrete a la fermeture
         // du dialogue (setOnDismissListener plus bas) - voir le champ

@@ -1,5 +1,7 @@
 package com.example.verifit;
 
+import android.content.Context;
+
 import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
@@ -35,11 +37,22 @@ import java.util.Locale;
 public class WorkoutReportGenerator
 {
     // Genere le rapport complet pour un WorkoutDay donne.
-    public static String generateReport(WorkoutDay day)
+    //
+    // L'en-tete reprenait jusqu'ici "FitNotes Workout - <date>" en dur (copie du
+    // template FitNotes fourni par Romain), alors que l'app s'appelle deja Verifit et
+    // portera un jour un nom a nous (retour Romain 28/09/2026 : "je veux qu'elle
+    // recupere le libelle de l'app"). Le Context est desormais requis pour lire ce
+    // libelle dynamiquement (PackageManager.getApplicationLabel(), pas
+    // R.string.app_name en dur ici) - se met donc a jour tout seul le jour ou l'app
+    // est renommee, sans repasser par ce fichier.
+    public static String generateReport(Context context, WorkoutDay day)
     {
         StringBuilder report = new StringBuilder();
 
-        report.append("FitNotes Workout - ").append(formatDateHeader(day.getDate())).append("\n");
+        String appLabel = context.getApplicationContext().getPackageManager()
+                .getApplicationLabel(context.getApplicationContext().getApplicationInfo())
+                .toString();
+        report.append(appLabel).append(" Workout - ").append(formatDateHeader(day.getDate())).append("\n");
 
         // "Comment a Workout" (Vague 3 du plan de migration, retour Romain 07/09/2026) -
         // affiche juste sous l'en-tete, comme sur FitNotes ("affiche au-dessus de la

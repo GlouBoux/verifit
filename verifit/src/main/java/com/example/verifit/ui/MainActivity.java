@@ -765,7 +765,7 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         }
 
         WorkoutDay day = dataStorage.getWorkoutDays().get(day_position);
-        String report = WorkoutReportGenerator.generateReport(day);
+        String report = WorkoutReportGenerator.generateReport(this, day);
 
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setType("text/plain");

@@ -252,7 +252,14 @@ public class RestTimerReceiver extends BroadcastReceiver
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
+                // Erreur de compilation signalee par Romain (28/09/2026) :
+                // NotificationCompat.CATEGORY_STOPWATCH n'existe pas (ni dans
+                // NotificationCompat, ni dans Notification a aucune API level - a ete
+                // invente par erreur lors du codage initial de cette notification en
+                // direct). CATEGORY_ALARM est la categorie standard la plus proche pour
+                // un decompte non glissable en cours (meme categorie que les timers de
+                // l'appli Horloge d'Android).
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setContentIntent(contentIntent);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)

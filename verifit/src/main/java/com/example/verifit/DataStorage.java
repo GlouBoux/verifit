@@ -282,6 +282,19 @@ public class DataStorage {
             // unique (sinon "Copy Workout" ferait disparaitre le texte d'analyse d'une
             // seance importee, alors qu'il etait recopie jusqu'ici).
             copy.setPlanComment(set.getPlanComment());
+            // BUG corrige (retour Romain 28/09/2026, badge Ecart Prevu/Realise absent
+            // apres "Move Workout") : les valeurs prevues (plannedReps/plannedWeight)
+            // n'etaient PAS recopiees ici - le constructeur ci-dessus les laisse a leur
+            // valeur par defaut (null), donc hasDiscrepancy() redevenait
+            // silencieusement faux pour toute serie deplacee/copiee, meme avec un
+            // ecart reel deja logue avant le Move. C'etait deja note comme correctif
+            // "B" a faire dans verifit-uat-retours-2026-09-21.md (cas 3) - jamais
+            // code jusqu'ici. "Move Workout" (MainActivity/DayActivity.moveWorkout())
+            // utilise cette meme methode puis supprime le jour source - c'est donc
+            // le chemin qui a expose ce manque en premier, mais "Copy Workout"
+            // partage exactement le meme risque.
+            copy.setPlannedReps(set.getPlannedReps());
+            copy.setPlannedWeight(set.getPlannedWeight());
             destinationDay.addSet(copy);
         }
 

@@ -811,7 +811,7 @@ public class DayActivity extends AppCompatActivity {
         }
 
         WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
-        String report = WorkoutReportGenerator.generateReport(day);
+        String report = WorkoutReportGenerator.generateReport(this, day);
 
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setType("text/plain");
