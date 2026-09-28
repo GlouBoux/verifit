@@ -50,6 +50,36 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/blue_line" />
 
+    <!-- "Exercise Notes" (retour Romain 28/09/2026) : notes libres facultatives -
+         standardisation de l'exo (reglages machine, amplitude, hauteur...), voir
+         claude/fitnotes-features-exercises.md §2. -->
+    <TextView
+        android:id="@+id/tv_notes_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="20dp"
+        android:text="Notes (optional):"
+        android:textColor="@color/colorPrimary"
+        android:textSize="24sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/et_exercise_name" />
+
+    <EditText
+        android:id="@+id/et_exercise_notes"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="10dp"
+        android:gravity="top|start"
+        android:hint="Ex : hauteur banc = 3, amplitude partielle..."
+        android:inputType="textMultiLine"
+        android:minLines="3"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tv_notes_label" />
+
 
     <TextView
         android:id="@+id/exercise_name1"
@@ -57,12 +87,12 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
         android:layout_marginLeft="20dp"
-        android:layout_marginTop="170dp"
+        android:layout_marginTop="20dp"
         android:text="Choose Exercise Category:"
         android:textColor="@color/colorPrimary"
         android:textSize="24sp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toBottomOf="@+id/et_exercise_notes">
 
     </TextView>
 

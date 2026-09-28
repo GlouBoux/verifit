@@ -84,6 +84,20 @@
 
     </item>
 
+    <!-- "Exercise Notes" (retour Romain 28/09/2026, feature deja presente dans FitNotes) :
+         a ne pas confondre avec "Exercise Comments" ci-dessus (propre au jour courant,
+         WorkoutExercise.getComment()) - ici, notes persistees sur la definition de
+         l'exercice (Exercise.notes), visibles a chaque seance. Voir
+         AddExerciseActivity.onOptionsItemSelected(), R.id.exercise_notes. -->
+    <item
+        android:id="@+id/exercise_notes"
+        android:icon="@drawable/notebook"
+        android:title="Exercise Notes"
+        app:showAsAction="never"
+        app:iconTint="@color/cardview_light_background">
+
+    </item>
+
     <!-- Retour Romain 05/09/2026 : sélection multiple pour supprimer plusieurs séries
          d'un coup, au lieu d'un "Clear" fastidieux série par série. Entre en mode
          sélection via une ActionMode (androidx.appcompat.view.ActionMode) plutôt que

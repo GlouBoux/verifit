@@ -2233,6 +2233,47 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         }
 
+        // "Exercise Notes" (retour Romain 28/09/2026, feature deja presente dans
+        // FitNotes - voir claude/fitnotes-features-workout-tracking.md §4/§9) : notes
+        // persistees sur la DEFINITION de l'exercice (Exercise.notes via
+        // DataStorage.getExerciseNotes()/setExerciseNotes()), donc les memes a chaque
+        // seance - a ne pas confondre avec "Exercise Comments" juste au-dessus, qui est
+        // propre au jour courant (WorkoutExercise.getComment()) et disparait d'une
+        // seance a l'autre. Purement local (pas de WorkoutSetsApi a prevenir, ces notes
+        // ne concernent aucun WorkoutSet), donc pas de distinction offline/online ici
+        // contrairement a saveComment() ci-dessus.
+        else if(item.getItemId() == R.id.exercise_notes)
+        {
+            LayoutInflater inflater = LayoutInflater.from(AddExerciseActivity.this);
+            View view = inflater.inflate(R.layout.exercise_notes_dialog,null);
+            AlertDialog alertDialog = new AlertDialog.Builder(AddExerciseActivity.this).setView(view).create();
+
+            EditText et_exercise_notes = view.findViewById(R.id.et_exercise_notes);
+            Button bt_save_notes = view.findViewById(R.id.bt_save_notes);
+            Button bt_cancel_notes = view.findViewById(R.id.bt_cancel_notes);
+
+            et_exercise_notes.setText(MainActivity.dataStorage.getExerciseNotes(exercise_name));
+
+            bt_cancel_notes.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    alertDialog.dismiss();
+                }
+            });
+
+            bt_save_notes.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    MainActivity.dataStorage.setExerciseNotes(exercise_name, et_exercise_notes.getText().toString());
+                    MainActivity.dataStorage.saveKnownExerciseData(getApplicationContext());
+                    alertDialog.dismiss();
+                    showSnackbarMessage("Notes Saved");
+                }
+            });
+
+            alertDialog.show();
+        }
+
         return super.onOptionsItemSelected(item);
     }
 

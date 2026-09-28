@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Exercise Notes" (retour Romain 28/09/2026) : accessible depuis le Training Screen
+     (AddExerciseActivity, menu "..." -> Exercise Notes) pour consulter/editer en cours
+     de seance les notes de standardisation de l'exercice (reglages machine, amplitude,
+     hauteur...) sans quitter l'ecran de saisie - voir
+     claude/fitnotes-features-workout-tracking.md §4/§9. Notes persistees sur la
+     definition de l'exercice (Exercise.notes, DataStorage.getExerciseNotes()/
+     setExerciseNotes()), donc visibles a chaque seance sur cet exercice, contrairement a
+     "Exercise Comments" (add_exercise_comment_dialog.xml) qui est propre au jour
+     courant. -->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/tv_date"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="50dp"
+        android:layout_marginRight="50dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="Exercise Notes"
+        android:textColor="@color/colorPrimary"
+        android:textSize="22sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/blue_line"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="20dp"
+        android:background="@color/colorPrimary"
+        app:layout_constraintTop_toBottomOf="@+id/tv_date"
+        tools:layout_editor_absoluteX="16dp" />
+
+    <EditText
+        android:id="@+id/et_exercise_notes"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginRight="20dp"
+        android:gravity="top|start"
+        android:hint="Ex : hauteur banc = 3, amplitude partielle..."
+        android:inputType="textMultiLine"
+        android:minLines="4"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/blue_line" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/bt_save_notes"
+        style="@style/Widget.Verifit.Button.Flat"
+        android:textColor="@color/colorPrimary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:text="Save"
+        android:textAllCaps="false"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/bt_cancel_notes"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/et_exercise_notes" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/bt_cancel_notes"
+        style="@style/Widget.Verifit.Button.Flat"
+        android:textColor="@color/colorPrimary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginRight="20dp"
+        android:text="Close"
+        android:textAllCaps="false"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/bt_save_notes"
+        app:layout_constraintTop_toBottomOf="@+id/et_exercise_notes" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -24,6 +24,7 @@ public class CustomExerciseActivity extends AppCompatActivity implements Adapter
     public String selected_category;
     public Spinner spinner;
     public EditText et_exercise_name;
+    public EditText et_exercise_notes; // "Exercise Notes" (retour Romain 28/09/2026)
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +41,7 @@ public class CustomExerciseActivity extends AppCompatActivity implements Adapter
 
         // Initialize Edit Text Object
         et_exercise_name = findViewById(R.id.et_exercise_name);
+        et_exercise_notes = findViewById(R.id.et_exercise_notes);
     }
 
     // Menu Stuff
@@ -59,6 +61,7 @@ public class CustomExerciseActivity extends AppCompatActivity implements Adapter
             if(!MainActivity.dataStorage.doesExerciseExist(et_exercise_name.getText().toString()))
             {
                 Exercise new_exercise = new Exercise(et_exercise_name.getText().toString(),selected_category);
+                new_exercise.setNotes(et_exercise_notes.getText().toString());
                 MainActivity.dataStorage.getKnownExercises().add(new_exercise);
                 MainActivity.dataStorage.saveKnownExerciseData(getApplicationContext());
                 Toast.makeText(getApplicationContext(),"Exercise Saved",Toast.LENGTH_SHORT).show();

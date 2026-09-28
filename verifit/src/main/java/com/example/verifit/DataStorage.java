@@ -813,6 +813,16 @@ public class DataStorage {
             {
                 knownExercises.get(i).setFavorite(false);
             }
+
+            // "Exercise Notes" (28/09/2026) : meme migration douce que Favorite ci-dessus
+            // pour les exercices connus deserialises depuis un JSON sauvegarde avant
+            // l'ajout du champ notes - Gson laisse notes a null plutot que de la creer a
+            // "", ce qui ferait planter tout code appelant notes.isEmpty()/length() sans
+            // verification.
+            if(knownExercises.get(i).getNotes() == null)
+            {
+                knownExercises.get(i).setNotes("");
+            }
         }
     }
 
@@ -1208,6 +1218,40 @@ public class DataStorage {
         return "";
     }
 
+    // "Exercise Notes" (retour Romain 28/09/2026) : notes libres attachees a la
+    // definition de l'exercice (voir Exercise.notes) - meme convention que
+    // getExerciseCategory() ci-dessus (recherche par nom, chaine vide si inconnu/non
+    // renseigne).
+    public String getExerciseNotes(String exerciseName)
+    {
+        for(int i = 0; i < knownExercises.size(); i++)
+        {
+            if(knownExercises.get(i).getName().equals(exerciseName))
+            {
+                String notes = knownExercises.get(i).getNotes();
+                return notes == null ? "" : notes;
+            }
+        }
+        return "";
+    }
+
+    // Met a jour les notes d'un exercice connu (no-op silencieux si l'exercice n'existe
+    // plus - meme convention defensive que editExercise() plus bas). Purement local :
+    // contrairement au nom/categorie, les notes ne sont jamais envoyees a
+    // WorkoutSetsApi (elles ne concernent aucun WorkoutSet), l'appelant doit juste
+    // penser a appeler saveKnownExerciseData() ensuite pour persister.
+    public void setExerciseNotes(String exerciseName, String notes)
+    {
+        for(int i = 0; i < knownExercises.size(); i++)
+        {
+            if(knownExercises.get(i).getName().equals(exerciseName))
+            {
+                knownExercises.get(i).setNotes(notes == null ? "" : notes);
+                return;
+            }
+        }
+    }
+
     // "Statistics par periode" (Vague 4 du plan de migration, item 13, retour Romain
     // 08/09/2026 : "passe a la vague 4") - agrege les statistiques d'un exercice sur
     // une plage de dates ISO "yyyy-MM-dd" (bornes incluses, une borne null = illimitee
@@ -1528,6 +1572,12 @@ public class DataStorage {
         }
 
         Exercise duplicate = new Exercise(new_exercise_name, source.getBodyPart());
+        // "Exercise Notes" (28/09/2026) : une variante d'exercice partage generalement
+        // les memes elements de standardisation (reglages machine, amplitude...) que sa
+        // source - copiee ici par defaut, reste modifiable ensuite comme n'importe quel
+        // autre exercice (voir ExerciseAdapter, dialog de duplication qui pre-remplit ce
+        // champ avec la valeur copiee et laisse l'utilisateur l'ajuster avant de valider).
+        duplicate.setNotes(source.getNotes());
         knownExercises.add(duplicate);
         return duplicate;
     }

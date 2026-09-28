@@ -363,8 +363,16 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
                 Button bt_save = view.findViewById(R.id.bt_login_signup);
                 Button bt_cancel = view.findViewById(R.id.bt_cancel);
                 EditText et_exercise_name = view.findViewById(R.id.et_exercise_name);
+                EditText et_exercise_notes = view.findViewById(R.id.et_exercise_notes);
                 Spinner spinner = view.findViewById(R.id.spinner);
 
+                // "Exercise Notes" (retour Romain 28/09/2026) : meme objet Exercise que
+                // celui stocke dans MainActivity.dataStorage.getKnownExercises() (voir
+                // le constructeur de cet adapter, copie superficielle de la liste - les
+                // references d'Exercise sont partagees), donc le muter directement au
+                // Save ci-dessous suffit a persister via saveKnownExerciseData(), meme
+                // apres un renommage (editExercise() renomme ce meme objet en place).
+                final Exercise edited_exercise = Exercises.get(position);
 
                 // Setup Spinner Stuff
                 ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(ct,R.array.Categories, android.R.layout.simple_spinner_item);
@@ -389,6 +397,7 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
                 // Set edit text and spinner initial values
                 exercise_name = Exercises.get(position).getName();
                 et_exercise_name.setText(exercise_name);
+                et_exercise_notes.setText(edited_exercise.getNotes());
                 spinner.setSelection(current_exercise_category_position);
 
                 // Dismiss Dialog Box
@@ -413,6 +422,14 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
                         // Call Edit Exercise if user gave reasonable input
                         if(new_exercise_category != null && !new_exercise_category.isEmpty() && new_exercise_category.length() > 0 && new_exercise_name != null && !new_exercise_name.isEmpty() && new_exercise_name.length() > 0)
                         {
+                            // "Exercise Notes" (retour Romain 28/09/2026) : purement local,
+                            // aucun WorkoutSetsApi a prevenir (voir commentaire de
+                            // edited_exercise plus haut) - mute avant meme de savoir si le
+                            // renommage va passer par le chemin offline ou online, les deux
+                            // chemins finissent par appeler saveKnownExerciseData() qui
+                            // serialisera cette valeur.
+                            edited_exercise.setNotes(et_exercise_notes.getText().toString());
+
                             SharedPreferences sharedPreferences = new SharedPreferences(ct);
                             if(sharedPreferences.isOfflineMode()) {
                                 locallyUpdateExercise(new_exercise_name);
@@ -497,10 +514,17 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
                 Button bt_save = view.findViewById(R.id.bt_login_signup);
                 Button bt_cancel = view.findViewById(R.id.bt_cancel);
                 EditText et_exercise_name = view.findViewById(R.id.et_exercise_name);
+                EditText et_exercise_notes = view.findViewById(R.id.et_exercise_notes);
                 Spinner spinner = view.findViewById(R.id.spinner);
 
                 tv_dialog_title.setText("Duplicate Exercise");
                 bt_save.setText("Duplicate");
+
+                // "Exercise Notes" (retour Romain 28/09/2026) : pre-rempli avec une copie
+                // des notes de la source (deja fait par DataStorage.duplicateExercise()
+                // plus bas, mais on le montre aussi ici pour que l'utilisateur puisse
+                // l'ajuster - ex. variante allegee - avant de valider).
+                et_exercise_notes.setText(source_exercise_name != null ? MainActivity.dataStorage.getExerciseNotes(source_exercise_name) : "");
 
                 // Setup Spinner Stuff
                 ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(ct,R.array.Categories, android.R.layout.simple_spinner_item);
@@ -568,6 +592,11 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
                             {
                                 duplicated.setBodyPart(new_exercise_category);
                             }
+
+                            // "Exercise Notes" (retour Romain 28/09/2026) : honore un
+                            // ajustement des notes fait dans le dialog (duplicateExercise()
+                            // ne fait que copier celles de la source par defaut).
+                            duplicated.setNotes(et_exercise_notes.getText().toString());
 
                             MainActivity.dataStorage.saveKnownExerciseData(ct);
 
