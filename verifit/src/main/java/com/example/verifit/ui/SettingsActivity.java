@@ -29,6 +29,7 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceGroup;
 import androidx.preference.PreferenceManager;
 
+import com.example.verifit.BuildConfig;
 import com.example.verifit.LoadingDialog;
 import com.example.verifit.R;
 import com.example.verifit.SharedPreferences;
@@ -41,6 +42,9 @@ import com.example.verifit.webdav.ClickedOnWebdavThread;
 import com.example.verifit.webdav.ExportWebdavThread;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -113,6 +117,16 @@ public class SettingsActivity extends AppCompatActivity {
             }
 
             setVerifitRsSettingsVisibility();
+
+            // Retour Romain 28/09/2026 : "un numero de build [...] pour verifier qu'on
+            // parle bien de la meme version". BuildConfig.BUILD_TIMESTAMP est genere
+            // automatiquement a chaque build (voir build.gradle, defaultConfig) - pas
+            // de geste manuel a oublier, contrairement a versionName qu'il faut
+            // incrementer soi-meme.
+            Preference versionPreference = findPreference("version");
+            if (versionPreference != null) {
+                versionPreference.setSummary(getBuildInfo());
+            }
 
             // Set summary to user config
             webdavurl.setSummary(sharedPreferences.load("webdav_url"));
@@ -437,7 +451,14 @@ public class SettingsActivity extends AppCompatActivity {
             }
             else if (key.equals("version"))
             {
-                Toast.makeText(getContext(),"Nothing to see here",Toast.LENGTH_SHORT).show();
+                // Retour Romain 28/09/2026 : copie le numero de build dans le
+                // presse-papier au tap, pratique pour me le communiquer tel quel sans
+                // recopier a la main.
+                String buildInfo = getBuildInfo();
+                ClipboardManager clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("verifit version", buildInfo);
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(getContext(), "Copied: " + buildInfo, Toast.LENGTH_SHORT).show();
             }
             else if (key.equals("donate"))
             {
@@ -851,6 +872,17 @@ public class SettingsActivity extends AppCompatActivity {
 //            alertDialog.show();
 //        }
 
+
+        // Retour Romain 28/09/2026 : versionName (ex. "1.0.14") + horodatage du build
+        // (ex. "2026-09-28 19:42"), genere automatiquement par Gradle a chaque build -
+        // voir BuildConfig.BUILD_TIMESTAMP dans build.gradle. Utilise a la fois pour le
+        // summary affiche dans les Settings et pour la copie presse-papier au tap.
+        public String getBuildInfo()
+        {
+            SimpleDateFormat buildDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
+            String buildDate = buildDateFormat.format(new Date(BuildConfig.BUILD_TIMESTAMP));
+            return BuildConfig.VERSION_NAME + " - build " + buildDate;
+        }
 
         public String getPasswordStarred()
         {

@@ -134,11 +134,17 @@
             app:title="Source Code"
             app:useSimpleSummaryProvider="false" />
 
-<!--        <Preference-->
-<!--            app:key="version"-->
-<!--            app:summary="0.0.1"-->
-<!--            app:title="Version"-->
-<!--            app:useSimpleSummaryProvider="false" />-->
+        <!-- Retour Romain 28/09/2026 : afficher un numero de build pour ne plus avoir a
+             se demander si on teste la bonne version de l'app. Summary pose
+             dynamiquement dans SettingsActivity.onCreatePreferences() (versionName +
+             horodatage de compilation, voir BuildConfig.BUILD_TIMESTAMP dans
+             build.gradle) - la valeur ci-dessous n'est qu'un texte de secours tant que
+             ce code ne s'est pas encore execute. -->
+        <Preference
+            app:key="version"
+            app:summary="..."
+            app:title="Version"
+            app:useSimpleSummaryProvider="false" />
 
         <Preference
             app:key="donate"

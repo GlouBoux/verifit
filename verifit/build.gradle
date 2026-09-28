@@ -14,6 +14,24 @@ android {
         versionName "1.0.14"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
+
+        // Retour Romain 28/09/2026 : "un numero de build [...] pour verifier qu'on
+        // parle bien de la meme version" (voir SettingsActivity, preference "version").
+        // Horodatage genere automatiquement a CHAQUE build (aucun geste manuel, donc
+        // aucun risque d'oubli de mise a jour comme avec versionName ci-dessus) :
+        // System.currentTimeMillis() est evalue quand Gradle configure ce module, ce
+        // qui arrive a chaque build/rebuild (le script n'est pas mis en cache par
+        // defaut dans ce projet). BuildConfig.BUILD_TIMESTAMP est donc l'heure a
+        // laquelle CE build a ete produit, pas l'heure d'installation ni l'heure
+        // actuelle du telephone.
+        buildConfigField "long", "BUILD_TIMESTAMP", "${System.currentTimeMillis()}L"
+    }
+
+    // Requis depuis AGP 8.0 (deja recommande en 7.x) pour continuer a generer la
+    // classe BuildConfig utilisee ci-dessus - sans ce flag, buildConfigField serait
+    // ignore silencieusement selon la version d'AGP.
+    buildFeatures {
+        buildConfig true
     }
 
     buildTypes {
