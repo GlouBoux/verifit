@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -1250,6 +1251,63 @@ public class DataStorage {
                 return;
             }
         }
+    }
+
+    // "Import Notes" (retour Romain 28/09/2026) : import en masse depuis un fichier
+    // JSON {"Nom d'exercice exact": "notes", ...} - typiquement genere par un script
+    // Coaching a partir d'un vieux backup FitNotes (voir ExerciseNotesImporter, menu
+    // "..." de ExercisesActivity). Resume de ce qui a ete fait, affiche a l'utilisateur
+    // sous forme de Toast (meme convention que DataStorage.ImportSummary/SessionImporter
+    // pour "Import Session").
+    public static class NotesImportSummary
+    {
+        public int applied = 0;
+        public int skippedAlreadyHasNotes = 0; // jamais d'ecrasement d'une note deja tapee a la main - meme principe que WorkoutComment dans SYNC_FITNOTES_BACKUP.md §2
+        public int notFound = 0; // jamais de creation d'exercice a la volee - meme principe que partout ailleurs dans ce pipeline (SessionImporter, inject_session_into_fitnotes_backup)
+    }
+
+    public NotesImportSummary mergeExerciseNotes(Map<String, String> notesByExerciseName)
+    {
+        NotesImportSummary summary = new NotesImportSummary();
+
+        for(Map.Entry<String, String> entry : notesByExerciseName.entrySet())
+        {
+            String exerciseName = entry.getKey();
+            String notes = entry.getValue();
+
+            if(exerciseName == null || exerciseName.trim().isEmpty() || notes == null || notes.trim().isEmpty())
+            {
+                continue;
+            }
+
+            Exercise match = null;
+            for(int i = 0; i < knownExercises.size(); i++)
+            {
+                if(knownExercises.get(i).getName().equals(exerciseName))
+                {
+                    match = knownExercises.get(i);
+                    break;
+                }
+            }
+
+            if(match == null)
+            {
+                summary.notFound++;
+                continue;
+            }
+
+            String currentNotes = match.getNotes();
+            if(currentNotes != null && !currentNotes.trim().isEmpty())
+            {
+                summary.skippedAlreadyHasNotes++;
+                continue;
+            }
+
+            match.setNotes(notes);
+            summary.applied++;
+        }
+
+        return summary;
     }
 
     // "Statistics par periode" (Vague 4 du plan de migration, item 13, retour Romain

@@ -35,4 +35,17 @@
         app:iconTint="@color/cardview_light_background">
     </item>
 
+    <!-- "Import Notes" (retour Romain 28/09/2026) : import en masse depuis un fichier
+         JSON {"exercise name": "notes", ...}, typiquement genere par un script Coaching
+         a partir d'un vieux backup FitNotes - voir ExerciseNotesImporter,
+         ExercisesActivity.fileSearchImportNotes(). Meme famille que "Import Session"
+         (DayActivity) mais pour le catalogue d'exercices plutot qu'une seance. -->
+    <item
+        android:id="@+id/import_notes"
+        android:title="Import Notes"
+        android:icon="@drawable/ic_cloud_upload_24px"
+        app:showAsAction="never"
+        app:iconTint="@color/cardview_light_background">
+    </item>
+
 </menu>
