@@ -14,8 +14,7 @@ import androidx.preference.PreferenceManager;
  * "system" - voir res/values/arrays.xml). La preference est persistee automatiquement
  * par androidx.preference dans les SharedPreferences par defaut de l'app
  * (PreferenceManager.getDefaultSharedPreferences) - PAS dans le wrapper
- * SharedPreferences.java maison (celui-ci sert a autre chose : identifiants Webdav,
- * session verifit_rs...).
+ * SharedPreferences.java maison (celui-ci sert a autre chose : identifiants Webdav...).
  *
  * applyStoredTheme() est appelee une seule fois au demarrage du process
  * (VerifitApplication.onCreate(), avant la creation de la moindre Activity) : c'est ce

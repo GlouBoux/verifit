@@ -47,10 +47,8 @@ public class BackupService extends Service {
                     String autoBackupRequired = sharedPreferences.load("autoBackupRequired");
                     String inAddExerciseActivity = sharedPreferences.load("inAddExerciseActivity");
 
-                    String verifit_rs_token = sharedPreferences.load("verifit_rs_token");
-
                     // Automatic webdav export
-                    if(verifit_rs_token.isEmpty() && autowebdavbackup.equals("true") && togglewebdav.equals("true") && autoBackupRequired.equals("true") && inAddExerciseActivity.equals("false") &&  !webdavurl.equals("") && !webdavusername.equals("") && !webdavpassword.equals(""))
+                    if(autowebdavbackup.equals("true") && togglewebdav.equals("true") && autoBackupRequired.equals("true") && inAddExerciseActivity.equals("false") &&  !webdavurl.equals("") && !webdavusername.equals("") && !webdavpassword.equals(""))
                     {
                         exportWebDavService(getApplicationContext(), webdavurl, webdavusername, webdavpassword);
                         MainActivity.autoBackupRequired = false;

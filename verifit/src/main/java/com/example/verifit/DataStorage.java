@@ -24,7 +24,6 @@ import com.example.verifit.model.ImportedSet;
 import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
-import com.example.verifit.verifitrs.WorkoutSetsApi;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -1091,26 +1090,6 @@ public class DataStorage {
         return true;
     }
 
-    public void readFromSets(ArrayList<WorkoutSet> sets, Context context)
-    {
-        clearDataStructures(context);
-
-        this.sets = sets;
-        initKnownExercises();
-        modifySets(); // bad design requires this
-        setsToEverything();
-        csvToKnownExercises();
-    }
-
-    public void modifySets()
-    {
-        for(int i = 0; i < sets.size(); i++)
-        {
-            String date = sets.get(i).getDate().substring(0,10);
-            sets.get(i).setDate(date);
-        }
-    }
-
     // Rend un commentaire ecrivable dans une cellule du CSV de backup. Le lecteur
     // (CSVFile.read()) decoupe naivement chaque ligne sur "," et ne gere ni guillemets ni
     // retours a la ligne : une virgule decalerait toutes les colonnes suivantes (Is
@@ -1400,9 +1379,7 @@ public class DataStorage {
     }
 
     // Met a jour les notes d'un exercice connu (no-op silencieux si l'exercice n'existe
-    // plus - meme convention defensive que editExercise() plus bas). Purement local :
-    // contrairement au nom/categorie, les notes ne sont jamais envoyees a
-    // WorkoutSetsApi (elles ne concernent aucun WorkoutSet), l'appelant doit juste
+    // plus - meme convention defensive que editExercise() plus bas). L'appelant doit
     // penser a appeler saveKnownExerciseData() ensuite pour persister.
     public void setExerciseNotes(String exerciseName, String notes)
     {
@@ -1634,29 +1611,6 @@ public class DataStorage {
         }
     }
 
-    // Returns all the sets to be deleted if we were to run deleteExercise
-    public List<WorkoutSet> deleteExerciseGetSets(String exercise_name)
-    {
-        List<WorkoutSet> to_be_delete_sets = new ArrayList<>();
-
-        // Iterate Workout Days
-        for (Iterator<WorkoutDay> dayIterator = workoutDays.iterator(); dayIterator.hasNext(); )
-        {
-            WorkoutDay currentDay = dayIterator.next();
-
-            // Iterate Workout Sets
-            for(Iterator<WorkoutSet> setIterator = currentDay.getSets().iterator(); setIterator.hasNext();)
-            {
-                WorkoutSet current_set = setIterator.next();
-                if(current_set.getExerciseName().equals(exercise_name))
-                {
-                    to_be_delete_sets.add(current_set);
-                }
-            }
-        }
-        return to_be_delete_sets;
-    }
-
     // Changes exercise name and body part
     public void editExercise(String exercise_name, String new_exercise_name, String new_exercise_bodypart)
     {
@@ -1697,44 +1651,6 @@ public class DataStorage {
                 }
             }
         }
-    }
-
-    // Changes exercise name and body part
-    public List<WorkoutSet> editExerciseGetSets(String exercise_name, String new_exercise_name, String new_exercise_bodypart)
-    {
-        List<WorkoutSet> to_be_updated_sets = new ArrayList<>();
-
-        for(int i = 0; i < workoutDays.size(); i++)
-        {
-            for(int j = 0; j < workoutDays.get(i).getSets().size(); j++)
-            {
-                if(workoutDays.get(i).getSets().get(j).getExerciseName().equals(exercise_name))
-                {
-                    WorkoutSet temp_set = workoutDays.get(i).getSets().get(j);
-                    temp_set.setExerciseName(new_exercise_name);
-                    temp_set.setCategory(new_exercise_bodypart);
-                    to_be_updated_sets.add(temp_set);
-                }
-            }
-
-            for(int j = 0; j < workoutDays.get(i).getExercises().size(); j++)
-            {
-                if(workoutDays.get(i).getExercises().get(j).getExercise().equals(exercise_name))
-                {
-                    for(int k = 0; k < workoutDays.get(i).getExercises().get(j).getSets().size(); k++)
-                    {
-                        if(workoutDays.get(i).getExercises().get(j).getSets().get(k).getExerciseName().equals(exercise_name))
-                        {
-                            WorkoutSet temp_set = workoutDays.get(i).getExercises().get(j).getSets().get(k);
-                            temp_set.setExerciseName(new_exercise_name);
-                            temp_set.setCategory(new_exercise_bodypart);
-                            to_be_updated_sets.add(temp_set);
-                        }
-                    }
-                }
-            }
-        }
-        return to_be_updated_sets;
     }
 
     // Add all exercises found in the csv to the Known Exercises local data structure

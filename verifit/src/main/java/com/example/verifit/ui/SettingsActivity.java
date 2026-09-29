@@ -1,7 +1,5 @@
 package com.example.verifit.ui;
 
-import static com.example.verifit.ui.MainActivity.READ_REQUEST_CODE;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ClipData;
@@ -15,8 +13,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -26,7 +22,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.EditTextPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
-import androidx.preference.PreferenceGroup;
 import androidx.preference.PreferenceManager;
 
 import com.example.verifit.BackupManager;
@@ -34,10 +29,7 @@ import com.example.verifit.BuildConfig;
 import com.example.verifit.LoadingDialog;
 import com.example.verifit.R;
 import com.example.verifit.SharedPreferences;
-import com.example.verifit.SnackBarWithMessage;
 import com.example.verifit.ThemeHelper;
-import com.example.verifit.verifitrs.UsersApi;
-import com.example.verifit.verifitrs.WorkoutSetsApi;
 import com.example.verifit.webdav.CheckWebdavThread;
 import com.example.verifit.webdav.ClickedOnWebdavThread;
 import com.example.verifit.webdav.ExportWebdavThread;
@@ -46,10 +38,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Response;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -116,8 +104,6 @@ public class SettingsActivity extends AppCompatActivity {
 
                 sharedPreferences.save("false", "togglewebdav");
             }
-
-            setVerifitRsSettingsVisibility();
 
             // Retour Romain 28/09/2026 : "un numero de build [...] pour verifier qu'on
             // parle bien de la meme version". BuildConfig.BUILD_TIMESTAMP est genere
@@ -219,47 +205,6 @@ public class SettingsActivity extends AppCompatActivity {
         }
 
 
-        public void setVerifitRsSettingsVisibility()
-        {
-            SharedPreferences sharedPreferences = new SharedPreferences(getContext());
-            Preference verifit_rs_login_signup_logout = findPreference("verifit_rs_login_signup_logout");
-            Preference verifit_rs_import = findPreference("verifit_rs_import");
-            Preference verifit_rs_export = findPreference("verifit_rs_export");
-            Preference verifit_rs_delete_all = findPreference("verifit_rs_delete_all");
-
-            // User is not logged in
-            if(sharedPreferences.isOfflineMode())
-            {
-                verifit_rs_import.setVisible(false);
-                verifit_rs_export.setVisible(false);
-                verifit_rs_delete_all.setVisible(false);
-
-                // Backend verifit_rs abandonne (29/09/2026) : section "Account" masquee
-                // entierement en mode hors ligne - l'ecran Login ne mene plus nulle part et
-                // son bouton Cancel effacait l'historique (voir
-                // SharedPreferences.enableOfflineMode()). Suppression complete au lot B.
-                Preference accountCategory = findPreference("account_category");
-                if (accountCategory != null)
-                {
-                    accountCategory.setVisible(false);
-                }
-
-                verifit_rs_login_signup_logout.setTitle("Login/Sign Up");
-                verifit_rs_login_signup_logout.setSummary("Login or create a free account");
-            }
-            else
-            {
-                verifit_rs_import.setVisible(true);
-                verifit_rs_export.setVisible(true);
-                verifit_rs_delete_all.setVisible(true);
-
-                verifit_rs_login_signup_logout.setTitle("Logout");
-                verifit_rs_login_signup_logout.setSummary("You are logged in as " + sharedPreferences.load("verifit_rs_username"));
-
-                disableOfflineSettings();
-            }
-        }
-
         @Override
         public boolean onPreferenceTreeClick(Preference preference) {
             String key = preference.getKey();
@@ -281,7 +226,6 @@ public class SettingsActivity extends AppCompatActivity {
                 bt_yes3.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        logoutFromVerifitRs();
                         Intent in = new Intent(getActivity(), MainActivity.class);
                         // Retour a l'ecran Workout existant (recree avec l'action demandee) plutot
                         // qu'une instance de plus dans la pile (voir TabNavigation).
@@ -526,146 +470,6 @@ public class SettingsActivity extends AppCompatActivity {
             {
                 composeEmail("support@verifit.xyz", "", getContext());
             }
-            else if(key.equals("verifit_rs_login_signup_logout"))
-            {
-                // If user is not logged in
-                if(sharedPreferences.isOfflineMode())
-                {
-                    Intent intent = new Intent(getContext(), LoginActivity.class);
-                    startActivity(intent);
-                }
-                else
-                {
-                    final LoadingDialog loadingDialog = new LoadingDialog(getActivity());
-                    loadingDialog.loadingAlertDialog();
-
-                    UsersApi users = new UsersApi(getContext(),getString(R.string.API_ENDPOINT), sharedPreferences.load("verifit_rs_username"), sharedPreferences.load("verifit_rs_password"));
-                    users.logout(new Callback() {
-                        @Override
-                        public void onFailure(Call call, IOException e) {
-                            // Handle error
-                            loadingDialog.dismissDialog();
-                            SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(getContext());
-                            snackBarWithMessage.showSnackbar("Can't connect to server");
-                        }
-
-                        @Override
-                        public void onResponse(Call call, Response response) throws IOException {
-
-                            sharedPreferences.enableOfflineMode();
-
-                            loadingDialog.dismissDialog();
-
-                            // Whether success or not we still logout the user
-                            Intent intent = new Intent(getContext(), MainActivity.class);
-                            intent.putExtra("message", "verifit_rs_logout"); // Replace "key" with a key identifier and "value" with the actual string value
-                            getContext().startActivity(intent);
-                        }
-                    });
-                }
-            }
-            else if(key.equals("verifit_rs_import"))
-            {
-                LayoutInflater inflater = LayoutInflater.from(getContext());
-                View view = inflater.inflate(R.layout.import_mild_warning_dialog, null);
-                AlertDialog alertDialog = new AlertDialog.Builder(getContext()).setView(view).create();
-
-                TextView tv_date = view.findViewById(R.id.tv_date);
-
-                tv_date.setText("Upload all sets?");
-
-                Button bt_yes3 = view.findViewById(R.id.bt_yes3);
-                Button bt_no3 = view.findViewById(R.id.bt_no3);
-
-                bt_yes3.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        alertDialog.dismiss();
-                        fileSearch();
-                    }
-                });
-
-                bt_no3.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        alertDialog.dismiss();
-                    }
-                });
-                alertDialog.show();
-            }
-            else if(key.equals("verifit_rs_export"))
-            {
-                // Same as offline export since we are exporting everything in local data structures
-                Intent in = new Intent(getActivity(), MainActivity.class);
-                // Retour a l'ecran Workout existant (recree avec l'action demandee) plutot
-                // qu'une instance de plus dans la pile (voir TabNavigation).
-                in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                in.putExtra("doit", "exportcsv");
-                startActivity(in);
-            }
-            else if(key.equals("verifit_rs_delete_all"))
-            {
-
-                // Prepare to show exercise dialog box
-                LayoutInflater inflater = LayoutInflater.from(getContext());
-                View view = inflater.inflate(R.layout.import_red_warning_dialog, null);
-                AlertDialog alertDialog = new AlertDialog.Builder(getContext()).setView(view).create();
-
-                TextView tv_date = view.findViewById(R.id.tv_date);
-
-                tv_date.setText("Delete all account data?");
-
-                Button bt_yes3 = view.findViewById(R.id.bt_yes3);
-                Button bt_no3 = view.findViewById(R.id.bt_no3);
-
-                bt_yes3.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-
-                        final LoadingDialog loadingDialog = new LoadingDialog(getActivity());
-                        loadingDialog.loadingAlertDialog();
-
-                        WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getContext(), getString(R.string.API_ENDPOINT));
-                        workoutSetsApi.deleteWorkoutSets(MainActivity.dataStorage.getSets(), new Callback() {
-                            @Override
-                            public void onFailure(@NonNull Call call, @NonNull IOException e)
-                            {
-                                loadingDialog.dismissDialog();
-                                SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(getContext());
-                                snackBarWithMessage.showSnackbar("Can't connect to server");
-                            }
-
-                            @Override
-                            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException
-                            {
-                                alertDialog.dismiss();
-                                loadingDialog.dismissDialog();
-
-                                if(200 == response.code())
-                                {
-
-                                    MainActivity.dataStorage.clearDataStructures(getContext());
-                                    SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(getContext());
-                                    snackBarWithMessage.showSnackbar("All data deleted");
-                                }
-                                else
-                                {
-                                    SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(getContext());
-                                    snackBarWithMessage.showSnackbar(response.message().toString());
-                                }
-                            }
-                        });
-                    }
-                });
-
-                bt_no3.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        alertDialog.dismiss();
-                    }
-                });
-                alertDialog.show();
-            }
 
             return true;
         }
@@ -704,15 +508,6 @@ public class SettingsActivity extends AppCompatActivity {
                     .show();
         }
 
-        // Select a file using the build in file manager
-        public void fileSearch()
-        {
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("text/*");
-            startActivityForResult(intent,READ_REQUEST_CODE);
-        }
-
         // When File explorer stops this function runs
         @Override
         public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data)
@@ -727,46 +522,6 @@ public class SettingsActivity extends AppCompatActivity {
                     if (requestCode == FULL_BACKUP_REQUEST_CODE)
                     {
                         onFullBackupFileChosen(uri);
-                    }
-                    else if (requestCode == READ_REQUEST_CODE)
-                    {
-                        if(MainActivity.dataStorage.readFile(uri, getContext()))
-                        {
-
-                            final LoadingDialog loadingDialog = new LoadingDialog(getActivity());
-                            loadingDialog.loadingAlertDialog();
-
-                                WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getContext(), getString(R.string.API_ENDPOINT));
-                                workoutSetsApi.postWorkoutSets(MainActivity.dataStorage.getSets(), new Callback()
-                                {
-                                    @Override
-                                    public void onFailure(@NonNull Call call, @NonNull IOException e)
-                                    {
-                                        loadingDialog.dismissDialog();
-                                        SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(getContext());
-                                        snackBarWithMessage.showSnackbar("Can't connect to server");
-                                    }
-
-                                    @Override
-                                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException
-                                    {
-                                        loadingDialog.dismissDialog();
-
-                                        if(200 == response.code()) {
-
-                                            SharedPreferences sharedPreferences = new SharedPreferences(getContext());
-                                            sharedPreferences.disableCaching();
-
-                                            SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(getContext());
-                                            snackBarWithMessage.showSnackbar("Data imported successfully");
-                                        }
-                                        else{
-                                            SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(getContext());
-                                            snackBarWithMessage.showSnackbar(response.message().toString());
-                                        }
-                                    }
-                                });
-                        }
                     }
                 }
             }
@@ -812,8 +567,6 @@ public class SettingsActivity extends AppCompatActivity {
             SharedPreferences sharedPreferences = new SharedPreferences(getContext());
             sharedPreferences.save("true", "togglewebdav");
 
-            logoutFromVerifitRs();
-
             System.out.println("turnWebdavOn() Webdav on");
 
             Toast.makeText(getContext(), "Webdav is on", Toast.LENGTH_SHORT).show();
@@ -833,49 +586,6 @@ public class SettingsActivity extends AppCompatActivity {
             autowebdavbackup.setVisible(true);
         }
 
-
-        public void logoutFromVerifitRs()
-        {
-            SharedPreferences sharedPreferences = new SharedPreferences(getContext());
-            sharedPreferences.save("offline", "mode");
-            sharedPreferences.save("", "verifit_rs_token");
-        }
-
-
-        public void disableOfflineSettings()
-        {
-            System.out.println("Disabling Offline Settings");
-
-            SharedPreferences sharedPreferences = new SharedPreferences(getContext());
-            sharedPreferences.save("false", "togglewebdav");
-
-            Preference importwebdav = findPreference("importwebdav");
-            Preference exportwebdav = findPreference("exportwebdav");
-            Preference webdavurl = findPreference("webdavurl");
-            Preference webdavusername = findPreference("webdavusername");
-            Preference webdavpassword = findPreference("webdavpassword");
-            Preference webdavcheckconnection = findPreference("webdavcheckconnection");
-            Preference autowebdavbackup = findPreference("autowebdavbackup");
-            Preference togglewebdav = findPreference("togglewebdav");
-
-            importwebdav.setVisible(false);
-            exportwebdav.setVisible(false);
-            webdavurl.setVisible(false);
-            webdavusername.setVisible(false);
-            webdavpassword.setVisible(false);
-            webdavcheckconnection.setVisible(false);
-            autowebdavbackup.setVisible(false);
-            togglewebdav.setVisible(false);
-
-            Preference importcsv = findPreference("importcsv");
-            Preference exportcsv = findPreference("exportcsv");
-            Preference deletedata = findPreference("deletedata");
-
-            importcsv.setVisible(false);
-            exportcsv.setVisible(false);
-            deletedata.setVisible(false);
-
-        }
 
         // Delete all currently saved workout data
         public void deleteData()

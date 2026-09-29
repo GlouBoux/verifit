@@ -1,7 +1,6 @@
 package com.example.verifit.ui;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
@@ -33,7 +32,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -48,7 +46,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.verifit.KeyboardHider;
-import com.example.verifit.LoadingDialog;
 import com.example.verifit.MonthXAxisFormatter;
 import com.example.verifit.RestTimerBarTicker;
 import com.example.verifit.RestTimerReceiver;
@@ -63,7 +60,6 @@ import com.example.verifit.model.SupersetGroup;
 import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
-import com.example.verifit.verifitrs.WorkoutSetsApi;
 import com.github.mikephil.charting.animation.Easing;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.Legend;
@@ -74,24 +70,14 @@ import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.highlight.Highlight;
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
 import com.google.android.material.button.MaterialButton;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
-import java.io.IOException;
-import java.lang.reflect.Array;
-import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Response;
 
 public class AddExerciseActivity extends AppCompatActivity {
 
@@ -432,85 +418,12 @@ public class AddExerciseActivity extends AppCompatActivity {
                         // WorkoutSet ci-dessus), a editer individuellement si besoin
                         // via l'appui long (WorkoutSetAdapter).
 
-                        // Offline
-                        if(sharedPreferences.isOfflineMode())
-                        {
-                            addSetExistingWorkoutDay(workoutSet, position);
-                        }
-                        else
-                        {
-                            final LoadingDialog loadingDialog = new LoadingDialog(AddExerciseActivity.this);
-                            loadingDialog.loadingAlertDialog();
-
-                            WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getApplicationContext(), getString(R.string.API_ENDPOINT));
-                            workoutSetsApi.postWorkoutSet(workoutSet, new Callback() {
-                                @Override
-                                public void onFailure(Call call, IOException e) {
-                                    loadingDialog.dismissDialog();
-                                    showSnackbarMessage(e.toString());
-                                }
-
-                                @Override
-                                public void onResponse(Call call, okhttp3.Response response) throws IOException {
-
-                                    loadingDialog.dismissDialog();
-
-                                    if (200 == response.code())
-                                    {
-                                        Integer set_id = getSetIdFromResponse(response);
-                                        workoutSet.setId(set_id);
-                                        addSetExistingWorkoutDay(workoutSet, position);
-                                    }
-                                    else
-                                    {
-                                        showSnackbarMessage(response.message().toString());
-                                    }
-                                }
-                            });
-                        }
+                        addSetExistingWorkoutDay(workoutSet, position);
                     }
                     // If not construct new workout day
                     else
                     {
-                        // Offline
-                        if(sharedPreferences.isOfflineMode())
-                        {
-                            addSetNewWorkoutDay(workoutSet);
-                        }
-                        else
-                        {
-                            final LoadingDialog loadingDialog = new LoadingDialog(AddExerciseActivity.this);
-                            loadingDialog.loadingAlertDialog();
-
-                            WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getApplicationContext(), getString(R.string.API_ENDPOINT));
-                            workoutSetsApi.postWorkoutSet(workoutSet, new Callback() {
-                                @Override
-                                public void onFailure(Call call, IOException e) {
-                                    // Show error
-                                    loadingDialog.dismissDialog();
-                                    showSnackbarMessage(e.toString());
-                                }
-
-                                @Override
-                                public void onResponse(Call call, okhttp3.Response response) throws IOException {
-
-                                    loadingDialog.dismissDialog();
-
-                                    if (200 == response.code())
-                                    {
-                                        Integer set_id = getSetIdFromResponse(response);
-                                        workoutSet.setId(set_id);
-                                        addSetNewWorkoutDay(workoutSet);
-                                    }
-                                    else
-                                    {
-                                        runOnUiThread(()->{
-                                            showSnackbarMessage(response.message());
-                                        });
-                                    }
-                                }
-                            });
-                        }
+                        addSetNewWorkoutDay(workoutSet);
                     }
                 }
             }
@@ -548,40 +461,7 @@ public class AddExerciseActivity extends AppCompatActivity {
                         set.setReps(reps);
                         set.setWeight(weight);
 
-                        if(sharedPreferences.isOfflineMode())
-                        {
-                            updateSet(finalI, finalJ, reps, weight);
-                        }
-                        else
-                        {
-                            final LoadingDialog loadingDialog = new LoadingDialog(AddExerciseActivity.this);
-                            loadingDialog.loadingAlertDialog();
-
-                            WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getApplicationContext(), getString(R.string.API_ENDPOINT));
-                            workoutSetsApi.updateWorkoutSet(set, new Callback() {
-                                @Override
-                                public void onFailure(Call call, IOException e)
-                                {
-                                    loadingDialog.dismissDialog();
-                                    showSnackbarMessage(e.toString());
-                                }
-
-                                @Override
-                                public void onResponse(Call call, okhttp3.Response response) throws IOException {
-
-                                    loadingDialog.dismissDialog();
-
-                                    if (200 == response.code())
-                                    {
-                                        updateSet(finalI, finalJ, reps, weight);
-                                    }
-                                    else
-                                    {
-                                        showSnackbarMessage(response.message().toString());
-                                    }
-                                }
-                            });
-                        }
+                        updateSet(finalI, finalJ, reps, weight);
                         break;
                     }
                 }
@@ -1230,16 +1110,6 @@ public class AddExerciseActivity extends AppCompatActivity {
                 .show();
     }
 
-    public Integer getSetIdFromResponse(okhttp3.Response response) throws IOException
-    {
-        String jsonString = response.body().string();
-        Gson gson = new Gson();
-        Type listType = new TypeToken<Integer>() {}.getType();
-        Integer set_id = gson.fromJson(jsonString, listType);
-
-        return  set_id;
-    }
-
     // Clear (mode normal) / Delete (mode edition d'une serie existante). Retour Romain
     // 06/09/2026 : un tap sur une serie passe maintenant en mode edition (bouton du bas
     // = "Delete"), donc ce bouton doit vraiment supprimer la serie selectionnee dans ce
@@ -1300,51 +1170,8 @@ public class AddExerciseActivity extends AppCompatActivity {
                 {
                     if(MainActivity.dataStorage.getWorkoutDays().get(i).getSets().contains(to_be_removed_set))
                     {
-                        final int finalI = i;
-
-                        if(sharedPreferences.isOfflineMode())
-                        {
-                            deleteSetLogic(ct, finalI, to_be_removed_set);
-                            alertDialog.dismiss();
-                        }
-                        else
-                        {
-                            final LoadingDialog loadingDialog = new LoadingDialog((Activity) ct);
-                            loadingDialog.loadingAlertDialog();
-
-                            WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(ct, ct.getString(R.string.API_ENDPOINT));
-                            workoutSetsApi.deleteWorkoutSet(to_be_removed_set, new Callback() {
-                                @Override
-                                public void onFailure(Call call, IOException e) {
-                                    // Show error
-                                    ((Activity) ct).runOnUiThread(() -> {
-                                        loadingDialog.dismissDialog();
-                                        alertDialog.dismiss();
-                                        SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(((Activity) ct));
-                                        snackBarWithMessage.showSnackbar("Can't connect to server");
-                                    });
-                                }
-
-                                @Override
-                                public void onResponse(Call call, okhttp3.Response response) throws IOException {
-
-                                    loadingDialog.dismissDialog();
-                                    alertDialog.dismiss();
-
-                                    if (200 == response.code())
-                                    {
-                                        deleteSetLogic(ct, finalI, to_be_removed_set);
-                                    }
-                                    else
-                                    {
-                                        ((Activity) ct).runOnUiThread(() -> {
-                                            SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(((Activity) ct));
-                                            snackBarWithMessage.showSnackbar(response.message().toString());
-                                        });
-                                    }
-                                }
-                            });
-                        }
+                        deleteSetLogic(ct, i, to_be_removed_set);
+                        alertDialog.dismiss();
                         break;
                     }
                 }
@@ -1399,9 +1226,6 @@ public class AddExerciseActivity extends AppCompatActivity {
             // bouton "Dismiss" du message existant ne faisait que le fermer, sans
             // jamais annuler la suppression. Devient "Undo" et restaure vraiment la
             // serie (meme objet, donc mêmes id/commentaire/valeurs prevues) si cliqué.
-            // Fonctionne en local uniquement (pas de re-synchronisation vers l'API
-            // verifit_rs en mode compte en ligne, comme pour les autres mutations
-            // ajoutees depuis - de toute facon vouee a disparaitre, voir la TODO).
             SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(((Activity) ct));
             snackBarWithMessage.showSnackbarWithUndoAtTop("Set Deleted", () -> undoDeleteSet(ct, to_be_removed_set, removedSetIndex));
             updateTodaysExercises();
@@ -1521,47 +1345,9 @@ public class AddExerciseActivity extends AppCompatActivity {
         com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
         sharedPreferences.save("true", "autoBackupRequired");
 
-        if (sharedPreferences.isOfflineMode())
-        {
-            deleteSetsLocally(getApplicationContext(), setsToDelete);
-            showSnackbarMessage(setsToDelete.size() + " sets deleted");
-            mode.finish();
-        }
-        else
-        {
-            final LoadingDialog loadingDialog = new LoadingDialog(AddExerciseActivity.this);
-            loadingDialog.loadingAlertDialog();
-
-            // /sets/bulk : même endpoint déjà utilisé pour la suppression d'un exercice
-            // entier (ExerciseAdapter.locallyDeleteExercise) - un seul appel réseau pour
-            // toute la sélection, pas un par série.
-            WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getApplicationContext(), getString(R.string.API_ENDPOINT));
-            workoutSetsApi.deleteWorkoutSets(setsToDelete, new Callback() {
-                @Override
-                public void onFailure(Call call, IOException e) {
-                    loadingDialog.dismissDialog();
-                    showSnackbarMessage("Can't connect to server");
-                }
-
-                @Override
-                public void onResponse(Call call, okhttp3.Response response) throws IOException {
-                    loadingDialog.dismissDialog();
-
-                    if (200 == response.code())
-                    {
-                        deleteSetsLocally(getApplicationContext(), setsToDelete);
-                        runOnUiThread(() -> {
-                            showSnackbarMessage(setsToDelete.size() + " sets deleted");
-                            mode.finish();
-                        });
-                    }
-                    else
-                    {
-                        showSnackbarMessage(response.message());
-                    }
-                }
-            });
-        }
+        deleteSetsLocally(getApplicationContext(), setsToDelete);
+        showSnackbarMessage(setsToDelete.size() + " sets deleted");
+        mode.finish();
     }
 
     // Local removal for a batch of sets, all belonging to the current exercise/date

@@ -16,7 +16,6 @@
     <string name="attachment_summary_on">Automatically download attachments for incoming emails
     </string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
-    <string name="API_ENDPOINT">https://verifit.xyz</string>
 
     <!-- Volet de navigation entre exercices (retour Romain 18/09/2026) - description
          d'accessibilite de l'icone hamburger de AddExerciseActivity (ActionBarDrawerToggle,

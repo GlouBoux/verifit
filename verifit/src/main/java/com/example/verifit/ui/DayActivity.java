@@ -29,7 +29,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.verifit.DataStorage;
-import com.example.verifit.LoadingDialog;
 import com.example.verifit.SessionImporter;
 import com.example.verifit.SessionTimerTicker;
 import com.example.verifit.WorkoutReportGenerator;
@@ -40,20 +39,15 @@ import com.example.verifit.model.SupersetGroup;
 import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
-import com.example.verifit.verifitrs.WorkoutSetsApi;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-
-import okhttp3.Call;
-import okhttp3.Callback;
 
 public class DayActivity extends AppCompatActivity {
 
@@ -435,46 +429,9 @@ public class DayActivity extends AppCompatActivity {
             return;
         }
 
-        if (sharedPreferences.isOfflineMode())
-        {
-            deleteExerciseSetsLocally(day_position, setsToDelete);
-            Toast.makeText(this, exerciseNames.size() + " exercise(s) deleted", Toast.LENGTH_SHORT).show();
-            mode.finish();
-        }
-        else
-        {
-            final LoadingDialog loadingDialog = new LoadingDialog(DayActivity.this);
-            loadingDialog.loadingAlertDialog();
-
-            // Même endpoint /sets/bulk que AddExerciseActivity.deleteSelectedSets - un
-            // seul appel réseau pour toute la sélection.
-            WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getApplicationContext(), getString(R.string.API_ENDPOINT));
-            workoutSetsApi.deleteWorkoutSets(setsToDelete, new Callback() {
-                @Override
-                public void onFailure(Call call, IOException e) {
-                    loadingDialog.dismissDialog();
-                    runOnUiThread(() -> Toast.makeText(DayActivity.this, "Can't connect to server", Toast.LENGTH_SHORT).show());
-                }
-
-                @Override
-                public void onResponse(Call call, okhttp3.Response response) throws IOException {
-                    loadingDialog.dismissDialog();
-
-                    if (200 == response.code())
-                    {
-                        deleteExerciseSetsLocally(day_position, setsToDelete);
-                        runOnUiThread(() -> {
-                            Toast.makeText(DayActivity.this, exerciseNames.size() + " exercise(s) deleted", Toast.LENGTH_SHORT).show();
-                            mode.finish();
-                        });
-                    }
-                    else
-                    {
-                        runOnUiThread(() -> Toast.makeText(DayActivity.this, response.message(), Toast.LENGTH_SHORT).show());
-                    }
-                }
-            });
-        }
+        deleteExerciseSetsLocally(day_position, setsToDelete);
+        Toast.makeText(this, exerciseNames.size() + " exercise(s) deleted", Toast.LENGTH_SHORT).show();
+        mode.finish();
     }
 
     // Groupe les exercices selectionnes en superset (Vague 2 du plan de migration,

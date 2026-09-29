@@ -31,10 +31,8 @@ import android.widget.Toast;
 
 import com.example.verifit.BackupService;
 import com.example.verifit.DataStorage;
-import com.example.verifit.LoadingDialog;
 import com.example.verifit.R;
 import com.example.verifit.SessionImporter;
-import com.example.verifit.SnackBarWithMessage;
 import com.example.verifit.WorkoutReportGenerator;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
@@ -44,14 +42,9 @@ import com.example.verifit.adapters.WebdavAdapter;
 import com.example.verifit.model.SupersetColours;
 import com.example.verifit.model.SupersetGroup;
 import com.example.verifit.model.WorkoutDay;
-import com.example.verifit.verifitrs.WorkoutSetsApi;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
-import java.io.IOException;
-import java.lang.reflect.Type;
 import java.text.DateFormat;
 import java.text.Format;
 import java.text.SimpleDateFormat;
@@ -59,10 +52,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity implements BottomNavigationView.OnNavigationItemSelectedListener {
 
@@ -204,8 +193,6 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
         String whatToDo = in.getStringExtra("doit");
 
-        String message = in.getStringExtra("message");
-
         // If Intent coming from settings activity
         if(whatToDo != null)
         {
@@ -251,109 +238,10 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         // No intent
         else
         {
-            // Offline / Webdav Mode
-            com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-
-            if(sharedPreferences.isOfflineMode())
-            {
-                sharedPreferences.save("offline", "mode");
-                dataStorage.loadWorkoutData(getApplicationContext());
-                dataStorage.loadKnownExercisesData(getApplicationContext());
-                dataStorage.loadGoalsData(getApplicationContext()); // "Goals" (Vague 4, item 14)
-                initViewPager();
-            }
-            // Caching: Update screen with local data
-            else if(dataStorage.getWorkoutDays().size() > 0 && sharedPreferences.shouldUseCache())
-            {
-                initViewPager();
-            }
-            // Fetch data from Rest API and then update screen
-            else
-            {
-                // Cloud Mode
-                WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getApplicationContext(), getString(R.string.API_ENDPOINT));
-                workoutSetsApi.getAllWorkoutSets(new Callback() {
-                    @Override
-                    public void onFailure(Call call, IOException e) {
-
-                        sharedPreferences.enableOfflineMode();
-
-                        // Show error
-                        runOnUiThread(() -> {
-                            initViewPager();
-                            SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(MainActivity.this);
-                            snackBarWithMessage.showSnackbar("Can't connect to server");
-                        });
-                    }
-
-                    @Override
-                    public void onResponse(Call call, okhttp3.Response response) throws IOException
-                    {
-                        if (200 == response.code())
-                        {
-                            String jsonString = response.body().string();
-                            Gson gson = new Gson();
-                            Type listType = new TypeToken<ArrayList<WorkoutSet>>() {}.getType();
-                            ArrayList<WorkoutSet> sets = gson.fromJson(jsonString, listType);
-
-                            MainActivity.dataStorage.readFromSets(sets, getApplicationContext());
-
-                            // Data loaded successfully, enable caching from now on
-                            sharedPreferences.enableCaching();
-
-                            runOnUiThread(() -> {
-                                initViewPager();
-                            });
-                        }
-                        else
-                        {
-                            // If logged out login again
-                            if(response.message().equals("Unauthorized"))
-                            {
-                                Intent intent = new Intent(MainActivity.this, LoginActivity.class);
-                                startActivity(intent);
-                            }
-                            else if(response.message().equals("Bad Gateway"))
-                            {
-                                sharedPreferences.enableOfflineMode();
-                                runOnUiThread(() -> {
-                                    initViewPager();
-                                });
-                            }
-                            else
-                            {
-                                sharedPreferences.enableOfflineMode();
-                            }
-
-                            runOnUiThread(() -> {
-                                SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(MainActivity.this);
-                                snackBarWithMessage.showSnackbar(response.message().toString());
-                            });
-                        }
-                    }
-                });
-            }
-        }
-        // Display login/logout messages
-        if(message != null)
-        {
-            if(message.equals("verifit_rs_login"))
-            {
-                SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(MainActivity.this);
-                snackBarWithMessage.showSnackbar("Welcome back");
-            }
-            else if(message.equals("verifit_rs_logout"))
-            {
-                SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(MainActivity.this);
-                snackBarWithMessage.showSnackbar("Logged out");
-            }
-            else if(message.equals("verifit_rs_signup"))
-            {
-                com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-                String email = sharedPreferences.load("verifit_rs_username");
-                SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(MainActivity.this);
-                snackBarWithMessage.showSnackbar("Account created for " + email);
-            }
+            dataStorage.loadWorkoutData(getApplicationContext());
+            dataStorage.loadKnownExercisesData(getApplicationContext());
+            dataStorage.loadGoalsData(getApplicationContext()); // "Goals" (Vague 4, item 14)
+            initViewPager();
         }
     }
 
@@ -1109,44 +997,9 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
             return;
         }
 
-        if (sharedPreferences.isOfflineMode())
-        {
-            deleteExerciseSetsLocally(day_position, setsToDelete);
-            Toast.makeText(this, exerciseNames.size() + " exercise(s) deleted", Toast.LENGTH_SHORT).show();
-            mode.finish();
-        }
-        else
-        {
-            final LoadingDialog loadingDialog = new LoadingDialog(MainActivity.this);
-            loadingDialog.loadingAlertDialog();
-
-            WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getApplicationContext(), getString(R.string.API_ENDPOINT));
-            workoutSetsApi.deleteWorkoutSets(setsToDelete, new Callback() {
-                @Override
-                public void onFailure(Call call, IOException e) {
-                    loadingDialog.dismissDialog();
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Can't connect to server", Toast.LENGTH_SHORT).show());
-                }
-
-                @Override
-                public void onResponse(Call call, Response response) throws IOException {
-                    loadingDialog.dismissDialog();
-
-                    if (200 == response.code())
-                    {
-                        deleteExerciseSetsLocally(day_position, setsToDelete);
-                        runOnUiThread(() -> {
-                            Toast.makeText(MainActivity.this, exerciseNames.size() + " exercise(s) deleted", Toast.LENGTH_SHORT).show();
-                            mode.finish();
-                        });
-                    }
-                    else
-                    {
-                        runOnUiThread(() -> Toast.makeText(MainActivity.this, response.message(), Toast.LENGTH_SHORT).show());
-                    }
-                }
-            });
-        }
+        deleteExerciseSetsLocally(day_position, setsToDelete);
+        Toast.makeText(this, exerciseNames.size() + " exercise(s) deleted", Toast.LENGTH_SHORT).show();
+        mode.finish();
     }
 
     private void deleteExerciseSetsLocally(int day_position, List<WorkoutSet> setsToDelete)

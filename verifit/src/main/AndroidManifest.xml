@@ -30,21 +30,6 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true" >
-        <activity
-            android:name=".ui.ChangePasswordActivity"
-            android:label="Reset Password"
-            android:parentActivityName=".ui.ForgotPasswordActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.ForgotPasswordActivity"
-            android:exported="false"
-            android:label="Forgot Password"
-            android:parentActivityName=".ui.LoginActivity" />
-        <activity
-            android:name=".ui.LoginActivity"
-            android:exported="false"
-            android:parentActivityName=".ui.SettingsActivity"/>
-
         <service android:name=".BackupService" />
 
         <!-- Retour Romain 06/09/2026 : recoit l'alarme systeme programmee par

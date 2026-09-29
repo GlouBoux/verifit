@@ -27,8 +27,6 @@ public class WorkoutSet {
     // deja sauvegardees sur disque.
     private String planComment;
 
-    private int user_id;
-
     // "Prevu" (planned) values, distincts du couple reps/weight ci-dessus qui
     // represente le "realise" (modifiable a tout moment par l'utilisateur).
     // Renseignes UNIQUEMENT au moment de l'import d'une seance generee (voir
@@ -121,7 +119,6 @@ public class WorkoutSet {
     public void setComment(String Comment){this.comment = Comment;}
     public void setPlanComment(String PlanComment) {this.planComment = PlanComment;}
     public void setId(int id) {this.id = id;}
-    public void setUser_id(int user_id) {this.user_id = user_id;}
     public void setPlannedReps(Double PlannedReps) {this.plannedReps = PlannedReps;}
     public void setPlannedWeight(Double PlannedWeight) {this.plannedWeight = PlannedWeight;}
     public void setTimestamp(Long Timestamp) {this.timestamp = Timestamp;}
@@ -152,7 +149,6 @@ public class WorkoutSet {
     public String getComment() {return this.comment;}
     // Jamais null (voir le commentaire du champ planComment).
     public String getPlanComment() {return this.planComment == null ? "" : this.planComment;}
-    public int getUser_id() {return user_id;}
     public int getId() {return id;}
     public Double getPlannedReps() {return this.plannedReps;}
     public Double getPlannedWeight() {return this.plannedWeight;}

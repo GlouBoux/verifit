@@ -1,6 +1,5 @@
 package com.example.verifit.adapters;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -22,34 +21,21 @@ import androidx.appcompat.widget.PopupMenu;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.verifit.LoadingDialog;
-import com.example.verifit.SharedPreferences;
-import com.example.verifit.SnackBarWithMessage;
 import com.example.verifit.model.CategoryColours;
 import com.example.verifit.model.Exercise;
 import com.example.verifit.R;
-import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.ui.AddExerciseActivity;
-import com.example.verifit.ui.LoginActivity;
 import com.example.verifit.ui.MainActivity;
-import com.example.verifit.verifitrs.WorkoutSetsApi;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Locale;
 
 import android.widget.ImageView;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Response;
-
 
 // Adapter for Exercise Class
 public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyViewHolder> implements Filterable {
@@ -422,63 +408,13 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
                         // Call Edit Exercise if user gave reasonable input
                         if(new_exercise_category != null && !new_exercise_category.isEmpty() && new_exercise_category.length() > 0 && new_exercise_name != null && !new_exercise_name.isEmpty() && new_exercise_name.length() > 0)
                         {
-                            // "Exercise Notes" (retour Romain 28/09/2026) : purement local,
-                            // aucun WorkoutSetsApi a prevenir (voir commentaire de
-                            // edited_exercise plus haut) - mute avant meme de savoir si le
-                            // renommage va passer par le chemin offline ou online, les deux
-                            // chemins finissent par appeler saveKnownExerciseData() qui
-                            // serialisera cette valeur.
+                            // "Exercise Notes" (retour Romain 28/09/2026) : mute avant le
+                            // renommage, locallyUpdateExercise() appelle ensuite
+                            // saveKnownExerciseData() qui serialisera cette valeur.
                             edited_exercise.setNotes(et_exercise_notes.getText().toString());
 
-                            SharedPreferences sharedPreferences = new SharedPreferences(ct);
-                            if(sharedPreferences.isOfflineMode()) {
-                                locallyUpdateExercise(new_exercise_name);
-                                alertDialog.dismiss();
-                            }
-                            else
-                            {
-
-                                final LoadingDialog loadingDialog = new LoadingDialog((Activity) ct);
-                                loadingDialog.loadingAlertDialog();
-
-                                List<WorkoutSet> to_be_updated_sets = MainActivity.dataStorage.editExerciseGetSets(exercise_name,new_exercise_name,new_exercise_category);
-                                WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(ct, ct.getString(R.string.API_ENDPOINT));
-                                workoutSetsApi.updateWorkoutSets(to_be_updated_sets, new Callback() {
-                                    @Override
-                                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                                        ((Activity) ct).runOnUiThread(() -> {
-                                            alertDialog.dismiss();
-                                            loadingDialog.dismissDialog();
-                                            SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(ct);
-                                            snackBarWithMessage.showSnackbar("Can't connect to server");
-                                        });
-                                    }
-
-                                    @Override
-                                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                                        System.out.println(response.toString());
-
-                                        ((Activity) ct).runOnUiThread(() -> {
-                                            alertDialog.dismiss();
-                                            loadingDialog.dismissDialog();
-                                        });
-
-                                        if(200 == response.code())
-                                        {
-                                            ((Activity) ct).runOnUiThread(() -> {
-                                                locallyUpdateExercise(new_exercise_name);
-                                                SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(ct);
-                                                snackBarWithMessage.showSnackbar("Exercise Updated");
-                                            });
-                                        }
-                                        else
-                                        {
-                                            SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(ct);
-                                            snackBarWithMessage.showSnackbar(response.message().toString());
-                                        }
-                                    }
-                                });
-                            }
+                            locallyUpdateExercise(new_exercise_name);
+                            alertDialog.dismiss();
                         }
 
                         // Tell user to stop fucking around
@@ -644,57 +580,7 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
                     @Override
                     public void onClick(View view)
                     {
-                        SharedPreferences sharedPreferences = new SharedPreferences(ct);
-
-                        if(sharedPreferences.isOfflineMode())
-                        {
-                            locallyDeleteExercise(position, ct);
-                        }
-                        else
-                        {
-                            final LoadingDialog loadingDialog = new LoadingDialog((Activity) ct);
-                            loadingDialog.loadingAlertDialog();
-
-                            WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(ct, ct.getString(R.string.API_ENDPOINT));
-                            List<WorkoutSet> to_be_deleted_sets = MainActivity.dataStorage.deleteExerciseGetSets(Exercises.get(position).getName());
-
-                            workoutSetsApi.deleteWorkoutSets(to_be_deleted_sets, new Callback() {
-                                @Override
-                                public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                                    loadingDialog.dismissDialog();
-
-                                    ((Activity) ct).runOnUiThread(() -> {
-                                        SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(ct);
-                                        snackBarWithMessage.showSnackbar("Can't connect to server");
-                                    });
-                                }
-
-                                @Override
-                                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-
-                                    loadingDialog.dismissDialog();
-
-                                    if(200 == response.code()){
-
-                                        ((Activity) ct).runOnUiThread(() -> {
-                                            locallyDeleteExercise(position, ct);
-                                            SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(ct);
-                                            snackBarWithMessage.showSnackbar("Exercise Deleted");
-                                        });
-
-                                    }
-                                    else
-                                    {
-                                        ((Activity) ct).runOnUiThread(() -> {
-                                            SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(ct);
-                                            snackBarWithMessage.showSnackbar(response.message().toString());
-                                        });
-                                    }
-                                }
-                            });
-
-                        }
-
+                        locallyDeleteExercise(position, ct);
                         alertDialog.dismiss();
                     }
                 });
