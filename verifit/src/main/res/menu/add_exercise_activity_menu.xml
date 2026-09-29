@@ -93,7 +93,7 @@
          d'un coup, au lieu d'un "Clear" fastidieux série par série. Entre en mode
          sélection via une ActionMode (androidx.appcompat.view.ActionMode) plutôt que
          de réinterpréter le long-press existant, qui reste utilisé pour Éditer/Supprimer
-         UNE série (menu popup existant, voir set_add_exercise_activity_menu.xml). -->
+         UNE série (menu popup existant). -->
     <item
         android:id="@+id/select_sets"
         android:icon="@drawable/ic_fact_check_24px"

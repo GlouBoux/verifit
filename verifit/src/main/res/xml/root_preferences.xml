@@ -64,12 +64,6 @@
             app:defaultValue="system"
             app:useSimpleSummaryProvider="true" />
 
-        <Preference
-            app:key="github"
-            app:summary="Contributions are always welcome"
-            app:title="Source Code"
-            app:useSimpleSummaryProvider="false" />
-
         <!-- Retour Romain 28/09/2026 : afficher un numero de build pour ne plus avoir a
              se demander si on teste la bonne version de l'app. Summary pose
              dynamiquement dans SettingsActivity.onCreatePreferences() (versionName +
@@ -83,35 +77,10 @@
             app:useSimpleSummaryProvider="false" />
 
         <Preference
-            app:key="donate"
-            app:summary="If you like this app consider donating"
-            app:title="Donate"
-            app:useSimpleSummaryProvider="false" />
-
-
-        <Preference
             app:key="licence"
             app:summary="GNU General Public Licence, version 3"
             app:title="Licence"
             app:useSimpleSummaryProvider="false" />
-
-<!--        <Preference-->
-<!--            app:key="privacy_policy"-->
-<!--            app:summary="Learn more about our privacy policy"-->
-<!--            app:title="Privacy Policy"-->
-<!--            app:useSimpleSummaryProvider="false" />-->
-
-        <Preference
-            app:key="reddit"
-            app:summary="Join our reddit community"
-            app:title="Reddit"
-            app:useSimpleSummaryProvider="false" />
-
-<!--        <Preference-->
-<!--            app:key="contact_us"-->
-<!--            app:summary="If you need to get in touch."-->
-<!--            app:title="Contact Us"-->
-<!--            app:useSimpleSummaryProvider="false" />-->
 
     </PreferenceCategory>
 

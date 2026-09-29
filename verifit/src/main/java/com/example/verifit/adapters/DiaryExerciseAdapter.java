@@ -7,8 +7,6 @@ import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -235,77 +233,6 @@ public class DiaryExerciseAdapter extends RecyclerView.Adapter<DiaryExerciseAdap
         ct.startActivity(in);
     }
 
-
-    // Blatant copy of FitNotes but ohh well ;)
-    public void showExerciseDialog(int position) {
-
-        // Prepare to show exercise dialog box
-        LayoutInflater inflater = LayoutInflater.from(ct);
-        View view = inflater.inflate(R.layout.exercise_dialog,null);
-        AlertDialog alertDialog = new AlertDialog.Builder(ct).setView(view).create();
-
-        // Get TextViews
-        TextView totalsets = view.findViewById(R.id.volume);
-        TextView totalreps = view.findViewById(R.id.totalreps);
-        TextView totalvolume = view.findViewById(R.id.totalvolume);
-        TextView maxweight = view.findViewById(R.id.maxweight);
-        TextView maxreps = view.findViewById(R.id.maxreps);
-        TextView maxsetvolume = view.findViewById(R.id.maxsetvolume);
-        TextView name = view.findViewById(R.id.tv_date);
-        TextView onerepmax = view.findViewById(R.id.onerepmax);
-        TextView actualonerepmax = view.findViewById(R.id.tv_maxweight);
-        Button bt_close = view.findViewById(R.id.bt_close);
-        Button bt_edit_exercise = view.findViewById(R.id.bt_edit_exercise);
-
-
-        // Set Values
-
-        // Double -> Integer
-        int sets = (int)Math.round(Exercises.get(position).getTotalSets());
-        int reps = (int)Math.round(Exercises.get(position).getTotalReps());
-        int max_reps = (int)Math.round(Exercises.get(position).getMaxReps());
-
-        totalsets.setText(String.valueOf(sets));
-        totalreps.setText(String.valueOf(reps));
-        maxreps.setText(String.valueOf(max_reps));
-
-        // Double
-        totalvolume.setText(Exercises.get(position).getVolume().toString());
-        maxweight.setText(Exercises.get(position).getMaxWeight().toString());
-        onerepmax.setText(Exercises.get(position).getEstimatedOneRepMax().toString());
-        actualonerepmax.setText(Exercises.get(position).getActualOneRepMax().toString());
-        name.setText(Exercises.get(position).getExercise());
-        maxsetvolume.setText(Exercises.get(position).getMaxSetVolume().toString());
-
-        exercise_name = Exercises.get(position).getExercise();
-
-        // Navigate to AddExercise Activity
-        bt_edit_exercise.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view)
-            {
-                Intent in = new Intent(ct, AddExerciseActivity.class);
-                in.putExtra("exercise",Exercises.get(position).getExercise());
-                MainActivity.dateSelected = Exercises.get(position).getDate(); // this is required by AddExerciseActivity
-                System.out.println(Exercises.get(position).getExercise());
-                System.out.println(MainActivity.dateSelected);
-                ct.startActivity(in);
-            }
-        });
-
-        bt_close.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view)
-            {
-                // Dismiss Exercise Dialog Box
-                alertDialog.dismiss();
-            }
-        });
-
-        // Show Exercise Dialog Box
-        alertDialog.show();
-
-    }
 
     @Override
     public int getItemCount()

@@ -52,9 +52,6 @@
             android:label="Settings"
             android:parentActivityName=".ui.MainActivity" />
         <activity
-            android:name=".ui.CalculatorActivity"
-            android:label="Plate Calculator" />
-        <activity
             android:name=".ui.PersonalRecordsActivity"
             android:label="Personal Records"
             android:parentActivityName=".ui.ChartsActivity" />

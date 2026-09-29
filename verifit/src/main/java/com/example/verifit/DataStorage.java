@@ -49,8 +49,6 @@ import java.util.TreeSet;
 
 public class DataStorage {
 
-    Set<String> days = new TreeSet<String>();
-    ArrayList<WorkoutSet> sets = new ArrayList<WorkoutSet>();
     ArrayList<WorkoutDay> workoutDays = new ArrayList<WorkoutDay>();
     ArrayList<Exercise> knownExercises = new ArrayList<Exercise>(); // Initialized with hardcoded exercises
     ArrayList<Goal> goals = new ArrayList<Goal>(); // "Goals" (Vague 4, item 14) - persiste en JSON comme knownExercises ci-dessus
@@ -93,120 +91,48 @@ public class DataStorage {
         return maxVolumeSetPRs;
     }
 
-    public void setMaxVolumeSetPRs(HashMap<String, WorkoutSet> maxVolumeSetPRs) {
-        this.maxVolumeSetPRs = maxVolumeSetPRs;
-    }
-
     public HashMap<String, WorkoutSet> getMaxRepsSetPRs() {
         return maxRepsSetPRs;
-    }
-
-    public void setMaxRepsSetPRs(HashMap<String, WorkoutSet> maxRepsSetPRs) {
-        this.maxRepsSetPRs = maxRepsSetPRs;
     }
 
     public HashMap<String, WorkoutSet> getMaxWeightSetPRs() {
         return maxWeightSetPRs;
     }
 
-    public void setMaxWeightSetPRs(HashMap<String, WorkoutSet> maxWeightSetPRs) {
-        this.maxWeightSetPRs = maxWeightSetPRs;
-    }
-
-    public Set<String> getDays() {
-        return days;
-    }
-
-    public void setDays(Set<String> days) {
-        this.days = days;
-    }
-
-    public ArrayList<WorkoutSet> getSets() {
-        return sets;
-    }
-
-    public void setSets(ArrayList<WorkoutSet> sets) {
-        this.sets = sets;
-    }
-
     public ArrayList<WorkoutDay> getWorkoutDays() {
         return workoutDays;
-    }
-
-    public void setWorkoutDays(ArrayList<WorkoutDay> workoutDays) {
-        this.workoutDays = workoutDays;
     }
 
     public ArrayList<Exercise> getKnownExercises() {
         return knownExercises;
     }
 
-    public void setKnownExercises(ArrayList<Exercise> knownExercises) {
-        this.knownExercises = knownExercises;
-    }
-
     public HashMap<String, Double> getVolumePRs() {
         return volumePRs;
-    }
-
-    public void setVolumePRs(HashMap<String, Double> volumePRs) {
-        this.volumePRs = volumePRs;
     }
 
     public HashMap<String, Pair<Double, Double>> getSetVolumePRs() {
         return setVolumePRs;
     }
 
-    public void setSetVolumePRs(HashMap<String, Pair<Double, Double>> setVolumePRs) {
-        this.setVolumePRs = setVolumePRs;
-    }
-
     public HashMap<String, Double> getActualOneRepMaxPRs() {
         return actualOneRepMaxPRs;
-    }
-
-    public void setActualOneRepMaxPRs(HashMap<String, Double> actualOneRepMaxPRs) {
-        this.actualOneRepMaxPRs = actualOneRepMaxPRs;
     }
 
     public HashMap<String, Double> getEstimatedOneRMPRs() {
         return estimatedOneRMPRs;
     }
 
-    public void setEstimatedOneRMPRs(HashMap<String, Double> estimatedOneRMPRs) {
-        this.estimatedOneRMPRs = estimatedOneRMPRs;
-    }
-
     public HashMap<String, Double> getMaxRepsPRs() {
         return maxRepsPRs;
-    }
-
-    public void setMaxRepsPRs(HashMap<String, Double> maxRepsPRs) {
-        this.maxRepsPRs = maxRepsPRs;
     }
 
     public HashMap<String, Double> getMaxWeightPRs() {
         return maxWeightPRs;
     }
 
-    public void setMaxWeightPRs(HashMap<String, Double> maxWeightPRs) {
-        this.maxWeightPRs = maxWeightPRs;
-    }
-
-    public HashMap<String, Double> getLastTimeVolume() {
-        return lastTimeVolume;
-    }
-
-    public void setLastTimeVolume(HashMap<String, Double> lastTimeVolume) {
-        this.lastTimeVolume = lastTimeVolume;
-    }
-
     public ArrayList<WorkoutDay> getInfiniteWorkoutDays() {
         return infiniteWorkoutDays;
-    }
-
-    public void setInfiniteWorkoutDays(ArrayList<WorkoutDay> infiniteWorkoutDays) {
-        this.infiniteWorkoutDays = infiniteWorkoutDays;
     }
 
     // Returns index of day
@@ -463,14 +389,12 @@ public class DataStorage {
         return parsed;
     }
 
-    // Updates All other Data Structures
-    public void setsToEverything()
+    // Reconstruit workoutDays a partir des series lues dans un CSV (import complet).
+    private void setsToEverything(List<WorkoutSet> sets)
     {
-        // Clear Data Structures
-        days.clear();
+        Set<String> days = new TreeSet<String>();
         workoutDays.clear();
 
-        // i = 1 since first row is only Strings
         for(int i = 0; i < sets.size(); i++)
         {
             days.add(sets.get(i).getDate());
@@ -870,9 +794,6 @@ public class DataStorage {
 
         goals = backup.getGoals();
 
-        sets.clear();
-        days.clear();
-
         workoutDataLoaded = true;
         knownExercisesLoaded = true;
         saveWorkoutData(context);
@@ -1072,8 +993,7 @@ public class DataStorage {
         // Fichier entierement valide : seulement maintenant on remplace les donnees, apres
         // une copie automatique de l'etat actuel (point 1.4, voir BackupManager).
         BackupManager.snapshot(context, this, "avant_import_csv");
-        sets = parsedSets;
-        setsToEverything(); // Convert Set Objects to Day Objects
+        setsToEverything(parsedSets); // Convert Set Objects to Day Objects
         csvToKnownExercises(); // Find all Exercises in CSV and add them to known exercises
         workoutDataLoaded = true; // donnees definies explicitement par l'import (voir ensureLoaded())
         knownExercisesLoaded = true;
@@ -1233,24 +1153,21 @@ public class DataStorage {
         }
     }
 
-    // Clears all locally used data structures
-    public void clearDataStructures(Context context)
+    // Reglages > "Clear Data" : efface toutes les seances (les exercices connus, leurs
+    // notes et les objectifs sont gardes, comme avant). Lot B (29/09/2026) : remplace
+    // clearDataStructures(), qui n'avait plus d'appelant, et ajoute la copie automatique
+    // qui manquait sur ce chemin (l'ecran effacait directement workoutDays).
+    public void deleteAllWorkouts(Context context)
     {
         // Copie automatique avant tout effacement (point 1.4, voir BackupManager) - ne
         // fait rien si les donnees sont deja vides.
         BackupManager.snapshot(context, this, "avant_effacement");
 
-        // Clear everything just in case
         this.workoutDays.clear();
-        this.knownExercises.clear(); // This removes all known exercises
-        this.sets.clear();
-        this.days.clear();
-        // Effacement VOLONTAIRE (Delete all, bascule de compte) : l'etat vide est
-        // l'etat voulu, il doit pouvoir etre sauvegarde (voir ensureLoaded()).
+        // Effacement VOLONTAIRE : l'etat vide est l'etat voulu, il doit pouvoir etre
+        // sauvegarde (voir ensureLoaded()).
         this.workoutDataLoaded = true;
-        this.knownExercisesLoaded = true;
         this.saveWorkoutData(context);
-        this.saveKnownExerciseData(context);
     }
 
     // Inefficient bubble sort but does the job
@@ -1743,7 +1660,8 @@ public class DataStorage {
     // tronqué était aussitôt persisté par saveWorkoutData() - l'exact inverse de ce que
     // cette méthode promettait ("additive, ne touche jamais l'historique"). Corrigé en
     // ajoutant les séries importées directement au bon WorkoutDay (existant ou nouveau)
-    // dans workoutDays, sans jamais reconstruire toute la liste depuis "sets".
+    // dans workoutDays, sans jamais reconstruire toute la liste depuis "sets" (liste
+    // supprimee depuis, lot B du 29/09/2026 : elle ne sert plus qu'en local a l'import CSV).
     // Nombre de series deja importees (avec des valeurs "prevues") le jour donne pour les
     // exercices donnes. Sert a detecter un import de seance fait deux fois (point 1.5 de
     // la revue d'architecture du 28/09/2026) : une saisie manuelle n'a jamais de prevu,
@@ -1841,9 +1759,6 @@ public class DataStorage {
                 workoutSet.setPlannedReps(importedSet.getReps());
                 workoutSet.setPlannedWeight(importedSet.getWeight());
 
-                // Gardée en cohérence avec "sets" au cas où un autre chemin du code s'y
-                // fierait encore, mais ce n'est plus elle qui alimente workoutDays ici.
-                sets.add(workoutSet);
                 day.addSet(workoutSet); // recalcule UpdateData() pour CE jour uniquement
                 summary.setsImported++;
             }

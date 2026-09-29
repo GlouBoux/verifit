@@ -20,14 +20,6 @@ public class SnackBarWithMessage {
         showSnackbar(message, "Dismiss", null, Gravity.BOTTOM);
     }
 
-    // Retour Romain 06/09/2026 : le bouton "Dismiss" existant fermait juste le message,
-    // sans jamais annuler l'action qu'il annonce - trompeur pour une suppression ("j'ai
-    // bien l'idée de garder le revert"). Ce deuxième point d'entrée fournit un vrai
-    // geste d'annulation, exécuté au clic sur le bouton (devenu "Undo").
-    public void showSnackbarWithUndo(String message, Runnable undoAction) {
-        showSnackbar(message, "Undo", undoAction, Gravity.BOTTOM);
-    }
-
     // Retour Romain 07/09/2026 : "la pop up dismiss/undo, tu pourrais la mettre en
     // haut de l'écran ? peut être au niveau du timer de séance ? [...] ça m'empêche de
     // visualiser ce que je viens d'ajouter avant que la pop up s'en aille." Variantes

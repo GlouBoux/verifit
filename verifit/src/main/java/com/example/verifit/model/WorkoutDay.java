@@ -108,23 +108,9 @@ public class WorkoutDay {
         UpdateData();
     }
 
-    // Suppression d'UNE serie. Retour Romain 06/09/2026 ("si je supprime la derniere
-    // ligne du dernier exercice ca fait planter l'app") : cette methode reposait sur un
-    // assert (Sets.size() > 1) qui n'est JAMAIS actif en production (les asserts Java
-    // sont desactives par defaut sur Android) - supprimer l'unique serie restante du
-    // jour videait donc Sets sans aucun garde-fou reel, ce que son propre message
-    // d'assert disait pourtant vouloir empecher. Deleguee a removeSets() (voir
-    // ci-dessous, deja sans assert) plutot que de dupliquer la logique - c'est
-    // desormais la seule implementation de suppression dans cette classe.
-    public void removeSet(WorkoutSet Set)
-    {
-        removeSets(java.util.Collections.singletonList(Set));
-    }
-
-    // Batch removal (retour Romain 05/09/2026 : suppression multiple) - une seule
-    // UpdateData() pour tout le lot plutôt qu'un removeSet() par élément, à la fois plus
-    // efficace et sans le risque ci-dessus quand la sélection (ou une suppression
-    // unique via removeSet()) vide le jour jusqu'à sa dernière série - le jour lui-même
+    // Suppression de series (une ou plusieurs, retour Romain 05/09/2026 : suppression
+    // multiple) - une seule UpdateData() pour tout le lot. Si la sélection vide le jour
+    // jusqu'à sa dernière série, le jour lui-même
     // (dans DataStorage.getWorkoutDays()) doit alors être retiré séparément par
     // l'appelant, cf. AddExerciseActivity.deleteSetLogic()/deleteSetsLocally() et
     // DayActivity.deleteExerciseSetsLocally().

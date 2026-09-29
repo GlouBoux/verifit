@@ -170,11 +170,6 @@ public class SettingsActivity extends AppCompatActivity {
             // ListPreference standard, elle affiche son propre dialogue de choix toute
             // seule. Voir le OnPreferenceChangeListener pose dans onCreatePreferences()
             // pour l'application immediate du changement (ThemeHelper).
-            else if (key.equals("github"))
-            {
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/MakisChristou/verifit"));
-                startActivity(browserIntent);
-            }
             else if (key.equals("version"))
             {
                 // Retour Romain 28/09/2026 : copie le numero de build dans le
@@ -186,33 +181,11 @@ public class SettingsActivity extends AppCompatActivity {
                 clipboard.setPrimaryClip(clip);
                 Toast.makeText(getContext(), "Copied: " + buildInfo, Toast.LENGTH_SHORT).show();
             }
-            else if (key.equals("donate"))
-            {
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.paypal.com/donate/?hosted_button_id=YFZX88G8XDSN4"));
-                startActivity(browserIntent);
-            }
-            else if(key.equals("privacy_policy"))
-            {
-                // Prepare to show exercise dialog box
-                LayoutInflater inflater = LayoutInflater.from(getContext());
-                View view = inflater.inflate(R.layout.privacy_policy_dialog,null);
-                AlertDialog alertDialog = new AlertDialog.Builder(getContext()).setView(view).create();
-
-                alertDialog.show();
-            }
-            else if(key.equals("reddit"))
-            {
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.reddit.com/r/verifitApp/"));
-                startActivity(browserIntent);
-            }
+            // Licence GPL v3 heritee du projet d'origine : notice gardee volontairement.
             else if (key.equals("licence"))
             {
                 Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.gnu.org/licenses/gpl-3.0.en.html"));
                 startActivity(browserIntent);
-            }
-            else if (key.equals("contact_us"))
-            {
-                composeEmail("support@verifit.xyz", "", getContext());
             }
 
             return true;
@@ -272,17 +245,6 @@ public class SettingsActivity extends AppCompatActivity {
         }
 
 
-        public void composeEmail(String address, String subject, Context context) {
-            Intent intent = new Intent(Intent.ACTION_SENDTO);
-            intent.setData(Uri.parse("mailto:")); // only email apps should handle this
-            intent.putExtra(Intent.EXTRA_EMAIL, address);
-            intent.putExtra(Intent.EXTRA_SUBJECT, subject);
-            if (intent.resolveActivity(context.getPackageManager()) != null) {
-                System.out.println("Hello");
-                startActivity(intent);
-            }
-        }
-
         // Delete all currently saved workout data
         public void deleteData()
         {
@@ -299,8 +261,7 @@ public class SettingsActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View view)
                 {
-                    MainActivity.dataStorage.getWorkoutDays().clear();
-                    MainActivity.dataStorage.saveWorkoutData(getContext());
+                    MainActivity.dataStorage.deleteAllWorkouts(getContext());
                     alertDialog.dismiss();
                     Toast.makeText(getContext(),"Data Deleted",Toast.LENGTH_SHORT).show();
                     Intent in = new Intent(getContext(),MainActivity.class);
@@ -320,42 +281,6 @@ public class SettingsActivity extends AppCompatActivity {
             // Show Exercise Dialog Box
             alertDialog.show();
         }
-
-        // Donations activity
-        // Delete all currently saved workout data
-//        public void donate()
-//        {
-//            // Prepare to show exercise dialog box
-//            LayoutInflater inflater = LayoutInflater.from(getContext());
-//            View view = inflater.inflate(R.layout.donate_dialog,null);
-//            AlertDialog alertDialog = new AlertDialog.Builder(getContext()).setView(view).create();
-//
-//            ImageView crypto_imageView = view.findViewById(R.id.crypto_imageView);
-//
-//
-//            crypto_imageView.setImageResource(R.drawable.xmr);
-//            // Copy Corresponding Address to Clipboard
-//            ClipboardManager clipboard = (ClipboardManager) getContext().getSystemService(getContext().CLIPBOARD_SERVICE);
-//            ClipData clip = ClipData.newPlainText("xmr", "42uCPZuxsSS3FNNx6RMDAMVmHVwYBfg3JVMuPKMwadeEfwyykFLkwAH8j4B12ziU7PBCMjLwpPbbDgBw45N4wMpsM3Dy7is");
-//            clipboard.setPrimaryClip(clip);
-//            Toast.makeText(getContext(),"XMR Address Copied",Toast.LENGTH_SHORT).show();
-//
-//
-//            Button monero_button = view.findViewById(R.id.monero_button);
-//
-//
-//            monero_button.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View v) {
-//                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.getmonero.org/"));
-//                    startActivity(browserIntent);
-//                }
-//            });
-//
-//            // Show Exercise Dialog Box
-//            alertDialog.show();
-//        }
-
 
         // Retour Romain 28/09/2026 : versionName (ex. "1.0.14") + horodatage du build
         // (ex. "2026-09-28 19:42"), genere automatiquement par Gradle a chaque build -

@@ -1315,11 +1315,9 @@ public class AddExerciseActivity extends AppCompatActivity {
 
     // Local removal for a batch of sets, all belonging to the current exercise/date
     // (Todays_Exercise_Sets is already scoped to both) - so there is exactly one
-    // WorkoutDay to touch, unlike deleteExerciseGetSets which spans every day.
-    // WorkoutDay.removeSets() does one UpdateData() for the whole batch rather than via
-    // WorkoutDay.removeSet() per item, both to avoid recomputing it N times and to
-    // sidestep removeSet()'s assert (size > 1) when the selection empties the day down
-    // to its last set.
+    // WorkoutDay to touch, unlike DataStorage.deleteExercise which spans every day.
+    // WorkoutDay.removeSets() does one UpdateData() for the whole batch rather than one
+    // per item.
     private static void deleteSetsLocally(Context ct, List<WorkoutSet> setsToDelete)
     {
         int day_position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
@@ -1946,7 +1944,7 @@ public class AddExerciseActivity extends AppCompatActivity {
         // supprime le 29/09/2026 : il n'etait stocke nulle part en propre, ecrasait la
         // note de chaque serie de l'exercice et s'affichait ensuite comme la note de la
         // derniere serie (disparaissait des qu'une serie etait ajoutee). Purement local
-        // (pas de WorkoutSetsApi a prevenir, ces notes ne concernent aucun WorkoutSet).
+        // (aucune serie concernee).
         else if(item.getItemId() == R.id.exercise_notes)
         {
             LayoutInflater inflater = LayoutInflater.from(AddExerciseActivity.this);
