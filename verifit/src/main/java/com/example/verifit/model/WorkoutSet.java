@@ -64,7 +64,7 @@ public class WorkoutSet {
     // de ce champ (saisie manuelle historique, import CSV, import de seance generee) -
     // coherent avec la decision 1 de ce document ("toujours decochee a la creation").
     // Seule exception volontaire : un backup FitNotes reimporte via le CSV enrichi
-    // (colonne "Is Completed", voir DataStorage.csvToSets()/scripts/
+    // (colonne "Is Completed", voir DataStorage.parseCsvSets()/scripts/
     // convert_fitnotes_to_verifit_csv.py) peut arriver directement a true, pour
     // refleter fidelement l'etat reel de l'epoque plutot que de tout remettre a zero.
     private boolean isCompleted;

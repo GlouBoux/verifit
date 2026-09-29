@@ -307,7 +307,6 @@ public class WorkoutDay {
             Double exercise_actual_one_rep_max = 0.0;
             String exercise_date = "";
             double exercise_max_set_volume = 0.0;
-            String exercise_comment = "";
 
             WorkoutSet exercise_max_volume_set = new WorkoutSet();
             WorkoutSet exercise_max_reps_set = new WorkoutSet();
@@ -326,7 +325,6 @@ public class WorkoutDay {
                     exercise_total_sets = exercise_total_sets + 1;
                     exercise_sets.add(temp_set);
                     exercise_date = temp_set.getDate();
-                    exercise_comment = temp_set.getComment(); // This should be done once but this still works
 
                     // Max Values
                     if(temp_set.getEplayOneRepMax() > exercise_one_rep_max)
@@ -365,7 +363,6 @@ public class WorkoutDay {
                 day_exercise.setDate(exercise_date);
                 day_exercise.setMaxSetVolume(exercise_max_set_volume);
                 day_exercise.setActualOneRepMax(exercise_actual_one_rep_max);
-                day_exercise.setComment(exercise_comment);
                 day_exercise.setMaxVolumeSet(exercise_max_volume_set);
                 day_exercise.setMaxWeightSet(exercise_max_weight_set);
                 day_exercise.setMaxRepsSet(exercise_max_reps_set);

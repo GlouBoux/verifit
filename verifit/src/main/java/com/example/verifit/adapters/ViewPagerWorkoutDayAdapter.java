@@ -1,6 +1,5 @@
 package com.example.verifit.adapters;
 import android.content.Context;
-import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,8 +15,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.verifit.R;
 import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
-import com.example.verifit.ui.DayActivity;
-import com.example.verifit.ui.ExercisesActivity;
 import com.example.verifit.ui.MainActivity;
 
 import java.text.DateFormat;
@@ -299,11 +296,6 @@ public class ViewPagerWorkoutDayAdapter extends RecyclerView.Adapter<ViewPagerWo
             WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
             day.moveExercise(fromPosition, toPosition);
             MainActivity.dataStorage.saveWorkoutData(itemView.getContext());
-
-            MainActivity.autoBackupRequired = true;
-            com.example.verifit.SharedPreferences sharedPreferences =
-                    new com.example.verifit.SharedPreferences(itemView.getContext());
-            sharedPreferences.save("true", "autoBackupRequired");
         }
     }
 }

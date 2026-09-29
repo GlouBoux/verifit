@@ -377,14 +377,6 @@ public class DataStorage {
         return -1;
     }
 
-    // Converts CSV file to Internally used Dat Structure (conserve pour l'import WebDAV,
-    // qui sera supprime avec le lot B de la revue du 28/09/2026). Peut lever
-    // IllegalArgumentException sur une ligne malformee - voir parseCsvSets().
-    public void csvToSets(List csvList)
-    {
-        sets = parseCsvSets(csvList);
-    }
-
     // Lit les lignes du CSV (la premiere est l'en-tete) dans une NOUVELLE liste, sans
     // toucher aux donnees de l'app. Leve IllegalArgumentException avec le numero de
     // ligne (tel qu'affiche dans un tableur, en-tete = ligne 1) si une ligne a moins de 5
@@ -1131,7 +1123,7 @@ public class DataStorage {
                 outputStream = new FileOutputStream(file);
             }
             // 7e colonne "Is Completed" (Mark Sets Complete, retour Romain 17/09/2026) -
-            // voir csvToSets() ci-dessus, qui la lit en retombant sur false si absente
+            // voir parseCsvSets() ci-dessus, qui la lit en retombant sur false si absente
             // (retro-compatibilite avec un CSV genere avant cet ajout).
             //
             // 8e colonne "Plan Comment" (retour Romain 21/09/2026, voir
@@ -1141,9 +1133,9 @@ public class DataStorage {
             // s'ajouter apres, sans decaler celles-ci.
             //
             // La colonne "Comment" contient desormais le commentaire PROPRE de chaque
-            // serie. Elle contenait jusqu'ici celui de l'EXERCICE (WorkoutExercise.
-            // getComment(), copie du commentaire de la derniere serie de l'exercice ce
-            // jour-la, voir WorkoutDay.UpdateData()) : un backup CSV ecrasait donc les
+            // serie. Elle contenait jusqu'ici celui de l'EXERCICE (copie du commentaire
+            // de la derniere serie de l'exercice ce jour-la, champ supprime depuis) : un
+            // backup CSV ecrasait donc les
             // commentaires individuels de toutes les series d'un exercice par celui de la
             // derniere a la restauration.
             outputStream.write("Date,Exercise,Category,Weight (kg),Reps,Comment,Is Completed,Plan Comment\n".getBytes());
@@ -1732,7 +1724,7 @@ public class DataStorage {
     // Merges an externally generated session (see ImportedSession, and SessionImporter
     // which reads the JSON file) into the existing workout history.
     //
-    // Unlike readFile()/csvToSets() - which is a full backup restore and clears
+    // Unlike readFile()/parseCsvSets() - which is a full backup restore and clears
     // everything first - this is ADDITIVE: it only appends new sets, so it's safe to use
     // for a single day/session coming from another tool (e.g. a workout-generator
     // script) without touching any previously logged history. Any exercise name in the
@@ -1742,7 +1734,7 @@ public class DataStorage {
     // BUG FIX (retour Romain 05/09/2026, PERTE DE DONNÉES) : cette méthode appelait
     // setsToEverything() pour intégrer les séries importées, qui VIDE workoutDays et le
     // RECONSTRUIT ENTIÈREMENT à partir de la liste "sets". Or "sets" n'est peuplée que
-    // par un import CSV complet (readFile()/csvToSets()) et n'est JAMAIS resynchronisée
+    // par un import CSV complet (readFile()/parseCsvSets()) et n'est JAMAIS resynchronisée
     // avec workoutDays après un simple loadWorkoutData() au démarrage de l'app - un
     // redémarrage à froid (ex. après avoir recompilé et réinstallé l'app) laisse donc
     // "sets" vide. Résultat concret vécu par Romain : importer une séance juste après un

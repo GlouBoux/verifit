@@ -48,56 +48,6 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="Webdav Settings">
-
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="togglewebdav"
-            android:title="Webdav Backup" />
-        <Preference
-            app:key="importwebdav"
-            app:summary="Import a previous backup from webdav server"
-            app:title="Import"
-            app:useSimpleSummaryProvider="false" />
-
-        <Preference
-            app:key="exportwebdav"
-            app:summary="Export to webdav server"
-            app:title="Export"
-            app:useSimpleSummaryProvider="false" />
-        <EditTextPreference
-            android:key="webdavurl"
-            android:selectAllOnFocus="true"
-            android:singleLine="true"
-            android:title="Url"
-            app:summary="http://example.com" />
-        <EditTextPreference
-            android:key="webdavusername"
-            android:selectAllOnFocus="true"
-            android:singleLine="true"
-            android:title="Username"
-            app:summary="" />
-        <EditTextPreference
-            android:key="webdavpassword"
-            android:inputType="textPassword"
-            android:selectAllOnFocus="true"
-            android:singleLine="true"
-            android:title="Password" />
-
-        <Preference
-            android:key="webdavcheckconnection"
-            android:summary="Test webdav configuration"
-            android:title="Check Connection" />
-
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="autowebdavbackup"
-            android:summary="Periodically export workouts to your webdav server"
-            android:title="Auto Export" />
-
-
-    </PreferenceCategory>
-
     <PreferenceCategory app:title="General">
 
         <!-- Retour Romain 16/09/2026 : bouton Light/Dark/Système comme FitNotes.

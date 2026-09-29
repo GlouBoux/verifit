@@ -303,10 +303,6 @@ public class DayActivity extends AppCompatActivity {
         WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
         day.moveExercise(fromPosition, toPosition);
         MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
-
-        MainActivity.autoBackupRequired = true;
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("true", "autoBackupRequired");
     }
 
     // --- Multi-select delete (retour Romain 05/09/2026) ---
@@ -402,10 +398,6 @@ public class DayActivity extends AppCompatActivity {
 
     private void deleteSelectedExercises(List<String> exerciseNames, ActionMode mode)
     {
-        MainActivity.autoBackupRequired = true;
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("true", "autoBackupRequired");
-
         int day_position = MainActivity.dataStorage.getDayPosition(date_clicked);
         if (day_position < 0)
         {
@@ -682,10 +674,6 @@ public class DayActivity extends AppCompatActivity {
                     }
 
                     MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
-
-                    MainActivity.autoBackupRequired = true;
-                    com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-                    sharedPreferences.save("true", "autoBackupRequired");
 
                     Toast.makeText(this, copiedCount + " set(s) " + (move ? "moved" : "copied"), Toast.LENGTH_SHORT).show();
                     initActivity();

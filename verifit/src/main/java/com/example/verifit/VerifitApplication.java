@@ -2,7 +2,10 @@ package com.example.verifit;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+
+import androidx.preference.PreferenceManager;
 
 import com.example.verifit.ui.MainActivity;
 
@@ -22,6 +25,7 @@ public class VerifitApplication extends Application {
     public void onCreate() {
         super.onCreate();
         ThemeHelper.applyStoredTheme(this);
+        removeLegacyPreferences();
 
         // Revue d'architecture du 28/09/2026 (point 1.2) : charger les donnees avant le
         // code de CHAQUE ecran, pas seulement de MainActivity. onActivityCreated() est
@@ -44,5 +48,36 @@ public class VerifitApplication extends Application {
             @Override public void onActivitySaveInstanceState(Activity activity, Bundle outState) {}
             @Override public void onActivityDestroyed(Activity activity) {}
         });
+    }
+
+    // Lot B du nettoyage (29/09/2026) : cles laissees sur le telephone par le backend
+    // verifit_rs et WebDAV, supprimes du code (dont le mot de passe WebDAV, stocke en
+    // clair). Suppression cle par cle, jamais de clear() : le fichier "shared
+    // preferences" contient aussi l'historique. Sans effet une fois les cles parties.
+    private static final String[] LEGACY_KEYS = {
+            "mode", "refresh_required", "verifit_rs_token", "verifit_rs_username", "verifit_rs_password",
+            "webdav_url", "webdav_username", "webdav_password", "togglewebdav", "autowebdavbackup",
+            "autobackup", "autoBackupRequired", "inAddExerciseActivity",
+            "webdavurl", "webdavusername", "webdavpassword"
+    };
+
+    private void removeLegacyPreferences()
+    {
+        removeKeys(getSharedPreferences("shared preferences", MODE_PRIVATE));
+        removeKeys(PreferenceManager.getDefaultSharedPreferences(this));
+    }
+
+    private static void removeKeys(SharedPreferences prefs)
+    {
+        SharedPreferences.Editor editor = null;
+        for (String key : LEGACY_KEYS)
+        {
+            if (prefs.contains(key))
+            {
+                if (editor == null) editor = prefs.edit();
+                editor.remove(key);
+            }
+        }
+        if (editor != null) editor.apply();
     }
 }

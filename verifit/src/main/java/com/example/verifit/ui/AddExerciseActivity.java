@@ -290,12 +290,6 @@ public class AddExerciseActivity extends AppCompatActivity {
         // Volet de navigation entre exercices (retour Romain 18/09/2026) - voir le
         // commentaire sur les champs drawerLayout/... plus haut.
         initNavPanel();
-
-        // User can modify data structures, possible race condition, thus temporary disable autobackup
-        MainActivity.inAddExerciseActivity = true;
-
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("true", "inAddExerciseActivity");
     }
 
     private static final String STATE_DATE_SELECTED = "state_date_selected";
@@ -310,11 +304,6 @@ public class AddExerciseActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // User can modify data structures, possible race condition, thus temporary disable autobackup
-        MainActivity.inAddExerciseActivity = true;
-
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("true", "inAddExerciseActivity");
 
         // Chrono de session (retour Romain 06/09/2026) : rafraichir l'etat affiche a
         // chaque retour sur cet ecran (une serie a pu etre loggee/supprimee ailleurs
@@ -361,12 +350,6 @@ public class AddExerciseActivity extends AppCompatActivity {
     {
         KeyboardHider keyboardHider = new KeyboardHider(AddExerciseActivity.this);
         keyboardHider.hideKeyboard();
-
-        // Let backup service know that something has changed
-        MainActivity.autoBackupRequired = true;
-
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("true", "autoBackupRequired");
 
         // Save Functionality
         if(!isEditMode)
@@ -531,11 +514,6 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
 
-        // Let backup service know that something has changed
-        MainActivity.autoBackupRequired = true;
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("true", "autoBackupRequired");
-
         runOnUiThread(() -> {
             showSnackbarMessage("Set Restored");
             updateTodaysExercises();
@@ -565,8 +543,7 @@ public class AddExerciseActivity extends AppCompatActivity {
     // un chrono "arrete" pendant qu'un entrainement continue visiblement - voir le
     // commentaire sur WorkoutDay.SessionStartTimestamp pour le detail du choix. Sauvegarde
     // immediatement (comme les autres actions explicites de cet ecran, ex.
-    // deleteSetLogic()) plutot que de compter sur le flag autoBackupRequired differe,
-    // pour ne jamais perdre ce chrono si l'app est tuee juste apres.
+    // deleteSetLogic()), pour ne jamais perdre ce chrono si l'app est tuee juste apres.
     private void startOrResumeSessionTimer(WorkoutDay workoutDay)
     {
         if (workoutDay.getSessionStartTimestamp() == null)
@@ -818,10 +795,6 @@ public class AddExerciseActivity extends AppCompatActivity {
         WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
         day.moveExercise(fromPosition, toPosition);
         MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
-
-        MainActivity.autoBackupRequired = true;
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("true", "autoBackupRequired");
     }
 
     // Changement d'exercice depuis le volet (US-6 du cadrage) : tap sur une ligne ->
@@ -1132,11 +1105,6 @@ public class AddExerciseActivity extends AppCompatActivity {
 
     public static void deleteSet(Context ct)
     {
-        // Let backup service know that something has changed
-        MainActivity.autoBackupRequired = true;
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(ct);
-        sharedPreferences.save("true", "autoBackupRequired");
-
         // Show confirmation dialog  box
         // Prepare to show exercise dialog box
         LayoutInflater inflater = LayoutInflater.from(ct);
@@ -1340,11 +1308,6 @@ public class AddExerciseActivity extends AppCompatActivity {
 
     private void deleteSelectedSets(List<WorkoutSet> setsToDelete, ActionMode mode)
     {
-        // Let backup service know that something has changed
-        MainActivity.autoBackupRequired = true;
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("true", "autoBackupRequired");
-
         deleteSetsLocally(getApplicationContext(), setsToDelete);
         showSnackbarMessage(setsToDelete.size() + " sets deleted");
         mode.finish();
@@ -1475,12 +1438,6 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         // Actually Save Changes in shared preferences
         MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
-
-        // User cannot modify data structures, thus we can let service auto backup without race conditions
-        MainActivity.inAddExerciseActivity = false;
-
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("false", "inAddExerciseActivity");
     }
 
     // Do I even need to explain this?
@@ -1704,10 +1661,6 @@ public class AddExerciseActivity extends AppCompatActivity {
         WorkoutDay day = MainActivity.dataStorage.getWorkoutDays().get(day_position);
         day.reorderSetsForExercise(exercise_name, Todays_Exercise_Sets);
         MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
-
-        MainActivity.autoBackupRequired = true;
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("true", "autoBackupRequired");
     }
 
     // Set Edit Text values to max set volume if sets exist

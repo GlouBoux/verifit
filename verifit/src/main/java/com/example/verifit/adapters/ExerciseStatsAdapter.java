@@ -166,8 +166,6 @@ public class ExerciseStatsAdapter extends RecyclerView.Adapter<ExerciseStatsAdap
             @Override
             public boolean onMenuItemClick(MenuItem item)
             {
-
-                // To Do: Edit Remote Webdav Resource
                 if(item.getItemId() == R.id.charts)
                 {
                     System.out.println("Charts Clicked");
@@ -196,7 +194,6 @@ public class ExerciseStatsAdapter extends RecyclerView.Adapter<ExerciseStatsAdap
                     ct.startActivity(intent);
                 }
 
-                // Delete Remote Webdav Resource
                 else if(item.getItemId() == R.id.favorite)
                 {
                     System.out.println("Favorite Clicked");

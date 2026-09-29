@@ -11,7 +11,7 @@ public class Exercise {
     // voir claude/fitnotes-features-workout-tracking.md §9 et
     // claude/fitnotes-features-exercises.md §2/§4) : zone de notes libres attachee a la
     // DEFINITION de l'exercice (persiste tant que l'exercice existe, visible a chaque
-    // seance), a ne pas confondre avec WorkoutExercise.getComment()/WorkoutSet.getComment()
+    // seance), a ne pas confondre avec WorkoutDay.getComment()/WorkoutSet.getComment()
     // qui sont des commentaires propres a UNE seance/UNE serie et ne survivent pas d'une
     // seance a l'autre. Jamais null pour un exercice cree apres ce changement (voir
     // constructeur ci-dessous) ; pour un exercice deserialise depuis un JSON plus ancien

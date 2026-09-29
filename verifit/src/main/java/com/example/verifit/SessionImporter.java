@@ -24,7 +24,7 @@ import java.util.HashSet;
 // action so an external tool - e.g. a workout-generator script - can hand a planned or
 // logged day straight to the app instead of it being typed in by hand.
 //
-// This is intentionally separate from DataStorage.readFile()/csvToSets(): that path is a
+// This is intentionally separate from DataStorage.readFile()/parseCsvSets(): that path is a
 // full backup restore (CSV, wipes existing data first). This one is additive and speaks
 // JSON, tailored to "drop in a single day from another program".
 public class SessionImporter {

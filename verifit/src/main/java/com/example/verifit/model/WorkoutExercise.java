@@ -22,7 +22,6 @@ public class WorkoutExercise {
     private boolean MaxRepsPR; // Is reps PR?
     private boolean MaxWeightPR; // Is wight PR?
     private boolean HTLT; // Is HARDER THAN LAST TIME?
-    private String Comment=""; // Comment about the specific exercise of that day (e.g. machine settings)
 
     WorkoutSet maxVolumeSet;
     WorkoutSet maxRepsSet;
@@ -68,10 +67,6 @@ public class WorkoutExercise {
     public void setHTLT(boolean HTLT) {
         this.HTLT = HTLT;
     }
-
-
-    public void setComment(String Comment) {this.Comment = Comment;}
-    public String getComment(){return this.Comment; }
 
     // Methods
     public Double getActualOneRepMax()

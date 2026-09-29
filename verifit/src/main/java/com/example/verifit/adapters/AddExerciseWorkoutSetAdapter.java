@@ -7,10 +7,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
@@ -229,10 +227,6 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
 
                 boolean isCompleted = holder.completedCheckbox.isChecked();
                 Workout_Sets.get(adapterPosition).setCompleted(isCompleted);
-
-                MainActivity.autoBackupRequired = true;
-                com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(ct);
-                sharedPreferences.save("true", "autoBackupRequired");
 
                 MainActivity.dataStorage.saveWorkoutData(ct);
             }

@@ -8,31 +8,22 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.InputType;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.preference.EditTextPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 
 import com.example.verifit.BackupManager;
 import com.example.verifit.BuildConfig;
-import com.example.verifit.LoadingDialog;
 import com.example.verifit.R;
-import com.example.verifit.SharedPreferences;
 import com.example.verifit.ThemeHelper;
-import com.example.verifit.webdav.CheckWebdavThread;
-import com.example.verifit.webdav.ClickedOnWebdavThread;
-import com.example.verifit.webdav.ExportWebdavThread;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -62,48 +53,7 @@ public class SettingsActivity extends AppCompatActivity {
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey)
         {
-            SharedPreferences sharedPreferences = new SharedPreferences(getContext());
-
             setPreferencesFromResource(R.xml.root_preferences, rootKey);
-
-            Preference importwebdav = findPreference("importwebdav");
-            Preference exportwebdav = findPreference("exportwebdav");
-            Preference webdavurl = findPreference("webdavurl");
-            Preference webdavusername = findPreference("webdavusername");
-            Preference webdavpassword = findPreference("webdavpassword");
-            Preference webdavcheckconnection = findPreference("webdavcheckconnection");
-            Preference autowebdavbackup = findPreference("autowebdavbackup");
-            Preference togglewebdav = findPreference("togglewebdav");
-
-            PreferenceManager preferenceManager = getPreferenceManager();
-            if (preferenceManager.getSharedPreferences().getBoolean("togglewebdav", true))
-            {
-                System.out.println("onCreatePreferences() Webdav on");
-                // Webdav switch is on
-                importwebdav.setVisible(true);
-                exportwebdav.setVisible(true);
-                webdavurl.setVisible(true);
-                webdavusername.setVisible(true);
-                webdavpassword.setVisible(true);
-                webdavcheckconnection.setVisible(true);
-                autowebdavbackup.setVisible(true);
-
-                sharedPreferences.save("true", "togglewebdav");
-
-            }
-            else
-            {
-                // Webdav switch is off
-                importwebdav.setVisible(false);
-                exportwebdav.setVisible(false);
-                webdavurl.setVisible(false);
-                webdavusername.setVisible(false);
-                webdavpassword.setVisible(false);
-                webdavcheckconnection.setVisible(false);
-                autowebdavbackup.setVisible(false);
-
-                sharedPreferences.save("false", "togglewebdav");
-            }
 
             // Retour Romain 28/09/2026 : "un numero de build [...] pour verifier qu'on
             // parle bien de la meme version". BuildConfig.BUILD_TIMESTAMP est genere
@@ -114,61 +64,6 @@ public class SettingsActivity extends AppCompatActivity {
             if (versionPreference != null) {
                 versionPreference.setSummary(getBuildInfo());
             }
-
-            // Set summary to user config
-            webdavurl.setSummary(sharedPreferences.load("webdav_url"));
-            webdavusername.setSummary(sharedPreferences.load("webdav_username"));
-            webdavpassword.setSummary(getPasswordStarred());
-
-            if (preferenceManager.getSharedPreferences().getBoolean("autowebdavbackup", true))
-            {
-                sharedPreferences.save("true", "autowebdavbackup");
-            }
-            else
-            {
-                sharedPreferences.save("false", "autowebdavbackup");
-            }
-
-            if (preferenceManager.getSharedPreferences().getBoolean("autobackup", true))
-            {
-                sharedPreferences.save("true", "autobackup");
-            }
-            else
-            {
-                sharedPreferences.save("false", "autobackup");
-            }
-
-            // On user update save Webdav config in shared preferences
-
-            webdavurl.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                @Override
-                public boolean onPreferenceChange(Preference preference, Object newValue) {
-
-                    sharedPreferences.save(newValue.toString(), "webdav_url");
-                    webdavurl.setSummary(sharedPreferences.load("webdav_url"));
-                    return false;
-                }
-            });
-
-            webdavusername.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                @Override
-                public boolean onPreferenceChange(Preference preference, Object newValue) {
-
-                    sharedPreferences.save(newValue.toString(), "webdav_username");
-                    webdavusername.setSummary(sharedPreferences.load("webdav_username"));
-                    return false;
-                }
-            });
-
-            webdavpassword.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                @Override
-                public boolean onPreferenceChange(Preference preference, Object newValue) {
-
-                    sharedPreferences.save(newValue.toString(), "webdav_password");
-                    webdavpassword.setSummary(getPasswordStarred());
-                    return false;
-                }
-            });
 
             // Retour Romain 16/09/2026 : "le bouton Light/Dark/Système dans les
             // Réglages, comme FitNotes". La ListPreference "theme" (root_preferences.xml)
@@ -186,29 +81,12 @@ public class SettingsActivity extends AppCompatActivity {
                     }
                 });
             }
-
-            // Make password not shown when typing
-            EditTextPreference preference = findPreference("webdavpassword");
-
-            if (preference!= null)
-            {
-                preference.setOnBindEditTextListener(
-                        new EditTextPreference.OnBindEditTextListener()
-                        {
-                            @Override
-                            public void onBindEditText(@NonNull EditText editText)
-                            {
-                                editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                            }
-                        });
-            }
         }
 
 
         @Override
         public boolean onPreferenceTreeClick(Preference preference) {
             String key = preference.getKey();
-            SharedPreferences sharedPreferences = new SharedPreferences(getContext());
 
             // Backup & Restore
             if (key.equals("importcsv"))
@@ -285,140 +163,6 @@ public class SettingsActivity extends AppCompatActivity {
             else if (key.equals("deletedata"))
             {
                 deleteData();
-            }
-            else if (key.equals("togglewebdav"))
-            {
-                PreferenceManager preferenceManager = getPreferenceManager();
-
-                if (preferenceManager.getSharedPreferences().getBoolean("togglewebdav", true))
-                {
-                    System.out.println("Turning webdav on");
-                    turnWebdavOn();
-                }
-                else
-                {
-                    System.out.println("Turning webdav off");
-                    turnWebdavOff();
-                }
-            }
-            else if (key.equals("importwebdav"))
-            {
-                System.out.println("Clicked on Import Webdav");
-                // Load Shared Preferences if they exist
-                String webdav_url = sharedPreferences.load("webdav_url");
-                String webdav_username = sharedPreferences.load("webdav_username");
-                String webdav_password = sharedPreferences.load("webdav_password");
-
-                if(webdav_url.isEmpty() || webdav_username.isEmpty() || webdav_password.isEmpty())
-                {
-                    Toast.makeText(getContext(), "Some fields are empty, cannot export", Toast.LENGTH_SHORT).show();
-                }
-                else
-                {
-                    // Show network loading popup
-                    final LoadingDialog loadingDialog = new LoadingDialog(getActivity());
-                    loadingDialog.loadingAlertDialog();
-
-
-                    // Prepare to show remote files dialog box
-                    LayoutInflater inflater = LayoutInflater.from(getContext());
-                    View view = inflater.inflate(R.layout.choose_webdav_file_dialog,null);
-                    AlertDialog alertDialog = new AlertDialog.Builder(getContext()).setView(view).create();
-
-                    ClickedOnWebdavThread clickedOnWebdavThread = new ClickedOnWebdavThread(getActivity(), webdav_url, webdav_username, webdav_password, loadingDialog, alertDialog, view, MainActivity.webdavAdapter);
-                    clickedOnWebdavThread.start();
-                }
-            }
-            else if (key.equals("exportwebdav"))
-            {
-                // Load Shared Preferences if they exist
-                String webdav_url = sharedPreferences.load("webdav_url");
-                String webdav_username = sharedPreferences.load("webdav_username");
-                String webdav_password = sharedPreferences.load("webdav_password");
-
-                if(webdav_url.isEmpty() || webdav_username.isEmpty() || webdav_password.isEmpty())
-                {
-                    Toast.makeText(getContext(), "Some fields are empty", Toast.LENGTH_SHORT).show();
-                }
-                else
-                {
-                    // Show loading popup
-                    final LoadingDialog loadingDialog = new LoadingDialog((Activity) getContext());
-                    loadingDialog.loadingAlertDialog();
-
-                    ExportWebdavThread exportWebdavThread = new ExportWebdavThread(getContext(), webdav_url, webdav_username, webdav_password, loadingDialog);
-                    exportWebdavThread.start();
-                }
-            }
-            else if (key.equals("webdavurl"))
-            {
-                System.out.println("Webdav Url");
-            }
-            else if (key.equals("webdavusername"))
-            {
-                System.out.println("Webdav Username");
-            }
-            else if (key.equals("webdavpassword"))
-            {
-                System.out.println("Webdav Password");
-            }
-            else if (key.equals("webdavcheckconnection"))
-            {
-                System.out.println("Webdav Check Connection");
-
-                // Load Shared Preferences if they exist
-                String webdav_url = sharedPreferences.load("webdav_url");
-                String webdav_username = sharedPreferences.load("webdav_username");
-                String webdav_password = sharedPreferences.load("webdav_password");
-
-                if(webdav_url.isEmpty() || webdav_username.isEmpty() || webdav_password.isEmpty())
-                {
-                    Toast.makeText(getContext(), "Some fields are empty, cannot export", Toast.LENGTH_SHORT).show();
-                }
-                else
-                {
-                    // Show network loading popup
-                    final LoadingDialog loadingDialog = new LoadingDialog(getActivity());
-                    loadingDialog.loadingAlertDialog();
-
-
-                    CheckWebdavThread checkWebdavThread = new CheckWebdavThread((Activity) getContext(), webdav_url, webdav_username, webdav_password, loadingDialog);
-                    checkWebdavThread.start();
-                }
-            }
-            else if(key.equals("autowebdavbackup"))
-            {
-                PreferenceManager preferenceManager = getPreferenceManager();
-                if (preferenceManager.getSharedPreferences().getBoolean("autowebdavbackup", true))
-                {
-                    System.out.println("Auto Webdav backup is on");
-                    Toast.makeText(getContext(), "Auto Webdav backup is on", Toast.LENGTH_SHORT).show();
-                    sharedPreferences.save("true", "autowebdavbackup");
-                }
-                else
-                {
-                    System.out.println("Auto Webdav backup is off");
-                    Toast.makeText(getContext(), "Auto Webdav backup is off", Toast.LENGTH_SHORT).show();
-                    sharedPreferences.save("false", "autowebdavbackup");
-                }
-            }
-
-            // Not being used currently
-            else if(key.equals("autobackup"))
-            {
-                PreferenceManager preferenceManager = getPreferenceManager();
-                if (preferenceManager.getSharedPreferences().getBoolean("autobackup", true))
-                {
-                    System.out.println("Auto backup is on");
-                    Toast.makeText(getContext(), "Auto backup is on", Toast.LENGTH_SHORT).show();
-                    sharedPreferences.save("true", "autobackup");
-                }
-                else
-                {
-                    System.out.println("Auto backup is off");
-                    Toast.makeText(getContext(), "Auto backup is off", Toast.LENGTH_SHORT).show();
-                    sharedPreferences.save("false", "autobackup");
-                }
             }
 
             // General
@@ -539,54 +283,6 @@ public class SettingsActivity extends AppCompatActivity {
             }
         }
 
-        public void turnWebdavOff()
-        {
-            Toast.makeText(getContext(), "Webdav is off", Toast.LENGTH_SHORT).show();
-
-            SharedPreferences sharedPreferences = new SharedPreferences(getContext());
-            sharedPreferences.save("false", "togglewebdav");
-
-            Preference importwebdav = findPreference("importwebdav");
-            importwebdav.setVisible(false);
-            Preference excportwebdav = findPreference("exportwebdav");
-            excportwebdav.setVisible(false);
-            Preference webdavurl = findPreference("webdavurl");
-            webdavurl.setVisible(false);
-            Preference webdavusername = findPreference("webdavusername");
-            webdavusername.setVisible(false);
-            Preference webdavpassword = findPreference("webdavpassword");
-            webdavpassword.setVisible(false);
-            Preference webdavcheckconnection = findPreference("webdavcheckconnection");
-            webdavcheckconnection.setVisible(false);
-            Preference autowebdavbackup = findPreference("autowebdavbackup");
-            autowebdavbackup.setVisible(false);
-        }
-
-        public void turnWebdavOn()
-        {
-            SharedPreferences sharedPreferences = new SharedPreferences(getContext());
-            sharedPreferences.save("true", "togglewebdav");
-
-            System.out.println("turnWebdavOn() Webdav on");
-
-            Toast.makeText(getContext(), "Webdav is on", Toast.LENGTH_SHORT).show();
-            Preference importwebdav = findPreference("importwebdav");
-            importwebdav.setVisible(true);
-            Preference excportwebdav = findPreference("exportwebdav");
-            excportwebdav.setVisible(true);
-            Preference webdavurl = findPreference("webdavurl");
-            webdavurl.setVisible(true);
-            Preference webdavusername = findPreference("webdavusername");
-            webdavusername.setVisible(true);
-            Preference webdavpassword = findPreference("webdavpassword");
-            webdavpassword.setVisible(true);
-            Preference webdavcheckconnection = findPreference("webdavcheckconnection");
-            webdavcheckconnection.setVisible(true);
-            Preference autowebdavbackup = findPreference("autowebdavbackup");
-            autowebdavbackup.setVisible(true);
-        }
-
-
         // Delete all currently saved workout data
         public void deleteData()
         {
@@ -671,22 +367,5 @@ public class SettingsActivity extends AppCompatActivity {
             String buildDate = buildDateFormat.format(new Date(BuildConfig.BUILD_TIMESTAMP));
             return BuildConfig.VERSION_NAME + " - build " + buildDate;
         }
-
-        public String getPasswordStarred()
-        {
-            SharedPreferences sharedPreferences = new SharedPreferences(getContext());
-
-            int passwordLength = sharedPreferences.load("webdav_password").length();
-            String password = "";
-
-            for(int i = 0; i < passwordLength; i++)
-            {
-                password+="*";
-            }
-
-            return password;
-        }
-
-
     }
 }

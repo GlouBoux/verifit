@@ -113,12 +113,6 @@ public class SetCommentSheet
             {
                 set.setComment(noteInput.getText().toString().trim());
 
-                // Let the backup service know something changed, same as every other
-                // mutation in the app.
-                MainActivity.autoBackupRequired = true;
-                com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(ct);
-                sharedPreferences.save("true", "autoBackupRequired");
-
                 MainActivity.dataStorage.saveWorkoutData(ct);
 
                 if (listener != null)

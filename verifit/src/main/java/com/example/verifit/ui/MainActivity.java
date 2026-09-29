@@ -9,10 +9,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
 import android.app.Activity;
-import android.app.ActivityManager;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,7 +26,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.verifit.BackupService;
 import com.example.verifit.DataStorage;
 import com.example.verifit.R;
 import com.example.verifit.SessionImporter;
@@ -38,7 +34,6 @@ import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.adapters.ViewPagerExerciseAdapter;
 import com.example.verifit.adapters.ViewPagerWorkoutDayAdapter;
-import com.example.verifit.adapters.WebdavAdapter;
 import com.example.verifit.model.SupersetColours;
 import com.example.verifit.model.SupersetGroup;
 import com.example.verifit.model.WorkoutDay;
@@ -58,9 +53,6 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     public static DataStorage dataStorage = new DataStorage(); // Holds all Verifit data and handles file I/O
     public static String dateSelected; // Used for other activities to get the selected date, by default it's set to today
     public static ViewPager2 viewPager2; // View Pager that is used in main activity
-    public static Boolean autoBackupRequired = false;
-    public static Boolean inAddExerciseActivity = false;
-    public static WebdavAdapter webdavAdapter;
     public static final int READ_REQUEST_CODE = 42;
     // Request code for the "Import Session" file picker (see fileSearchImportSession()),
     // meme mecanique que DayActivity.IMPORT_SESSION_REQUEST_CODE mais sa propre valeur -
@@ -87,59 +79,14 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
             }
         });
 
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-
-        // No need for backup, not adding exercises
-        if(!doesSharedPreferenceExist("autoBackupRequired"))
-        {
-            sharedPreferences.save("false", "autoBackupRequired");
-        }
-
-        if(!doesSharedPreferenceExist("inAddExerciseActivity"))
-        {
-            sharedPreferences.save("false", "inAddExerciseActivity");
-        }
-
         // Hacky way to have the same code run in onRestart() as well
         onCreateStuff();
-    }
-
-    public Boolean doesSharedPreferenceExist(String key)
-    {
-        SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences("shared preferences", MODE_PRIVATE);
-
-        if(sharedPreferences.contains(key))
-        {
-            return true;
-        }
-        return false;
-    }
-
-    private boolean isMyServiceRunning(Class<?> serviceClass)
-    {
-        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE))
-        {
-            if (serviceClass.getName().equals(service.service.getClassName()))
-            {
-                return true;
-            }
-        }
-        return false;
     }
 
     // General Initialization Stuff
     public void onCreateStuff()
     {
         initActivity();
-
-        // If backup background service has not started, start it
-        if(!isMyServiceRunning(BackupService.class))
-        {
-            // Start background service
-            Intent intent = new Intent(this, BackupService.class);
-            startService(intent);
-        }
 
         // Bottom Navigation Bar Intents
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation_view);
@@ -221,17 +168,6 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
                     dataStorage.writeJsonExport(getApplicationContext());
                 }
 
-                initViewPager();
-            }
-            else if(whatToDo.equals("exportwebdav"))
-            {
-                // After Loading Data Initialize ViewPager
-                initViewPager();
-            }
-            // Data already saved, just init view pager
-            else if(whatToDo.equals("importwebdav"))
-            {
-                // After Loading Data Initialize ViewPager
                 initViewPager();
             }
         }
@@ -631,10 +567,6 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
                     dataStorage.saveWorkoutData(getApplicationContext());
 
-                    autoBackupRequired = true;
-                    com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-                    sharedPreferences.save("true", "autoBackupRequired");
-
                     Toast.makeText(this, copiedCount + " set(s) " + (move ? "moved" : "copied"), Toast.LENGTH_SHORT).show();
                     runOnUiThread(this::initViewPager);
                 })
@@ -970,10 +902,6 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
     private void deleteSelectedExercises(List<String> exerciseNames, String date, ActionMode mode)
     {
-        autoBackupRequired = true;
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("true", "autoBackupRequired");
-
         int day_position = dataStorage.getDayPosition(date);
         if (day_position < 0)
         {

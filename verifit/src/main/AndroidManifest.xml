@@ -4,7 +4,6 @@
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Retour Romain 06/09/2026 : minuteur de repos fiable meme telephone verrouille.
          Correctif 06/09/2026 (crash au demarrage du timer) : contrairement a ce qui
@@ -28,10 +27,7 @@
         android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true" >
-        <service android:name=".BackupService" />
-
+        android:theme="@style/AppTheme" >
         <!-- Retour Romain 06/09/2026 : recoit l'alarme systeme programmee par
              AddExerciseActivity.scheduleTimerAlarm() a la fin du minuteur de repos -
              son + vibration + notification, meme app fermee ou telephone verrouille.
