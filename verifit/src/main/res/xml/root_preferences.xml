@@ -2,7 +2,9 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <PreferenceCategory app:title="Account">
+    <PreferenceCategory
+        app:key="account_category"
+        app:title="Account">
 
         <Preference
             app:key="verifit_rs_login_signup_logout"

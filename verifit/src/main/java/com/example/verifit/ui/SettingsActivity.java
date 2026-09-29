@@ -233,6 +233,16 @@ public class SettingsActivity extends AppCompatActivity {
                 verifit_rs_export.setVisible(false);
                 verifit_rs_delete_all.setVisible(false);
 
+                // Backend verifit_rs abandonne (29/09/2026) : section "Account" masquee
+                // entierement en mode hors ligne - l'ecran Login ne mene plus nulle part et
+                // son bouton Cancel effacait l'historique (voir
+                // SharedPreferences.enableOfflineMode()). Suppression complete au lot B.
+                Preference accountCategory = findPreference("account_category");
+                if (accountCategory != null)
+                {
+                    accountCategory.setVisible(false);
+                }
+
                 verifit_rs_login_signup_logout.setTitle("Login/Sign Up");
                 verifit_rs_login_signup_logout.setSummary("Login or create a free account");
             }

@@ -67,6 +67,28 @@ public class DataStorage {
     HashMap<String, WorkoutSet> maxRepsSetPRs = new HashMap<String, WorkoutSet>();
     HashMap<String, WorkoutSet> maxWeightSetPRs = new HashMap<String, WorkoutSet>();
 
+    // Revue d'architecture du 28/09/2026 (point 1.2) : vrais tant que les donnees n'ont
+    // pas ete relues depuis la sauvegarde (ou definies explicitement par un import CSV /
+    // un effacement volontaire). Jusqu'ici seule MainActivity chargeait les donnees : si
+    // Android tuait l'app en arriere-plan puis recreait directement un autre ecran (ex.
+    // l'ecran de saisie au retour de la salle), dataStorage repartait VIDE et la premiere
+    // sauvegarde ecrasait tout l'historique. Desormais ensureLoaded() est appele a la
+    // creation de CHAQUE ecran (VerifitApplication), et saveWorkoutData()/
+    // saveKnownExerciseData() refusent d'ecrire tant que le chargement n'a pas eu lieu.
+    private boolean workoutDataLoaded = false;
+    private boolean knownExercisesLoaded = false;
+
+    // Charge (une seule fois par process) seances, exercices connus et objectifs depuis
+    // la sauvegarde. Appele par VerifitApplication a la creation de chaque Activity,
+    // avant le code propre de l'ecran - voir le commentaire des drapeaux ci-dessus.
+    public void ensureLoaded(Context context)
+    {
+        Context appContext = context.getApplicationContext();
+        loadWorkoutData(appContext);
+        loadKnownExercisesData(appContext);
+        loadGoalsData(appContext);
+    }
+
 
     public HashMap<String, WorkoutSet> getMaxVolumeSetPRs() {
         return maxVolumeSetPRs;
@@ -356,22 +378,47 @@ public class DataStorage {
         return -1;
     }
 
-    // Converts CSV file to Internally used Dat Structure
+    // Converts CSV file to Internally used Dat Structure (conserve pour l'import WebDAV,
+    // qui sera supprime avec le lot B de la revue du 28/09/2026). Peut lever
+    // IllegalArgumentException sur une ligne malformee - voir parseCsvSets().
     public void csvToSets(List csvList)
     {
-        // Remove potential Duplicates
-        sets.clear();
+        sets = parseCsvSets(csvList);
+    }
+
+    // Lit les lignes du CSV (la premiere est l'en-tete) dans une NOUVELLE liste, sans
+    // toucher aux donnees de l'app. Leve IllegalArgumentException avec le numero de
+    // ligne (tel qu'affiche dans un tableur, en-tete = ligne 1) si une ligne a moins de 5
+    // colonnes ou des reps/poids non numeriques. Les lignes entierement vides sont
+    // ignorees.
+    public static ArrayList<WorkoutSet> parseCsvSets(List csvList)
+    {
+        ArrayList<WorkoutSet> parsed = new ArrayList<WorkoutSet>();
 
         // i = 1 since first row is only Strings
         for(int i = 1; i < csvList.size(); i++)
         {
             String[] row = (String[]) csvList.get(i);
+            int lineNumber = i + 1;
+
+            if (row.length == 0 || (row.length == 1 && row[0].trim().isEmpty()))
+            {
+                continue;
+            }
+            if (row.length < 5)
+            {
+                throw new IllegalArgumentException("ligne " + lineNumber + " incomplète (" + row.length + " colonnes au lieu d'au moins 5)");
+            }
 
             String Date = row[0];
             String Exercise = row[1];
             String Category = row[2];
-            String Reps = row[3];
-            String Weight = row[4];
+            // Ordre reel des colonnes (voir l'en-tete ecrit par writeFile()) :
+            // 4e = "Weight (kg)", 5e = "Reps". Les anciens noms de variables (Reps pour
+            // row[3], Weight pour row[4]) etaient inverses ; renommes le 29/09/2026 sans
+            // changer le resultat de l'import.
+            String WeightText = row[3];
+            String RepsText = row[4];
 
             String Comment = "";
 
@@ -404,11 +451,25 @@ public class DataStorage {
                 PlanComment = row[7];
             }
 
-            WorkoutSet workoutSet = new WorkoutSet(Date,Exercise,Category,Double.parseDouble(Weight),Double.parseDouble(Reps),Comment);
+            double weightValue;
+            double repsValue;
+            try
+            {
+                weightValue = Double.parseDouble(WeightText.trim());
+                repsValue = Double.parseDouble(RepsText.trim());
+            }
+            catch (NumberFormatException e)
+            {
+                throw new IllegalArgumentException("ligne " + lineNumber + " : poids ou reps non numérique (\"" + WeightText + "\", \"" + RepsText + "\")");
+            }
+
+            WorkoutSet workoutSet = new WorkoutSet(Date,Exercise,Category,repsValue,weightValue,Comment);
             workoutSet.setCompleted(isCompleted);
             workoutSet.setPlanComment(PlanComment);
-            sets.add(workoutSet);
+            parsed.add(workoutSet);
         }
+
+        return parsed;
     }
 
     // Updates All other Data Structures
@@ -732,6 +793,13 @@ public class DataStorage {
     // For some reason when I pass the context it works so let's roll with it :D
     public void saveWorkoutData(Context ct)
     {
+        if (!workoutDataLoaded)
+        {
+            // Garde-fou (point 1.2 de la revue du 28/09/2026) : jamais d'ecriture d'un
+            // etat qui n'a pas ete charge, sinon on ecraserait l'historique sauvegarde.
+            Log.e("DataStorage", "saveWorkoutData ignore : donnees pas encore chargees");
+            return;
+        }
         android.content.SharedPreferences sharedPreferences = ct.getSharedPreferences("shared preferences",MODE_PRIVATE);
         android.content.SharedPreferences.Editor editor = sharedPreferences.edit();
         Gson gson = new Gson();
@@ -743,7 +811,10 @@ public class DataStorage {
     // Loads Workout_Days Array List from shared preferences
     public void loadWorkoutData(Context context)
     {
-        if(workoutDays.isEmpty())
+        // Une seule lecture par process (drapeau plutot que workoutDays.isEmpty() : une
+        // liste non vide avant tout chargement est justement le cas dangereux du point
+        // 1.2 - on relit alors la sauvegarde, qui fait foi).
+        if(!workoutDataLoaded)
         {
             android.content.SharedPreferences sharedPreferences = context.getSharedPreferences("shared preferences",MODE_PRIVATE);
             Gson gson = new Gson();
@@ -775,6 +846,8 @@ public class DataStorage {
                     day.setExercises(new ArrayList<WorkoutExercise>());
                 }
             }
+
+            workoutDataLoaded = true;
         }
     }
 
@@ -782,6 +855,12 @@ public class DataStorage {
     // For some reason when I pass the context it works so let's roll with it :D
     public void saveKnownExerciseData(Context ct)
     {
+        if (!knownExercisesLoaded)
+        {
+            // Meme garde-fou que saveWorkoutData() (point 1.2 de la revue du 28/09/2026).
+            Log.e("DataStorage", "saveKnownExerciseData ignore : exercices pas encore charges");
+            return;
+        }
         android.content.SharedPreferences sharedPreferences = ct.getSharedPreferences("shared preferences",MODE_PRIVATE);
         android.content.SharedPreferences.Editor editor = sharedPreferences.edit();
         Gson gson = new Gson();
@@ -793,7 +872,7 @@ public class DataStorage {
     // Loads Workout_Days Array List from shared preferences
     public void loadKnownExercisesData(Context context)
     {
-        if(knownExercises.isEmpty())
+        if(!knownExercisesLoaded)
         {
             SharedPreferences sharedPreferences = context.getSharedPreferences("shared preferences",MODE_PRIVATE);
             Gson gson = new Gson();
@@ -807,6 +886,8 @@ public class DataStorage {
                 knownExercises = new ArrayList<Exercise>();
                 initKnownExercises();
             }
+
+            knownExercisesLoaded = true;
         }
 
         // Those who have previously saved entries will have null in this case
@@ -909,33 +990,58 @@ public class DataStorage {
         }
     }
 
-    // Read CSV from internal storage
+    // Import d'un backup CSV : REMPLACE toutes les seances par le contenu du fichier.
+    // Revue d'architecture du 28/09/2026 (point 1.3) : auparavant, un fichier illisible
+    // declenchait clearDataStructures() - tout l'historique etait vide ET sauvegarde vide -
+    // et une ligne malformee faisait planter l'app au milieu de l'import. Desormais le
+    // fichier est lu puis valide ENTIEREMENT avant de toucher aux donnees : au moindre
+    // probleme, message explicite (avec le numero de ligne) et donnees inchangees.
     public boolean readFile(Uri uri, Context context)
     {
+        List csvList;
         try
         {
-            List csvList = new ArrayList();
             InputStream inputStream = context.getContentResolver().openInputStream(uri);
-            CSVFile csvFile = new CSVFile(inputStream);
-            csvList = csvFile.read();
-
-            // Here is where the magic happens
-            csvToSets(csvList); // Read File and Construct Local Objects
-            setsToEverything(); // Convert Set Objects to Day Objects
-            csvToKnownExercises(); // Find all Exercises in CSV and add them to known exercises
-            saveKnownExerciseData(context); // Save KnownExercises in CSV
-            saveWorkoutData(context); // Save WorkoutDays in Shared Preferences
-            return true;
+            if (inputStream == null)
+            {
+                throw new IOException("flux vide");
+            }
+            csvList = new CSVFile(inputStream).read();
         }
-        catch (IOException e)
+        catch (IOException | RuntimeException e)
         {
-            System.out.println(e.getMessage());
-            Toast.makeText(context, e.toString(), Toast.LENGTH_SHORT).show();
-            Toast.makeText(context, "Could not locate file " + uri.getPath(),Toast.LENGTH_SHORT).show();
-            clearDataStructures(context);
+            Log.e("DataStorage", "Import CSV : lecture impossible", e);
+            Toast.makeText(context, "Import annulé : fichier illisible (" + e.getMessage() + "). Tes données n'ont pas été modifiées.", Toast.LENGTH_LONG).show();
             return false;
         }
 
+        ArrayList<WorkoutSet> parsedSets;
+        try
+        {
+            parsedSets = parseCsvSets(csvList);
+        }
+        catch (IllegalArgumentException e)
+        {
+            Log.e("DataStorage", "Import CSV : fichier invalide", e);
+            Toast.makeText(context, "Import annulé : " + e.getMessage() + ". Tes données n'ont pas été modifiées.", Toast.LENGTH_LONG).show();
+            return false;
+        }
+
+        if (parsedSets.isEmpty())
+        {
+            Toast.makeText(context, "Import annulé : aucune série trouvée dans le fichier. Tes données n'ont pas été modifiées.", Toast.LENGTH_LONG).show();
+            return false;
+        }
+
+        // Fichier entierement valide : seulement maintenant on remplace les donnees.
+        sets = parsedSets;
+        setsToEverything(); // Convert Set Objects to Day Objects
+        csvToKnownExercises(); // Find all Exercises in CSV and add them to known exercises
+        workoutDataLoaded = true; // donnees definies explicitement par l'import (voir ensureLoaded())
+        knownExercisesLoaded = true;
+        saveKnownExerciseData(context);
+        saveWorkoutData(context);
+        return true;
     }
 
     public void readFromSets(ArrayList<WorkoutSet> sets, Context context)
@@ -1117,6 +1223,10 @@ public class DataStorage {
         this.knownExercises.clear(); // This removes all known exercises
         this.sets.clear();
         this.days.clear();
+        // Effacement VOLONTAIRE (Delete all, bascule de compte) : l'etat vide est
+        // l'etat voulu, il doit pouvoir etre sauvegarde (voir ensureLoaded()).
+        this.workoutDataLoaded = true;
+        this.knownExercisesLoaded = true;
         this.saveWorkoutData(context);
         this.saveKnownExerciseData(context);
     }

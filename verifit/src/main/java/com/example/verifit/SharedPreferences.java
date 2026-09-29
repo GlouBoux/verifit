@@ -37,7 +37,11 @@ public class SharedPreferences {
         SharedPreferences sharedPreferences = new SharedPreferences(context);
         sharedPreferences.save("", "verifit_rs_token");
         sharedPreferences.save("offline","mode");
-        MainActivity.dataStorage.clearDataStructures(context);
+        // Plus d'effacement des donnees ici (29/09/2026) : cette methode est appelee par
+        // le bouton "Cancel" de l'ecran Login et par tout echec de connexion au backend
+        // verifit_rs (abandonne) - un simple tap Reglages > Login/Sign Up > Cancel
+        // effacait donc tout l'historique local. Le backend entier part au lot B de la
+        // revue d'architecture du 28/09/2026.
     }
 
     public void enableOnlineMode(String responseBody, String username, String password)

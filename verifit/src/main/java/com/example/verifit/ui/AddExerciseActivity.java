@@ -227,6 +227,19 @@ public class AddExerciseActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+
+        // Point 1.2 de la revue du 28/09/2026 : MainActivity.dateSelected est un static,
+        // perdu si Android tue l'app en arriere-plan puis recree directement cet ecran.
+        // Sans ce retour, une serie loguee a ce moment-la partait avec une date nulle.
+        if (savedInstanceState != null && savedInstanceState.getString(STATE_DATE_SELECTED) != null)
+        {
+            MainActivity.dateSelected = savedInstanceState.getString(STATE_DATE_SELECTED);
+        }
+        else if (MainActivity.dateSelected == null)
+        {
+            MainActivity.dateSelected = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        }
+
         setContentView(R.layout.activity_add_exercise);
 
         // find views
@@ -297,6 +310,15 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
         sharedPreferences.save("true", "inAddExerciseActivity");
+    }
+
+    private static final String STATE_DATE_SELECTED = "state_date_selected";
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState)
+    {
+        super.onSaveInstanceState(outState);
+        outState.putString(STATE_DATE_SELECTED, MainActivity.dateSelected);
     }
 
     @Override
