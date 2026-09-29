@@ -222,10 +222,6 @@ public class AddExerciseActivity extends AppCompatActivity {
 
 
 
-    // Comment Items
-    Button bt_save_comment;
-    Button bt_clear_comment;
-    EditText et_exercise_comment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -1943,7 +1939,7 @@ public class AddExerciseActivity extends AppCompatActivity {
     // "Toolbar Settings" (voir showToolbarSettingsDialog()) - le reste des 6 items du
     // menu (add_exercise_activity_menu.xml) reste dans l'overflow par defaut.
     private static final int[] PINNABLE_TOOLBAR_ITEM_IDS = {
-            R.id.history, R.id.graph, R.id.rep_range_history, R.id.timer, R.id.comment, R.id.select_sets
+            R.id.history, R.id.graph, R.id.rep_range_history, R.id.timer, R.id.select_sets
     };
 
     private static final String TOOLBAR_PIN_PREF_PREFIX = "toolbar_pinned_";
@@ -2000,7 +1996,6 @@ public class AddExerciseActivity extends AppCompatActivity {
         wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_graph), R.id.graph);
         wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_rep_range_history), R.id.rep_range_history);
         wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_timer), R.id.timer);
-        wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_comment), R.id.comment);
         wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_select_sets), R.id.select_sets);
 
         MaterialButton bt_close = dialogView.findViewById(R.id.bt_toolbar_settings_close);
@@ -2181,67 +2176,15 @@ public class AddExerciseActivity extends AppCompatActivity {
             showToolbarSettingsDialog();
         }
 
-        // Exercise Comments
-        else if(item.getItemId() == R.id.comment)
-        {
-            // Prepare to show exercise history dialog box
-            LayoutInflater inflater = LayoutInflater.from(AddExerciseActivity.this);
-            View view = inflater.inflate(R.layout.add_exercise_comment_dialog,null);
-            AlertDialog alertDialog = new AlertDialog.Builder(AddExerciseActivity.this).setView(view).create();
-
-
-            bt_save_comment = view.findViewById(R.id.bt_save_comment);
-            bt_clear_comment = view.findViewById(R.id.bt_clear_comment);
-            et_exercise_comment = view.findViewById(R.id.et_exercise_comment);
-
-            // Check if exercise exists (to show the comment if it has one)
-            // Find if workout day already exists
-            int exercise_position = MainActivity.dataStorage.getExercisePosition(MainActivity.dateSelected,exercise_name);
-
-            // Exists, then show the comment
-            if(exercise_position >= 0)
-            {
-                System.out.println("We can comment, exercise exists");
-
-                int day_position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
-
-                String comment = MainActivity.dataStorage.getWorkoutDays().get(day_position).getExercises().get(exercise_position).getComment();
-
-                et_exercise_comment.setText(comment);
-            }
-
-
-
-            bt_clear_comment.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-
-
-                    clearComment();
-                }
-            });
-
-            bt_save_comment.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    saveComment(alertDialog);
-                }
-            });
-
-            // Show Chart Dialog box
-            alertDialog.show();
-
-        }
-
         // "Exercise Notes" (retour Romain 28/09/2026, feature deja presente dans
         // FitNotes - voir claude/fitnotes-features-workout-tracking.md §4/§9) : notes
         // persistees sur la DEFINITION de l'exercice (Exercise.notes via
         // DataStorage.getExerciseNotes()/setExerciseNotes()), donc les memes a chaque
-        // seance - a ne pas confondre avec "Exercise Comments" juste au-dessus, qui est
-        // propre au jour courant (WorkoutExercise.getComment()) et disparait d'une
-        // seance a l'autre. Purement local (pas de WorkoutSetsApi a prevenir, ces notes
-        // ne concernent aucun WorkoutSet), donc pas de distinction offline/online ici
-        // contrairement a saveComment() ci-dessus.
+        // seance. L'ancien "Exercise Comments" (commentaire propre au jour courant) a ete
+        // supprime le 29/09/2026 : il n'etait stocke nulle part en propre, ecrasait la
+        // note de chaque serie de l'exercice et s'affichait ensuite comme la note de la
+        // derniere serie (disparaissait des qu'une serie etait ajoutee). Purement local
+        // (pas de WorkoutSetsApi a prevenir, ces notes ne concernent aucun WorkoutSet).
         else if(item.getItemId() == R.id.exercise_notes)
         {
             LayoutInflater inflater = LayoutInflater.from(AddExerciseActivity.this);
@@ -2736,122 +2679,6 @@ public class AddExerciseActivity extends AppCompatActivity {
 
 
         // Makes necessary checks and saves comment
-    public void saveComment(AlertDialog alertDialog)
-    {
-        // Let backup service know that something has changed
-        MainActivity.autoBackupRequired = true;
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("true", "autoBackupRequired");
-
-        // Check if exercise exists (cannot comment on non-existant exercise)
-        // Find if workout day already exists
-        int exercise_position = MainActivity.dataStorage.getExercisePosition(MainActivity.dateSelected,exercise_name);
-
-        if(exercise_position >= 0)
-        {
-            System.out.println("We can comment, exercise exists");
-        }
-        else
-        {
-            System.out.println("We can't comment, exercise doesn't exist");
-            Toast.makeText(getApplicationContext(),"Can't comment without sets",Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        String comment;
-
-        if(et_exercise_comment.getText().toString().isEmpty())
-        {
-            comment = "";
-        }
-        else
-        {
-            comment = et_exercise_comment.getText().toString(); // Get user comment
-        }
-
-        // Get the date for today
-        int day_position = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
-
-
-        // Modify the data structure to add the comment
-        MainActivity.dataStorage.getWorkoutDays().get(day_position).getExercises().get(exercise_position).setComment(comment);
-
-
-        final int finalSize = MainActivity.dataStorage.getWorkoutDays().get(day_position).getExercises().get(exercise_position).getSets().size();
-
-        // Also modify individual sets
-        for(int i = 0; i < MainActivity.dataStorage.getWorkoutDays().get(day_position).getExercises().get(exercise_position).getSets().size(); i++)
-        {
-            final int finalI = i;
-
-            WorkoutSet set_to_be_updated = MainActivity.dataStorage.getWorkoutDays().get(day_position).getExercises().get(exercise_position).getSets().get(i);
-            set_to_be_updated.setComment(comment);
-
-            if(sharedPreferences.isOfflineMode())
-            {
-                updateCommentInSet(day_position, exercise_position, finalI, finalSize, comment);
-                alertDialog.dismiss();
-            }
-            else
-            {
-                final LoadingDialog loadingDialog = new LoadingDialog(AddExerciseActivity.this);
-                loadingDialog.loadingAlertDialog();
-
-                WorkoutSetsApi workoutSetsApi = new WorkoutSetsApi(getApplicationContext(), getString(R.string.API_ENDPOINT));
-                workoutSetsApi.updateWorkoutSet(set_to_be_updated, new Callback() {
-                    @Override
-                    public void onFailure(@NonNull Call call, @NonNull IOException e)
-                    {
-                        loadingDialog.dismissDialog();
-                        alertDialog.dismiss();
-                        showSnackbarMessage(e.toString());
-                    }
-
-                    @Override
-                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                        loadingDialog.dismissDialog();
-                        alertDialog.dismiss();
-
-                        if(200 == response.code())
-                        {
-                            updateCommentInSet(day_position, exercise_position, finalI, finalSize, comment);
-
-                        }
-                        else
-                        {
-                            showSnackbarMessage(response.message().toString());
-                        }
-                    }
-                });
-            }
-        }
-    }
-
-    public void updateCommentInSet(int day_position, int exercise_position, int finalI, int finalSize, String comment)
-    {
-        MainActivity.dataStorage.getWorkoutDays().get(day_position).getExercises().get(exercise_position).getSets().get(finalI).setComment(comment);
-
-        runOnUiThread(() -> {
-            updateTodaysExercises();
-        });
-
-        if (finalI == finalSize-1) // Show popup only when last set comment is saved
-        {
-            showSnackbarMessage("Comment Logged");
-        }
-    }
-
-
-    // Makes necessary checks and clears comment
-    public void clearComment()
-    {
-        // Let backup service know that something has changed
-        MainActivity.autoBackupRequired = true;
-        com.example.verifit.SharedPreferences sharedPreferences = new com.example.verifit.SharedPreferences(getApplicationContext());
-        sharedPreferences.save("true", "autoBackupRequired");
-        et_exercise_comment.setText("");
-    }
-
     public void startTimer()
     {
         countDownTimer = new CountDownTimer(TimeLeftInMillis, 1000)

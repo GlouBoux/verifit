@@ -9,7 +9,17 @@ import java.util.Set;
 public class WorkoutDay {
 
     // Attributes
-    private ArrayList<WorkoutExercise> Exercises;
+    // Revue d'architecture du 28/09/2026 (point 1.1) : Exercises est une liste DERIVEE,
+    // reconstruite par UpdateData() a partir de Sets (memes objets WorkoutSet). Elle
+    // etait jusqu'ici sauvegardee avec Gson EN PLUS de Sets : au rechargement, Gson
+    // recreait deux jeux d'objets independants, et selon l'ecran on modifiait l'un ou
+    // l'autre (note ecrite depuis l'onglet Workout perdue au prochain ajout de serie,
+    // progression "X / Y" fausse, tag [PR] absent du Share, colonne "Is Completed"
+    // fausse dans le CSV). "transient" : Gson ne l'ecrit plus et l'ignore a la lecture
+    // (les anciennes sauvegardes qui la contiennent encore restent lisibles) ;
+    // DataStorage.loadWorkoutData() la reconstruit via rebuildDerivedData() juste apres
+    // le chargement. Sets reste la seule source de verite.
+    private transient ArrayList<WorkoutExercise> Exercises;
     private ArrayList<WorkoutSet> Sets;
     private Double DayVolume;
     private String Date;
@@ -183,6 +193,26 @@ public class WorkoutDay {
         }
     }
 
+    // Reconstruit les donnees derivees (Exercises, DayVolume, Reps) d'un jour qui vient
+    // d'etre charge depuis la sauvegarde - voir le commentaire sur le champ Exercises
+    // (revue d'architecture du 28/09/2026, point 1.1). Un jour SANS serie n'est PAS
+    // passe dans UpdateData() : celle-ci remettrait sa date a "0000-00-00" et viderait
+    // son commentaire de seance (cas d'un jour qui n'a qu'un commentaire ou un chrono) -
+    // on se contente de garantir des listes non nulles.
+    public void rebuildDerivedData()
+    {
+        if (Sets == null)
+        {
+            Sets = new ArrayList<WorkoutSet>();
+        }
+        if (Sets.isEmpty())
+        {
+            Exercises = new ArrayList<WorkoutExercise>();
+            return;
+        }
+        UpdateData();
+    }
+
     // Update Data Structure Data
     public void UpdateData()
     {
@@ -204,7 +234,7 @@ public class WorkoutDay {
         if(Sets.isEmpty())
         {
             Sets.clear();
-            Exercises.clear();
+            Exercises = new ArrayList<WorkoutExercise>();
             ExerciseOrder.clear();
             SupersetGroups.clear();
             Comment = "";

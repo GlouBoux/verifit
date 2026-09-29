@@ -75,19 +75,10 @@
 
     </item>
 
-    <item
-        android:id="@+id/comment"
-        android:icon="@drawable/ic_comment_24px"
-        android:title="Exercise Comments"
-        app:showAsAction="never"
-        app:iconTint="@color/cardview_light_background">
-
-    </item>
-
     <!-- "Exercise Notes" (retour Romain 28/09/2026, feature deja presente dans FitNotes) :
-         a ne pas confondre avec "Exercise Comments" ci-dessus (propre au jour courant,
-         WorkoutExercise.getComment()) - ici, notes persistees sur la definition de
-         l'exercice (Exercise.notes), visibles a chaque seance. Voir
+         notes persistees sur la definition de l'exercice (Exercise.notes), visibles a
+         chaque seance. L'ancien item "Exercise Comments" (commentaire du jour, qui
+         ecrasait les notes de serie) a ete supprime le 29/09/2026. Voir
          AddExerciseActivity.onOptionsItemSelected(), R.id.exercise_notes. -->
     <item
         android:id="@+id/exercise_notes"

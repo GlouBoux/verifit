@@ -632,7 +632,7 @@ public class DataStorage {
     // (deduit) ou exactement egal (reel). Exclut les series a 0 reps (retour Romain :
     // "ca n'a pas de sens"). Source de verite unique reutilisee a la fois par
     // RepRangeRecordsActivity (affichage de l'historique complet) et par l'export de
-    // seance (tag [PR] par serie, cf. getRepRangePRSets() ci-dessous) pour garantir
+    // seance (tag [PR] par serie, cf. getRepRangePRKeys() ci-dessous) pour garantir
     // la meme regle partout.
     public TreeMap<Integer, ArrayList<RepRangePREvent>> calculateRepRangeHistory(String exerciseName)
     {
@@ -682,33 +682,16 @@ public class DataStorage {
         return history;
     }
 
-    // Aplatit calculateRepRangeHistory() en un ensemble de WorkoutSet (comparaison par
-    // reference, WorkoutSet ne redefinit pas equals/hashCode) - pratique pour tagger
-    // [PR] sur une serie precise lors de la generation de l'export de seance sans
-    // recalculer l'historique complet a chaque ligne. Ne retient que les evenements
-    // REELS (isDeduced() == false, c'est-a-dire ou la case correspond exactement au
-    // nombre de reps de la serie) : un evenement deduit designe la MEME serie source
-    // qui apparait deja, ailleurs dans la table, comme son propre record reel (a son
-    // nombre de reps exact) - inutile de le compter deux fois pour le tag [PR].
-    public HashSet<WorkoutSet> getRepRangePRSets(String exerciseName)
-    {
-        HashSet<WorkoutSet> prSets = new HashSet<WorkoutSet>();
-
-        for (ArrayList<RepRangePREvent> events : calculateRepRangeHistory(exerciseName).values())
-        {
-            for (RepRangePREvent event : events)
-            {
-                if (!event.isDeduced())
-                {
-                    prSets.add(event.getSourceSet());
-                }
-            }
-        }
-
-        return prSets;
-    }
-
-    // Meme chose que getRepRangePRSets() mais avec un matching par CLE VALEUR
+    // Series qui etablissent un PR REEL (evenement non deduit : la case correspond
+    // exactement au nombre de reps de la serie ; un evenement deduit designe la meme
+    // serie source, deja comptee a sa propre case), identifiees par CLE VALEUR
+    // ("date#reps#weight"). Source unique du badge trophee (WorkoutSetAdapter,
+    // AddExerciseWorkoutSetAdapter) ET du tag [PR] du Share (WorkoutReportGenerator,
+    // bascule le 28/09/2026 : l'ancienne getRepRangePRSets(), comparaison par identite
+    // d'objet, a ete supprimee). Historique : ce matching par cle valeur a ete introduit
+    // le 17/09/2026 comme contournement du meme bug de duplication que le point 1.1 de la
+    // revue du 28/09/2026 ; il reste le plus robuste des deux, meme maintenant que ce
+    // bug est corrige a la source (WorkoutDay.Exercises transient).
     // ("date#reps#weight") plutot que par identite d'objet Java (retour Romain
     // 17/09/2026 : trophee disparu sur le resume du jour/onglet Workout pour une
     // journee vieille de quelques jours). Cause : WorkoutDay.Sets (lu ici, via
@@ -772,6 +755,25 @@ public class DataStorage {
             if(workoutDays == null)
             {
                 workoutDays = new ArrayList<WorkoutDay>();
+            }
+
+            // Revue d'architecture du 28/09/2026 (point 1.1) : WorkoutDay.Exercises n'est
+            // plus sauvegardee (transient) - on la reconstruit ici a partir de Sets, avec
+            // les MEMES objets WorkoutSet, pour que tous les ecrans (onglet Workout,
+            // resume du jour, saisie, export, Share) modifient et lisent les memes series.
+            // Un jour qui echouerait a se reconstruire (donnee corrompue) garde une liste
+            // d'exercices vide plutot que d'empecher le chargement de tout l'historique.
+            for (WorkoutDay day : workoutDays)
+            {
+                try
+                {
+                    day.rebuildDerivedData();
+                }
+                catch (RuntimeException e)
+                {
+                    Log.e("DataStorage", "rebuildDerivedData a echoue pour le jour " + day.getDate(), e);
+                    day.setExercises(new ArrayList<WorkoutExercise>());
+                }
             }
         }
     }

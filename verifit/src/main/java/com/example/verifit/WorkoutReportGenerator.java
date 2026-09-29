@@ -75,14 +75,16 @@ public class WorkoutReportGenerator
 
             // Source de verite unique pour le tag [PR] (retour Romain 06/09/2026 :
             // "Un PR c'est un record [...] pour ce rep range [...] pour ce poids" -
-            // voir DataStorage.getRepRangePRSets()/calculateRepRangeHistory(), deja
+            // voir DataStorage.getRepRangePRKeys()/calculateRepRangeHistory(), deja
             // utilisee par l'ecran "Historique des PR par nombre de reps") - garantit
             // que l'ecran et cet export s'accordent toujours sur ce qui est un PR.
-            HashSet<WorkoutSet> prSets = MainActivity.dataStorage.getRepRangePRSets(exercise.getExercise());
+            // Cles valeur ("date#reps#weight"), pas identite d'objet : voir
+            // DataStorage.getRepRangePRKeys() (revue d'architecture du 28/09/2026).
+            HashSet<String> prKeys = MainActivity.dataStorage.getRepRangePRKeys(exercise.getExercise());
 
             for (WorkoutSet set : exercise.getSets())
             {
-                report.append(formatSetLine(set, prSets)).append("\n");
+                report.append(formatSetLine(set, prKeys)).append("\n");
             }
         }
 
@@ -162,14 +164,14 @@ public class WorkoutReportGenerator
     // "[PR]" (record), "[<commentaire>]" (commentaire libre de la serie), ou
     // "[PR. <commentaire>]" quand les deux sont presents (retour Romain 06/09/2026,
     // PR en premier - c'est le motif observe dans son propre export FitNotes).
-    private static String formatSetLine(WorkoutSet set, HashSet<WorkoutSet> prSets)
+    private static String formatSetLine(WorkoutSet set, HashSet<String> prKeys)
     {
         int reps = (int) Math.round(set.getReps());
         String weight = set.getWeight().toString();
 
         StringBuilder line = new StringBuilder("- ").append(weight).append(" kgs x ").append(reps).append(" reps");
 
-        boolean isPR = prSets.contains(set);
+        boolean isPR = prKeys.contains(DataStorage.repRangePRKey(set.getDate(), reps, set.getWeight()));
 
         // Plan du script (WorkoutSet.planComment) ET note perso (WorkoutSet.comment) -
         // retour Romain 21/09/2026, "les deux". Le plan d'abord, tel quel ; la note a la

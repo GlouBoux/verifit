@@ -32,9 +32,6 @@ public class DiaryExerciseAdapter extends RecyclerView.Adapter<DiaryExerciseAdap
 
     Context ct;
     ArrayList<WorkoutExercise> Exercises;
-    Button bt_save_comment;
-    Button bt_clear_comment;
-    EditText et_exercise_comment;
     String exercise_name;
 
 
@@ -69,17 +66,6 @@ public class DiaryExerciseAdapter extends RecyclerView.Adapter<DiaryExerciseAdap
 
         // Set PR icon tint
         ArrayList<String> Records = initializePersonalRecordIcon(holder,position);
-
-        // Show the comment icon or not
-        initializeCommentButton(holder,position);
-
-
-        holder.comment_button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showCommentDialog(position);
-            }
-        });
 
 
         holder.pr_button.setOnClickListener(new View.OnClickListener()
@@ -171,29 +157,6 @@ public class DiaryExerciseAdapter extends RecyclerView.Adapter<DiaryExerciseAdap
     }
 
 
-    // Set the comment button accordingly
-    public void initializeCommentButton(MyViewHolder holder, int position)
-    {
-        String Comment = Exercises.get(position).getComment();
-
-        if (Comment == null)
-        {
-            holder.comment_button.setVisibility(View.GONE);
-        }
-        else if(Comment.equals(""))
-        {
-            holder.comment_button.setVisibility(View.GONE);
-        }
-        else if(Comment.isEmpty())
-        {
-            holder.comment_button.setVisibility(View.GONE);
-        }
-        else
-        {
-            holder.comment_button.setVisibility(View.VISIBLE);
-        }
-    }
-
     public void showVolumePRDialog(ArrayList<String> Records)
     {
         // Prepare to show exercise dialog box
@@ -223,20 +186,6 @@ public class DiaryExerciseAdapter extends RecyclerView.Adapter<DiaryExerciseAdap
         alertDialog.show();
     }
 
-
-    public void showCommentDialog(int position)
-    {
-        // Prepare to show exercise dialog box
-        LayoutInflater inflater = LayoutInflater.from(ct);
-        View view = inflater.inflate(R.layout.show_exercise_comment_dialog,null);
-        AlertDialog alertDialog = new AlertDialog.Builder(ct).setView(view).create();
-        TextView tv_exercise_comment = view.findViewById(R.id.tv_exercise_comment);
-        String Comment = Exercises.get(position).getComment();
-        tv_exercise_comment.setText(Exercises.get(position).getComment());
-
-        // Show Exercise Dialog Box
-        alertDialog.show();
-    }
 
     // Simple
     public void setCategoryIconTint(MyViewHolder holder, String exercise_name)
@@ -371,7 +320,6 @@ public class DiaryExerciseAdapter extends RecyclerView.Adapter<DiaryExerciseAdap
         TextView sets;
         ImageView imageView;
         ImageButton pr_button;
-        ImageButton comment_button;
 
 
         public MyViewHolder(@NonNull View itemView) {
@@ -381,7 +329,6 @@ public class DiaryExerciseAdapter extends RecyclerView.Adapter<DiaryExerciseAdap
             sets = itemView.findViewById(R.id.sets);
             imageView = itemView.findViewById(R.id.imageView);
             pr_button = itemView.findViewById(R.id.pr_button);
-            comment_button = itemView.findViewById(R.id.comment_button);
         }
     }
 }
