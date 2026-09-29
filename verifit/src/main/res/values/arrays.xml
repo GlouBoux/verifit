@@ -1,13 +1,8 @@
 <resources>
-    <!-- Reply Preference -->
+    <!-- Liste du Spinner de exercise_graph_dialog.xml (heritee du modele Android Studio). -->
     <string-array name="reply_entries">
         <item>Reply</item>
         <item>Reply to all</item>
-    </string-array>
-
-    <string-array name="reply_values">
-        <item>reply</item>
-        <item>reply_all</item>
     </string-array>
 
     <!-- Preference "Theme" (Reglages > General, retour Romain 16/09/2026 : "le bouton

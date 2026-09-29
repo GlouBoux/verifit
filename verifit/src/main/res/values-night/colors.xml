@@ -19,7 +19,6 @@
 <resources>
     <!-- Accent bleu FitNotes Dark reel (capture Romain), remplace le bleu Light #0074bd. -->
     <color name="colorPrimary">#33b5e6</color>
-    <color name="colorPrimaryLight">#6cd4f0</color>
     <color name="colorPrimaryDark">#1f8ab5</color>
 
     <!-- colorAccent pilote les widgets sans tinting explicite (CheckBox, Spinner,
@@ -35,9 +34,6 @@
     <!-- Jaune du badge PR : deja tres lisible sur fond sombre, inchange. -->
     <color name="core_yellow">#ffd624</color>
 
-    <!-- Role "structurel" (fond ecran / surface carte), pas de simple inversion -
-         valeurs directement reprises des captures Romain. -->
-    <color name="almostWhite">#2a2a2a</color>
     <!-- Surface/carte (CardView.custom_row, boutons secondaires fond blanc/texte
          colorPrimary...). Corrige le 16/09/2026 : #333333 (premiere estimation, non
          echantillonnee) etait visiblement trop clair compare aux 78 nouvelles captures
@@ -54,10 +50,9 @@
     <color name="core_grey_02">#9a9a9a</color>
     <!-- Fond d'ecran (derriere les cartes). -->
     <color name="core_grey_05">#222222</color>
-    <!-- Separateurs discrets / etats "pressed" (custom_button1/2/3, custom_row). -->
+    <!-- Separateurs discrets / etats "pressed" (custom_button3, custom_row). -->
     <color name="core_grey_10">#454545</color>
     <color name="core_grey_20">#505050</color>
-    <color name="core_grey_30">#5c5c5c</color>
     <!-- Icone/texte d'onglet non selectionne (BottomNavigationView) : ce gris moyen
          reste suffisamment lisible sur fond sombre, inchange. -->
     <color name="core_grey_40">#919191</color>

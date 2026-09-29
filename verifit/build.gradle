@@ -45,14 +45,10 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation "androidx.fragment:fragment-ktx:1.3.0-rc01"
     implementation "androidx.fragment:fragment:1.3.0-rc01"
     implementation 'androidx.activity:activity:1.2.0-rc01'
-    implementation 'androidx.activity:activity-ktx:1.2.0-rc01'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.0'
     implementation 'com.google.android.material:material:1.2.0'
-    implementation 'androidx.navigation:navigation-fragment:2.3.0'
-    implementation 'androidx.navigation:navigation-ui:2.3.0'
     implementation 'androidx.preference:preference:1.1.0'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
@@ -68,11 +64,11 @@ dependencies {
     // volley at 1.1.1+ instead of these exact versions.
 }
 
-// Contournement (07/09/2026) : Android Studio essaie parfois d'executer une tache
-// Kotlin ("prepareKotlinBuildScriptModel") meme sur ce module 100% Java, probablement
-// a cause des dependances -ktx (fragment-ktx, activity-ktx) ci-dessus qui font croire
-// a l'IDE qu'il y a du Kotlin. Comme le plugin Kotlin n'est pas applique ici, cette
-// tache n'existe pas et l'IDE plante avec "Task not found". On la declare en no-op
-// pour que la recherche de tache aboutisse sans rien faire. Solution standard/connue
-// pour ce message d'erreur precis sur des projets Java purs.
+// Contournement (07/09/2026, commentaire corrige le 29/09/2026) : Android Studio
+// demande la tache "prepareKotlinBuildScriptModel" pendant la synchronisation Gradle,
+// meme sur ce module 100% Java. Le retrait des dependances -ktx (lot B) n'a rien
+// change : c'est l'IDE qui la reclame, pas une dependance du projet. Comme le plugin
+// Kotlin n'est pas applique ici, la tache n'existe pas et la synchro echoue avec
+// "Task not found". On la declare en no-op pour que la recherche aboutisse sans rien
+// faire.
 task prepareKotlinBuildScriptModel {}
