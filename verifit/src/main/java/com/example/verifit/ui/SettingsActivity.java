@@ -29,6 +29,7 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceGroup;
 import androidx.preference.PreferenceManager;
 
+import com.example.verifit.BackupManager;
 import com.example.verifit.BuildConfig;
 import com.example.verifit.LoadingDialog;
 import com.example.verifit.R;
@@ -309,6 +310,24 @@ public class SettingsActivity extends AppCompatActivity {
                 Intent in = new Intent(getActivity(), MainActivity.class);
                 in.putExtra("doit", "exportjson");
                 startActivity(in);
+            }
+            // Backup complet (point 1.4 de la revue du 28/09/2026, voir BackupManager)
+            else if (key.equals("exportfullbackup"))
+            {
+                BackupManager.exportToDocuments(getContext(), MainActivity.dataStorage);
+            }
+            else if (key.equals("importfullbackup"))
+            {
+                // "*/*" : un .json n'est pas toujours annonce comme application/json par
+                // le selecteur ; le contenu est de toute facon valide avant restauration.
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("*/*");
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
+                {
+                    intent.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, BackupManager.documentsFolderUri());
+                }
+                startActivityForResult(intent, FULL_BACKUP_REQUEST_CODE);
             }
             else if (key.equals("deletedata"))
             {
@@ -640,6 +659,39 @@ public class SettingsActivity extends AppCompatActivity {
         }
 
 
+        private static final int FULL_BACKUP_REQUEST_CODE = 91;
+
+        // Fichier choisi pour "Restaurer un backup complet" : lecture + validation SANS
+        // rien modifier, puis confirmation explicite (date et contenu du backup) avant de
+        // remplacer les donnees.
+        private void onFullBackupFileChosen(Uri uri)
+        {
+            final BackupManager.FullBackup backup;
+            try
+            {
+                backup = BackupManager.readFromUri(getContext(), uri);
+            }
+            catch (IOException | IllegalArgumentException e)
+            {
+                Toast.makeText(getContext(), "Restauration annulée : " + e.getMessage() + ". Tes données n'ont pas été modifiées.", Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            String exportedAt = backup.getExportedAt() == null ? "date inconnue" : backup.getExportedAt().replace('T', ' ');
+            new AlertDialog.Builder(getContext())
+                    .setTitle("Restaurer ce backup ?")
+                    .setMessage("Backup du " + exportedAt + " : " + backup.getWorkoutDays().size() + " jours, "
+                            + backup.countSets() + " séries, " + backup.getKnownExercises().size() + " exercices, "
+                            + backup.getGoals().size() + " objectifs.\n\nToutes les données actuelles seront remplacées. "
+                            + "Une copie de l'état actuel est d'abord enregistrée dans Documents/Verifit/auto.")
+                    .setPositiveButton("Restaurer", (dialog, which) -> {
+                        BackupManager.restore(getContext(), MainActivity.dataStorage, backup);
+                        Toast.makeText(getContext(), "Backup restauré", Toast.LENGTH_LONG).show();
+                    })
+                    .setNegativeButton("Annuler", null)
+                    .show();
+        }
+
         // Select a file using the build in file manager
         public void fileSearch()
         {
@@ -660,7 +712,11 @@ public class SettingsActivity extends AppCompatActivity {
                 if (data != null)
                 {
                     Uri uri = data.getData();
-                    if (requestCode == READ_REQUEST_CODE)
+                    if (requestCode == FULL_BACKUP_REQUEST_CODE)
+                    {
+                        onFullBackupFileChosen(uri);
+                    }
+                    else if (requestCode == READ_REQUEST_CODE)
                     {
                         if(MainActivity.dataStorage.readFile(uri, getContext()))
                         {

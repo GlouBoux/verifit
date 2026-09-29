@@ -34,6 +34,8 @@ public class VerifitApplication extends Application {
             @Override
             public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
                 MainActivity.dataStorage.ensureLoaded(activity);
+                // Copie automatique quotidienne (point 1.4, voir BackupManager).
+                BackupManager.dailySnapshotIfNeeded(activity, MainActivity.dataStorage);
             }
             @Override public void onActivityStarted(Activity activity) {}
             @Override public void onActivityResumed(Activity activity) {}

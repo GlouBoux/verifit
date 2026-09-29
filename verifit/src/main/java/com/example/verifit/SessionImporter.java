@@ -72,6 +72,9 @@ public class SessionImporter {
             return result;
         }
 
+        // Copie automatique avant d'ajouter des series (point 1.4, voir BackupManager).
+        BackupManager.snapshot(context, dataStorage, "avant_import_seance");
+
         DataStorage.ImportSummary summary = dataStorage.mergeImportedSession(session, fallbackDate);
 
         if (summary.setsImported == 0) {
@@ -130,7 +133,8 @@ public class SessionImporter {
         }
     }
 
-    private static String readAll(Uri uri, Context context) throws IOException {
+    // Aussi utilisee par BackupManager.readFromUri() (restauration d'un backup complet).
+    static String readAll(Uri uri, Context context) throws IOException {
         InputStream inputStream = context.getContentResolver().openInputStream(uri);
         if (inputStream == null) {
             throw new IOException("Unable to open selected file");

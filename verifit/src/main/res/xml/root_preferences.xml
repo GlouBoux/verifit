@@ -56,6 +56,21 @@
             app:title="Export JSON"
             app:useSimpleSummaryProvider="false" />
 
+        <!-- Backup complet (point 1.4 de la revue d'architecture du 28/09/2026) : tout ce
+             que l'app sauvegarde (voir BackupManager), contrairement au CSV ci-dessus.
+             Des copies automatiques sont aussi faites dans Documents/Verifit/auto. -->
+        <Preference
+            app:key="exportfullbackup"
+            app:summary="Tout exporter (séances, prévu, chrono, supersets, objectifs, notes) dans Documents/Verifit"
+            app:title="Backup complet"
+            app:useSimpleSummaryProvider="false" />
+
+        <Preference
+            app:key="importfullbackup"
+            app:summary="Remplace toutes les données. Copies automatiques dans Documents/Verifit/auto"
+            app:title="Restaurer un backup complet"
+            app:useSimpleSummaryProvider="false" />
+
         <Preference
             app:key="deletedata"
             app:summary="Delete all app workout data"

@@ -834,21 +834,59 @@ public class DataStorage {
             // resume du jour, saisie, export, Share) modifient et lisent les memes series.
             // Un jour qui echouerait a se reconstruire (donnee corrompue) garde une liste
             // d'exercices vide plutot que d'empecher le chargement de tout l'historique.
-            for (WorkoutDay day : workoutDays)
-            {
-                try
-                {
-                    day.rebuildDerivedData();
-                }
-                catch (RuntimeException e)
-                {
-                    Log.e("DataStorage", "rebuildDerivedData a echoue pour le jour " + day.getDate(), e);
-                    day.setExercises(new ArrayList<WorkoutExercise>());
-                }
-            }
+            rebuildAllDerivedData();
 
             workoutDataLoaded = true;
         }
+    }
+
+    // Reconstruit Exercises (liste derivee, non sauvegardee) pour chaque jour - voir
+    // loadWorkoutData() ci-dessus et restoreFullBackup().
+    private void rebuildAllDerivedData()
+    {
+        for (WorkoutDay day : workoutDays)
+        {
+            try
+            {
+                day.rebuildDerivedData();
+            }
+            catch (RuntimeException e)
+            {
+                Log.e("DataStorage", "rebuildDerivedData a echoue pour le jour " + day.getDate(), e);
+                day.setExercises(new ArrayList<WorkoutExercise>());
+            }
+        }
+    }
+
+    public boolean isWorkoutDataLoaded()
+    {
+        return workoutDataLoaded;
+    }
+
+    // Restauration d'un backup complet (point 1.4 de la revue du 28/09/2026) : REMPLACE
+    // seances, exercices connus et objectifs par ceux du backup, deja valide par
+    // BackupManager.parse(). La copie automatique de l'etat precedent est faite par
+    // BackupManager.restore() avant l'appel.
+    public void restoreFullBackup(BackupManager.FullBackup backup, Context context)
+    {
+        workoutDays = backup.getWorkoutDays();
+        rebuildAllDerivedData();
+        sortWorkoutDaysDate();
+
+        knownExercises = backup.getKnownExercises();
+        normalizeKnownExercises();
+        csvToKnownExercises(); // ajoute tout exercice present dans les series mais absent de la liste
+
+        goals = backup.getGoals();
+
+        sets.clear();
+        days.clear();
+
+        workoutDataLoaded = true;
+        knownExercisesLoaded = true;
+        saveWorkoutData(context);
+        saveKnownExerciseData(context);
+        saveGoalsData(context);
     }
 
     // Saves Workout_Days Array List in shared preferences
@@ -890,6 +928,13 @@ public class DataStorage {
             knownExercisesLoaded = true;
         }
 
+        normalizeKnownExercises();
+    }
+
+    // Valeurs par defaut des champs ajoutes apres coup (favori, notes) pour les
+    // exercices deserialises depuis une ancienne sauvegarde ou un backup.
+    private void normalizeKnownExercises()
+    {
         // Those who have previously saved entries will have null in this case
         for(int i = 0; i < knownExercises.size(); i++)
         {
@@ -1033,7 +1078,9 @@ public class DataStorage {
             return false;
         }
 
-        // Fichier entierement valide : seulement maintenant on remplace les donnees.
+        // Fichier entierement valide : seulement maintenant on remplace les donnees, apres
+        // une copie automatique de l'etat actuel (point 1.4, voir BackupManager).
+        BackupManager.snapshot(context, this, "avant_import_csv");
         sets = parsedSets;
         setsToEverything(); // Convert Set Objects to Day Objects
         csvToKnownExercises(); // Find all Exercises in CSV and add them to known exercises
@@ -1218,6 +1265,10 @@ public class DataStorage {
     // Clears all locally used data structures
     public void clearDataStructures(Context context)
     {
+        // Copie automatique avant tout effacement (point 1.4, voir BackupManager) - ne
+        // fait rien si les donnees sont deja vides.
+        BackupManager.snapshot(context, this, "avant_effacement");
+
         // Clear everything just in case
         this.workoutDays.clear();
         this.knownExercises.clear(); // This removes all known exercises
