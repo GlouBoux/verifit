@@ -1836,6 +1836,28 @@ public class DataStorage {
     // cette méthode promettait ("additive, ne touche jamais l'historique"). Corrigé en
     // ajoutant les séries importées directement au bon WorkoutDay (existant ou nouveau)
     // dans workoutDays, sans jamais reconstruire toute la liste depuis "sets".
+    // Nombre de series deja importees (avec des valeurs "prevues") le jour donne pour les
+    // exercices donnes. Sert a detecter un import de seance fait deux fois (point 1.5 de
+    // la revue d'architecture du 28/09/2026) : une saisie manuelle n'a jamais de prevu,
+    // seul un Import Session en pose.
+    public int countImportedSets(String date, java.util.Collection<String> exerciseNames)
+    {
+        int dayPosition = getDayPosition(date);
+        if (dayPosition < 0)
+        {
+            return 0;
+        }
+        int count = 0;
+        for (WorkoutSet set : workoutDays.get(dayPosition).getSets())
+        {
+            if (set.hasPlannedValues() && exerciseNames.contains(set.getExerciseName()))
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
     public ImportSummary mergeImportedSession(ImportedSession session, String fallbackDate)
     {
         ImportSummary summary = new ImportSummary();

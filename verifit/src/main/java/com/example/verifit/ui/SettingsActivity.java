@@ -283,6 +283,9 @@ public class SettingsActivity extends AppCompatActivity {
                     public void onClick(View view) {
                         logoutFromVerifitRs();
                         Intent in = new Intent(getActivity(), MainActivity.class);
+                        // Retour a l'ecran Workout existant (recree avec l'action demandee) plutot
+                        // qu'une instance de plus dans la pile (voir TabNavigation).
+                        in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                         in.putExtra("doit", "importcsv");
                         startActivity(in);
                     }
@@ -299,6 +302,9 @@ public class SettingsActivity extends AppCompatActivity {
             else if (key.equals("exportcsv"))
             {
                 Intent in = new Intent(getActivity(), MainActivity.class);
+                // Retour a l'ecran Workout existant (recree avec l'action demandee) plutot
+                // qu'une instance de plus dans la pile (voir TabNavigation).
+                in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 in.putExtra("doit", "exportcsv");
                 startActivity(in);
             }
@@ -308,6 +314,9 @@ public class SettingsActivity extends AppCompatActivity {
             else if (key.equals("exportjson"))
             {
                 Intent in = new Intent(getActivity(), MainActivity.class);
+                // Retour a l'ecran Workout existant (recree avec l'action demandee) plutot
+                // qu'une instance de plus dans la pile (voir TabNavigation).
+                in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 in.putExtra("doit", "exportjson");
                 startActivity(in);
             }
@@ -588,6 +597,9 @@ public class SettingsActivity extends AppCompatActivity {
             {
                 // Same as offline export since we are exporting everything in local data structures
                 Intent in = new Intent(getActivity(), MainActivity.class);
+                // Retour a l'ecran Workout existant (recree avec l'action demandee) plutot
+                // qu'une instance de plus dans la pile (voir TabNavigation).
+                in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 in.putExtra("doit", "exportcsv");
                 startActivity(in);
             }

@@ -154,6 +154,14 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
         // Bottom Navigation Bar Intents
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation_view);
+        // Retour Romain 29/09/2026 (import de seance sans reaction) : setSelectedItemId()
+        // declenche le listener meme quand l'onglet est DEJA selectionne (BottomNavigationView
+        // sans OnNavigationItemReselectedListener). Appele a chaque onRestart() avec le
+        // listener deja pose, il relancait donc une NOUVELLE instance de cet ecran par-dessus
+        // (invisible, sans animation) : dialogue affiche sur l'ancienne instance masque, et
+        // une instance de plus dans la pile a chaque retour sur l'ecran. On retire le
+        // listener le temps de synchroniser l'onglet affiche.
+        bottomNavigationView.setOnNavigationItemSelectedListener(null);
         bottomNavigationView.setSelectedItemId(R.id.home);
         bottomNavigationView.setOnNavigationItemSelectedListener(this);
 
@@ -370,6 +378,14 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
         // Bottom Navigation Bar Intents
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation_view);
+        // Retour Romain 29/09/2026 (import de seance sans reaction) : setSelectedItemId()
+        // declenche le listener meme quand l'onglet est DEJA selectionne (BottomNavigationView
+        // sans OnNavigationItemReselectedListener). Appele a chaque onRestart() avec le
+        // listener deja pose, il relancait donc une NOUVELLE instance de cet ecran par-dessus
+        // (invisible, sans animation) : dialogue affiche sur l'ancienne instance masque, et
+        // une instance de plus dans la pile a chaque retour sur l'ecran. On retire le
+        // listener le temps de synchroniser l'onglet affiche.
+        bottomNavigationView.setOnNavigationItemSelectedListener(null);
         bottomNavigationView.setSelectedItemId(R.id.home);
         bottomNavigationView.setOnNavigationItemSelectedListener(this);
     }
@@ -519,21 +535,13 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
             return;
         }
 
-        SessionImporter.Result result;
-        try
-        {
-            result = SessionImporter.importFromUri(uri, this, dataStorage, dateSelected);
-        }
-        catch (Exception e)
-        {
-            // Belt-and-suspenders: SessionImporter already catches the JSON parsing
-            // failures we know about, but this is fed by an external file the user
-            // picked (typically from a workout-generator script), so an unexpected
-            // shape should show an error toast instead of crashing the app.
-            Toast.makeText(this, "Import failed: " + e.toString(), Toast.LENGTH_LONG).show();
-            return;
-        }
+        // Point 1.5 de la revue du 28/09/2026 : confirmation si la seance a deja ete
+        // importee ce jour-la (voir SessionImporter.importWithDuplicateCheck()).
+        SessionImporter.importWithDuplicateCheck(this, uri, dataStorage, dateSelected, this::showImportSessionResult);
+    }
 
+    private void showImportSessionResult(SessionImporter.Result result)
+    {
         if (result.success)
         {
             DataStorage.ImportSummary summary = result.summary;
@@ -569,38 +577,33 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item)
     {
-        if(item.getItemId() == R.id.home)
+        // Retaper "Workout" deja affiche : retour au jour courant. Jusqu'ici ce tap
+        // ouvrait une NOUVELLE instance de cet ecran (positionnee sur aujourd'hui) par-dessus
+        // l'ancienne, ce qui empilait les ecrans (voir TabNavigation).
+        if (item.getItemId() == R.id.home)
         {
-            Intent in = new Intent(this,MainActivity.class);
-            startActivity(in);
-            overridePendingTransition(0,0);
+            scrollToToday();
+            return true;
         }
-        else if(item.getItemId() == R.id.exercises)
+        return TabNavigation.navigate(this, item.getItemId(), R.id.home);
+    }
+
+    private void scrollToToday()
+    {
+        if (viewPager2 == null)
         {
-            Intent in = new Intent(this, ExercisesActivity.class);
-            startActivity(in);
-            overridePendingTransition(0,0);
+            return;
         }
-        else if(item.getItemId() == R.id.diary)
+        String today = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        ArrayList<WorkoutDay> days = dataStorage.getInfiniteWorkoutDays();
+        for (int i = 0; i < days.size(); i++)
         {
-            Intent in = new Intent(this,DiaryActivity.class);
-            in.putExtra("date", dateSelected);
-            startActivity(in);
-            overridePendingTransition(0,0);
+            if (today.equals(days.get(i).getDate()))
+            {
+                viewPager2.setCurrentItem(i, false);
+                return;
+            }
         }
-        else if(item.getItemId() == R.id.charts)
-        {
-            Intent in = new Intent(this,ChartsActivity.class);
-            startActivity(in);
-            overridePendingTransition(0,0);
-        }
-        else if(item.getItemId() == R.id.me)
-        {
-            Intent in = new Intent(this, SettingsActivity.class);
-            startActivity(in);
-            overridePendingTransition(0,0);
-        }
-        return true;
     }
 
     // Menu Stuff

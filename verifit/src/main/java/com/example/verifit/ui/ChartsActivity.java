@@ -62,6 +62,14 @@ public class ChartsActivity extends AppCompatActivity implements BottomNavigatio
     {
         // Bottom Navigation Bar Intents
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation_view);
+        // Retour Romain 29/09/2026 (import de seance sans reaction) : setSelectedItemId()
+        // declenche le listener meme quand l'onglet est DEJA selectionne (BottomNavigationView
+        // sans OnNavigationItemReselectedListener). Appele a chaque onRestart() avec le
+        // listener deja pose, il relancait donc une NOUVELLE instance de cet ecran par-dessus
+        // (invisible, sans animation) : dialogue affiche sur l'ancienne instance masque, et
+        // une instance de plus dans la pile a chaque retour sur l'ecran. On retire le
+        // listener le temps de synchroniser l'onglet affiche.
+        bottomNavigationView.setOnNavigationItemSelectedListener(null);
         bottomNavigationView.setSelectedItemId(R.id.charts);
         bottomNavigationView.setOnNavigationItemSelectedListener(this);
 
@@ -414,40 +422,10 @@ public class ChartsActivity extends AppCompatActivity implements BottomNavigatio
 
     // Navigates to given activity based on the selected menu item
     @Override
-    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-
-
-        if(item.getItemId() == R.id.home)
-        {
-            Intent in = new Intent(this,MainActivity.class);
-            startActivity(in);
-            overridePendingTransition(0,0);
-        }
-        else if(item.getItemId() == R.id.exercises)
-        {
-            Intent in = new Intent(this, ExercisesActivity.class);
-            startActivity(in);
-            overridePendingTransition(0,0);
-        }
-        else if(item.getItemId() == R.id.diary)
-        {
-            Intent in = new Intent(this,DiaryActivity.class);
-            startActivity(in);
-            overridePendingTransition(0,0);
-        }
-        else if(item.getItemId() == R.id.charts)
-        {
-            Intent in = new Intent(this,ChartsActivity.class);
-            startActivity(in);
-            overridePendingTransition(0,0);
-        }
-        else if(item.getItemId() == R.id.me)
-        {
-            Intent in = new Intent(this, SettingsActivity.class);
-            startActivity(in);
-            overridePendingTransition(0,0);
-        }
-        return true;
+    public boolean onNavigationItemSelected(@NonNull MenuItem item)
+    {
+        // Navigation commune aux onglets, sans empiler d'ecrans (voir TabNavigation).
+        return TabNavigation.navigate(this, item.getItemId(), R.id.charts);
     }
 
     // Menu Stuff

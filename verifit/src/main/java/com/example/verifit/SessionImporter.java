@@ -1,9 +1,12 @@
 package com.example.verifit;
 
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
 
+import com.example.verifit.model.ImportedExercise;
 import com.example.verifit.model.ImportedSession;
 import com.example.verifit.model.WorkoutDay;
 import com.google.gson.Gson;
@@ -14,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 
 // Reads a JSON file describing one workout session (see docs/session-import-format.md)
 // and merges it into a DataStorage instance. Used by DayActivity's "Import Session" menu
@@ -28,6 +32,12 @@ public class SessionImporter {
     // Outcome of a single importFromUri() call, meant to be shown to the user as a
     // Toast/Snackbar (see DayActivity).
     public static class Result {
+        // Point 1.5 de la revue du 28/09/2026 : le jour contient deja des series importees
+        // pour ces exercices. Rien n'a ete importe ; l'appelant peut relancer avec
+        // allowDuplicate = true apres confirmation (voir importWithDuplicateCheck()).
+        public boolean alreadyImported;
+        public int existingImportedSets;
+        public String targetDate;
         public boolean success;
         public String errorMessage = "";
         public DataStorage.ImportSummary summary;
@@ -36,6 +46,51 @@ public class SessionImporter {
     // fallbackDate is used when the JSON file doesn't specify its own "date" field -
     // typically the date of the DayActivity screen the import was triggered from.
     public static Result importFromUri(Uri uri, Context context, DataStorage dataStorage, String fallbackDate) {
+        return importFromUri(uri, context, dataStorage, fallbackDate, false);
+    }
+
+    public interface OnImportDone {
+        void onImportDone(Result result);
+    }
+
+    // Point d'entree des ecrans (MainActivity, DayActivity) : importe la seance, sauf si
+    // le jour contient deja des series importees pour ces exercices (retour de la revue
+    // d'architecture du 28/09/2026, point 1.5 : un double import doublait toutes les
+    // series). Dans ce cas, confirmation explicite avant d'importer quand meme ; sur
+    // "Annuler", onDone n'est pas appele et rien ne change. Toute exception imprevue
+    // devient un Result en echec plutot qu'un crash (fichier externe choisi par
+    // l'utilisateur).
+    public static void importWithDuplicateCheck(final Activity activity, final Uri uri, final DataStorage dataStorage,
+                                                final String fallbackDate, final OnImportDone onDone) {
+        Result first = safeImport(uri, activity, dataStorage, fallbackDate, false);
+        if (!first.alreadyImported) {
+            onDone.onImportDone(first);
+            return;
+        }
+
+        new AlertDialog.Builder(activity)
+                .setTitle("Séance déjà importée ?")
+                .setMessage("Le " + first.targetDate + " contient déjà " + first.existingImportedSets
+                        + " série(s) importée(s) pour les exercices de ce fichier.\n\n"
+                        + "Importer quand même ajoutera ces séries une seconde fois.")
+                .setPositiveButton("Importer quand même", (dialog, which) ->
+                        onDone.onImportDone(safeImport(uri, activity, dataStorage, fallbackDate, true)))
+                .setNegativeButton("Annuler", null)
+                .show();
+    }
+
+    private static Result safeImport(Uri uri, Context context, DataStorage dataStorage, String fallbackDate, boolean allowDuplicate) {
+        try {
+            return importFromUri(uri, context, dataStorage, fallbackDate, allowDuplicate);
+        } catch (Exception e) {
+            Result result = new Result();
+            result.success = false;
+            result.errorMessage = e.toString();
+            return result;
+        }
+    }
+
+    public static Result importFromUri(Uri uri, Context context, DataStorage dataStorage, String fallbackDate, boolean allowDuplicate) {
         Result result = new Result();
 
         String json;
@@ -70,6 +125,25 @@ public class SessionImporter {
             result.success = false;
             result.errorMessage = "No exercises found in file";
             return result;
+        }
+
+        // Point 1.5 : seance deja importee ce jour-la ? Detection AVANT toute
+        // modification (et avant la copie automatique, inutile si on n'importe pas).
+        if (!allowDuplicate) {
+            String targetDate = session.getDate().isEmpty() ? fallbackDate : session.getDate();
+            HashSet<String> exerciseNames = new HashSet<String>();
+            for (ImportedExercise exercise : session.getExercises()) {
+                exerciseNames.add(exercise.getName());
+            }
+            int existing = dataStorage.countImportedSets(targetDate, exerciseNames);
+            if (existing > 0) {
+                result.success = false;
+                result.alreadyImported = true;
+                result.existingImportedSets = existing;
+                result.targetDate = targetDate;
+                result.errorMessage = "Session already imported on " + targetDate;
+                return result;
+            }
         }
 
         // Copie automatique avant d'ajouter des series (point 1.4, voir BackupManager).

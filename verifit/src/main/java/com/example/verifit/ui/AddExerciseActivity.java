@@ -838,8 +838,9 @@ public class AddExerciseActivity extends AppCompatActivity {
         View rowHome = findViewById(R.id.row_nav_panel_home);
         rowHome.setOnClickListener(v -> {
             drawerLayout.closeDrawer(GravityCompat.START);
-            Intent in = new Intent(AddExerciseActivity.this, MainActivity.class);
-            startActivity(in);
+            // Retour a l'ecran Workout existant en fermant ce qui est au-dessus (voir
+            // TabNavigation) plutot qu'un ecran Workout de plus dans la pile.
+            startActivity(TabNavigation.workoutIntent(AddExerciseActivity.this));
             overridePendingTransition(0, 0);
         });
 

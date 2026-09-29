@@ -1034,47 +1034,39 @@ public class DayActivity extends AppCompatActivity {
                 return;
             }
 
-            SessionImporter.Result result;
-            try
-            {
-                result = SessionImporter.importFromUri(uri, this, MainActivity.dataStorage, date_clicked);
-            }
-            catch (Exception e)
-            {
-                // Belt-and-suspenders: SessionImporter already catches the JSON parsing
-                // failures we know about, but this is fed by an external file the user
-                // picked (typically from a workout-generator script), so an unexpected
-                // shape should show an error toast instead of crashing the app.
-                Toast.makeText(this, "Import failed: " + e.toString(), Toast.LENGTH_LONG).show();
-                return;
-            }
+            // Point 1.5 de la revue du 28/09/2026 : confirmation si la seance a deja ete
+            // importee ce jour-la (voir SessionImporter.importWithDuplicateCheck()).
+            SessionImporter.importWithDuplicateCheck(this, uri, MainActivity.dataStorage, date_clicked, this::showImportSessionResult);
+        }
+    }
 
-            if(result.success)
+    private void showImportSessionResult(SessionImporter.Result result)
+    {
+        if(result.success)
+        {
+            DataStorage.ImportSummary summary = result.summary;
+            String message = summary.setsImported + " set(s) imported into " + summary.date;
+            if(summary.exercisesCreated > 0)
             {
-                DataStorage.ImportSummary summary = result.summary;
-                String message = summary.setsImported + " set(s) imported into " + summary.date;
-                if(summary.exercisesCreated > 0)
-                {
-                    message += " (" + summary.exercisesCreated + " new exercise(s) created)";
-                }
-                if(summary.setsSkipped > 0)
-                {
-                    message += " - " + summary.setsSkipped + " incomplete set(s) skipped";
-                }
-                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                message += " (" + summary.exercisesCreated + " new exercise(s) created)";
+            }
+            if(summary.setsSkipped > 0)
+            {
+                message += " - " + summary.setsSkipped + " incomplete set(s) skipped";
+            }
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
 
-                // Refresh this screen, and reload the imported day if it wasn't the one
-                // currently open (the JSON file is allowed to carry its own "date").
-                // initActivity() re-reads "date" from the intent extras every time it
-                // runs (see onRestart()), so update those extras rather than just the
-                // field, otherwise this would be overwritten right back.
-                getIntent().putExtra("date", summary.date);
-                initActivity();
-            }
-            else
-            {
-                Toast.makeText(this, "Import failed: " + result.errorMessage, Toast.LENGTH_LONG).show();
-            }
+            // Refresh this screen, and reload the imported day if it wasn't the one
+            // currently open (the JSON file is allowed to carry its own "date").
+            // initActivity() re-reads "date" from the intent extras every time it
+            // runs (see onRestart()), so update those extras rather than just the
+            // field, otherwise this would be overwritten right back.
+            getIntent().putExtra("date", summary.date);
+            initActivity();
+        }
+        else
+        {
+            Toast.makeText(this, "Import failed: " + result.errorMessage, Toast.LENGTH_LONG).show();
         }
     }
 }
