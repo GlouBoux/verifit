@@ -97,6 +97,20 @@ public class RepRangePRTest
     }
 
     @Test
+    public void badgeTrophee_regleUniqueDesDeuxEcrans()
+    {
+        DataStorage ds = history();
+        HashSet<String> keys = ds.getRepRangePRKeys("Squat");
+        WorkoutDay later = ds.workoutDays.get(2);
+        assertTrue(DataStorage.isRepRangePR(keys, ds.workoutDays.get(0).getSets().get(0)));
+        assertFalse("egalite, pas un record", DataStorage.isRepRangePR(keys, later.getSets().get(0)));
+
+        WorkoutSet incomplete = set("2026-09-15", "Squat", "Legs", 5, 100);
+        incomplete.setWeight(null);
+        assertFalse(DataStorage.isRepRangePR(keys, incomplete));
+    }
+
+    @Test
     public void cle_format()
     {
         assertEquals("2026-09-01#5#100.0", DataStorage.repRangePRKey("2026-09-01", 5, 100.0));

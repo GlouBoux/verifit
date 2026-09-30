@@ -683,6 +683,18 @@ public class DataStorage {
         return date + "#" + reps + "#" + weight;
     }
 
+    // true si cette serie precise est un PR reel, d'apres les cles calculees par
+    // getRepRangePRKeys() pour son exercice. Regle unique du badge trophee des deux
+    // adapters de series (lot C.3, 30/09/2026 : elle etait copiee dans chacun).
+    public static boolean isRepRangePR(Set<String> prKeys, WorkoutSet set)
+    {
+        if (set.getDate() == null || set.getReps() == null || set.getWeight() == null)
+        {
+            return false;
+        }
+        return prKeys.contains(repRangePRKey(set.getDate(), (int) Math.round(set.getReps()), set.getWeight()));
+    }
+
     public HashSet<String> getRepRangePRKeys(String exerciseName)
     {
         HashSet<String> prKeys = new HashSet<String>();
