@@ -1,7 +1,5 @@
 package com.example.verifit;
 
-import android.util.Pair;
-
 import com.example.verifit.model.WorkoutSet;
 
 public class ExercisePersonalStats {

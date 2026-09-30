@@ -104,20 +104,10 @@ public class SessionImporter {
 
         ImportedSession session;
         try {
-            Gson gson = new Gson();
-            session = gson.fromJson(json, ImportedSession.class);
-        } catch (JsonSyntaxException e) {
+            session = parseSession(json);
+        } catch (InvalidSessionException e) {
             result.success = false;
-            result.errorMessage = "Invalid JSON file: " + e.getMessage();
-            return result;
-        } catch (IllegalStateException | NumberFormatException e) {
-            // Gson throws these directly (not wrapped in JsonSyntaxException) when a
-            // field's JSON type doesn't match the Java type it's bound to - e.g. a
-            // quoted "8" instead of a numeric 8 for weight/reps, or an object where a
-            // list was expected. Catching only JsonSyntaxException misses these and lets
-            // them crash the app, so treat them the same way as a syntax error.
-            result.success = false;
-            result.errorMessage = "Invalid JSON file (unexpected field type): " + e.getMessage();
+            result.errorMessage = e.getMessage();
             return result;
         }
 
@@ -179,6 +169,32 @@ public class SessionImporter {
         result.success = true;
         result.summary = summary;
         return result;
+    }
+
+    // Lecture du JSON de seance (contrat du fichier genere par workout_engine.py cote
+    // Coaching), sans aucune dependance Android : separee de importFromUri() pour etre
+    // testee en JUnit (lot C, etape C.1, 29/09/2026). Renvoie null pour un fichier vide.
+    // Leve InvalidSessionException avec le message affiche a l'utilisateur, inchange.
+    static ImportedSession parseSession(String json) throws InvalidSessionException {
+        try {
+            Gson gson = new Gson();
+            return gson.fromJson(json, ImportedSession.class);
+        } catch (JsonSyntaxException e) {
+            throw new InvalidSessionException("Invalid JSON file: " + e.getMessage());
+        } catch (IllegalStateException | NumberFormatException e) {
+            // Gson throws these directly (not wrapped in JsonSyntaxException) when a
+            // field's JSON type doesn't match the Java type it's bound to - e.g. a
+            // quoted "8" instead of a numeric 8 for weight/reps, or an object where a
+            // list was expected. Catching only JsonSyntaxException misses these and lets
+            // them crash the app, so treat them the same way as a syntax error.
+            throw new InvalidSessionException("Invalid JSON file (unexpected field type): " + e.getMessage());
+        }
+    }
+
+    static class InvalidSessionException extends Exception {
+        InvalidSessionException(String message) {
+            super(message);
+        }
     }
 
     // Demarre (ou reprend, si le jour avait ete Stop manuellement avant ce nouvel

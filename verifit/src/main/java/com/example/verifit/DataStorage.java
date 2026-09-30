@@ -13,7 +13,6 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
-import android.util.Pair;
 import android.widget.Toast;
 
 import com.example.verifit.model.Exercise;
@@ -21,6 +20,7 @@ import com.example.verifit.model.Goal;
 import com.example.verifit.model.ImportedExercise;
 import com.example.verifit.model.ImportedSession;
 import com.example.verifit.model.ImportedSet;
+import com.example.verifit.model.RepsWeight;
 import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
@@ -53,7 +53,7 @@ public class DataStorage {
     ArrayList<Exercise> knownExercises = new ArrayList<Exercise>(); // Initialized with hardcoded exercises
     ArrayList<Goal> goals = new ArrayList<Goal>(); // "Goals" (Vague 4, item 14) - persiste en JSON comme knownExercises ci-dessus
     HashMap<String,Double> volumePRs = new HashMap<String,Double>();
-    HashMap<String, Pair<Double,Double>> setVolumePRs = new HashMap<String, Pair<Double,Double>>(); // first = reps, second = weight
+    HashMap<String, RepsWeight> setVolumePRs = new HashMap<String, RepsWeight>(); // model/RepsWeight plutot qu'android.util.Pair : voir sa javadoc (lot C.1)
     HashMap<String,Double> actualOneRepMaxPRs = new HashMap<String,Double>();
     HashMap<String,Double> estimatedOneRMPRs = new HashMap<String,Double>();
     HashMap<String,Double> maxRepsPRs = new HashMap<String,Double>();
@@ -111,7 +111,7 @@ public class DataStorage {
         return volumePRs;
     }
 
-    public HashMap<String, Pair<Double, Double>> getSetVolumePRs() {
+    public HashMap<String, RepsWeight> getSetVolumePRs() {
         return setVolumePRs;
     }
 
@@ -491,7 +491,7 @@ public class DataStorage {
         for(int i = 0; i < knownExercises.size(); i++)
         {
             volumePRs.put((knownExercises.get(i).getName()),0.0);
-            setVolumePRs.put((knownExercises.get(i).getName()),new Pair(0.0, 0.0));
+            setVolumePRs.put((knownExercises.get(i).getName()),new RepsWeight(0.0, 0.0));
             actualOneRepMaxPRs.put((knownExercises.get(i).getName()),0.0);
             estimatedOneRMPRs.put((knownExercises.get(i).getName()),0.0);
             maxRepsPRs.put((knownExercises.get(i).getName()),0.0);
@@ -515,7 +515,7 @@ public class DataStorage {
                             volumePRs.put(knownExercises.get(i).getName(),workoutDays.get(j).getExercises().get(k).getVolume());
                         }
 
-                        Double setVolume = setVolumePRs.get(knownExercises.get(i).getName()).first * setVolumePRs.get(knownExercises.get(i).getName()).second;
+                        Double setVolume = setVolumePRs.get(knownExercises.get(i).getName()).getReps() * setVolumePRs.get(knownExercises.get(i).getName()).getWeight();
 
                         // Per Set Volume Personal Records
                         if(setVolume  < (workoutDays.get(j).getExercises().get(k).getMaxSetVolume()))
@@ -523,9 +523,7 @@ public class DataStorage {
                             Double maxReps = workoutDays.get(j).getExercises().get(k).getMaxReps();
                             Double maxWeight = workoutDays.get(j).getExercises().get(k).getMaxWeight();
 
-                            Pair pair = new Pair(maxReps, maxWeight);
-
-                            setVolumePRs.put(knownExercises.get(i).getName(), pair);
+                            setVolumePRs.put(knownExercises.get(i).getName(), new RepsWeight(maxReps, maxWeight));
 
                             WorkoutSet temp_set = new WorkoutSet();
                             temp_set.setReps(maxReps);
@@ -1019,6 +1017,51 @@ public class DataStorage {
         return text.replace("\r\n", " / ").replace("\n", " / ").replace("\r", " / ").replace(",", ";");
     }
 
+    // Contenu complet du backup CSV (en-tete compris), sans aucune dependance Android :
+    // separe de l'ecriture MediaStore de writeFile() pour etre teste en JUnit (lot C,
+    // etape C.1, 29/09/2026). Octets ecrits identiques a avant.
+    public String buildCsvBackup()
+    {
+        StringBuilder csv = new StringBuilder();
+        // 7e colonne "Is Completed" (Mark Sets Complete, retour Romain 17/09/2026) -
+        // voir parseCsvSets() ci-dessus, qui la lit en retombant sur false si absente
+        // (retro-compatibilite avec un CSV genere avant cet ajout).
+        //
+        // 8e colonne "Plan Comment" (retour Romain 21/09/2026, voir
+        // WorkoutSet.planComment) : le texte pre-rempli par le script generateur,
+        // separe de la note perso ("Comment"). Toujours en DERNIERE colonne : les
+        // colonnes "prevu" (correctif A de verifit-uat-retours-2026-09-21.md) viendront
+        // s'ajouter apres, sans decaler celles-ci.
+        //
+        // La colonne "Comment" contient desormais le commentaire PROPRE de chaque
+        // serie. Elle contenait jusqu'ici celui de l'EXERCICE (copie du commentaire
+        // de la derniere serie de l'exercice ce jour-la, champ supprime depuis) : un
+        // backup CSV ecrasait donc les
+        // commentaires individuels de toutes les series d'un exercice par celui de la
+        // derniere a la restauration.
+        csv.append("Date,Exercise,Category,Weight (kg),Reps,Comment,Is Completed,Plan Comment\n");
+
+        for(int i = 0; i < workoutDays.size(); i++)
+        {
+            for(int j = 0; j < workoutDays.get(i).getExercises().size(); j++)
+            {
+                for(int k = 0; k < workoutDays.get(i).getExercises().get(j).getSets().size(); k++)
+                {
+                    String Date = workoutDays.get(i).getExercises().get(j).getDate();
+                    String exerciseName = workoutDays.get(i).getExercises().get(j).getSets().get(k).getExerciseName();
+                    String exerciseCategory = workoutDays.get(i).getExercises().get(j).getSets().get(k).getCategory();
+                    Double Weight = workoutDays.get(i).getExercises().get(j).getSets().get(k).getWeight();
+                    Double Reps = workoutDays.get(i).getExercises().get(j).getSets().get(k).getReps();
+                    boolean isCompleted = workoutDays.get(i).getExercises().get(j).getSets().get(k).isCompleted();
+                    String setComment = csvSafe(workoutDays.get(i).getExercises().get(j).getSets().get(k).getComment());
+                    String setPlanComment = csvSafe(workoutDays.get(i).getExercises().get(j).getSets().get(k).getPlanComment());
+                    csv.append(Date + "," + exerciseName+ "," + exerciseCategory + "," + Weight + "," + Reps + "," + setComment + "," + isCompleted + "," + setPlanComment + "\n");
+                }
+            }
+        }
+        return csv.toString();
+    }
+
     // Export backup function using Storage Access Framework
     public void writeFile(Context context)
     {
@@ -1042,42 +1085,7 @@ public class DataStorage {
                 Log.d(TAG, "saveFile: file path - " + file.getAbsolutePath());
                 outputStream = new FileOutputStream(file);
             }
-            // 7e colonne "Is Completed" (Mark Sets Complete, retour Romain 17/09/2026) -
-            // voir parseCsvSets() ci-dessus, qui la lit en retombant sur false si absente
-            // (retro-compatibilite avec un CSV genere avant cet ajout).
-            //
-            // 8e colonne "Plan Comment" (retour Romain 21/09/2026, voir
-            // WorkoutSet.planComment) : le texte pre-rempli par le script generateur,
-            // separe de la note perso ("Comment"). Toujours en DERNIERE colonne : les
-            // colonnes "prevu" (correctif A de verifit-uat-retours-2026-09-21.md) viendront
-            // s'ajouter apres, sans decaler celles-ci.
-            //
-            // La colonne "Comment" contient desormais le commentaire PROPRE de chaque
-            // serie. Elle contenait jusqu'ici celui de l'EXERCICE (copie du commentaire
-            // de la derniere serie de l'exercice ce jour-la, champ supprime depuis) : un
-            // backup CSV ecrasait donc les
-            // commentaires individuels de toutes les series d'un exercice par celui de la
-            // derniere a la restauration.
-            outputStream.write("Date,Exercise,Category,Weight (kg),Reps,Comment,Is Completed,Plan Comment\n".getBytes());
-
-            for(int i = 0; i < workoutDays.size(); i++)
-            {
-                for(int j = 0; j < workoutDays.get(i).getExercises().size(); j++)
-                {
-                    for(int k = 0; k < workoutDays.get(i).getExercises().get(j).getSets().size(); k++)
-                    {
-                        String Date = workoutDays.get(i).getExercises().get(j).getDate();
-                        String exerciseName = workoutDays.get(i).getExercises().get(j).getSets().get(k).getExerciseName();
-                        String exerciseCategory = workoutDays.get(i).getExercises().get(j).getSets().get(k).getCategory();
-                        Double Weight = workoutDays.get(i).getExercises().get(j).getSets().get(k).getWeight();
-                        Double Reps = workoutDays.get(i).getExercises().get(j).getSets().get(k).getReps();
-                        boolean isCompleted = workoutDays.get(i).getExercises().get(j).getSets().get(k).isCompleted();
-                        String setComment = csvSafe(workoutDays.get(i).getExercises().get(j).getSets().get(k).getComment());
-                        String setPlanComment = csvSafe(workoutDays.get(i).getExercises().get(j).getSets().get(k).getPlanComment());
-                        outputStream.write((Date + "," + exerciseName+ "," + exerciseCategory + "," + Weight + "," + Reps + "," + setComment + "," + isCompleted + "," + setPlanComment + "\n").getBytes());
-                    }
-                }
-            }
+            outputStream.write(buildCsvBackup().getBytes());
             outputStream.close();
             Toast.makeText(context, "Backup saved in " + Environment.DIRECTORY_DOCUMENTS+"/Verifit" , Toast.LENGTH_LONG).show();
         }
@@ -1128,21 +1136,7 @@ public class DataStorage {
             }
 
             String exportedAt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
-            CoachingExport export = new CoachingExport(exportedAt);
-
-            for (int i = 0; i < workoutDays.size(); i++)
-            {
-                WorkoutDay day = workoutDays.get(i);
-                ArrayList<CoachingExportSet> exportSets = new ArrayList<CoachingExportSet>();
-                for (int j = 0; j < day.getSets().size(); j++)
-                {
-                    exportSets.add(new CoachingExportSet(day.getSets().get(j)));
-                }
-                export.addDay(new CoachingExportDay(day.getDate(), exportSets));
-            }
-
-            Gson gson = new Gson();
-            outputStream.write(gson.toJson(export).getBytes());
+            outputStream.write(buildCoachingExportJson(exportedAt).getBytes());
             outputStream.close();
             Toast.makeText(context, "Export JSON Coaching enregistré dans " + Environment.DIRECTORY_DOCUMENTS+"/Verifit", Toast.LENGTH_LONG).show();
         }
@@ -1151,6 +1145,29 @@ public class DataStorage {
             System.out.println(e.toString());
             Toast.makeText(context, e.toString(), Toast.LENGTH_LONG).show();
         }
+    }
+
+    // Contenu de l'export JSON Coaching (contrat lu par sync_verifit_to_excel.py cote
+    // Coaching), sans aucune dependance Android : separe de l'ecriture MediaStore de
+    // writeJsonExport() pour etre teste en JUnit (lot C, etape C.1, 29/09/2026).
+    // exportedAt est passe par l'appelant (horodatage fixe dans les tests).
+    public String buildCoachingExportJson(String exportedAt)
+    {
+        CoachingExport export = new CoachingExport(exportedAt);
+
+        for (int i = 0; i < workoutDays.size(); i++)
+        {
+            WorkoutDay day = workoutDays.get(i);
+            ArrayList<CoachingExportSet> exportSets = new ArrayList<CoachingExportSet>();
+            for (int j = 0; j < day.getSets().size(); j++)
+            {
+                exportSets.add(new CoachingExportSet(day.getSets().get(j)));
+            }
+            export.addDay(new CoachingExportDay(day.getDate(), exportSets));
+        }
+
+        Gson gson = new Gson();
+        return gson.toJson(export);
     }
 
     // Reglages > "Clear Data" : efface toutes les seances (les exercices connus, leurs

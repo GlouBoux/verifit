@@ -54,13 +54,24 @@ public class BackupManager
     public static final String FORMAT = "verifit-full-backup";
     public static final int SCHEMA_VERSION = 1;
 
-    private static final String BACKUP_DIR = Environment.DIRECTORY_DOCUMENTS + "/Verifit";
-    private static final String AUTO_DIR = Environment.DIRECTORY_DOCUMENTS + "/Verifit/auto";
     private static final String AUTO_PREFIX = "verifit_auto_";
     private static final int KEEP_AUTO_SNAPSHOTS = 15;
 
     private static final String PREFS_NAME = "shared preferences";
     private static final String PREF_LAST_DAILY_SNAPSHOT = "last_daily_auto_backup_day";
+
+    // Dossiers calcules a l'appel plutot qu'en constantes (lot C, etape C.1, 29/09/2026) :
+    // l'initialisation de la classe ne lit ainsi rien d'Android, et toJson()/parse()
+    // restent utilisables dans les tests JUnit locaux (android.jar bouchon).
+    private static String backupDir()
+    {
+        return Environment.DIRECTORY_DOCUMENTS + "/Verifit";
+    }
+
+    private static String autoDir()
+    {
+        return Environment.DIRECTORY_DOCUMENTS + "/Verifit/auto";
+    }
 
     // Contenu du fichier. Les noms de champs SONT le format du fichier : ne pas les
     // renommer sans augmenter SCHEMA_VERSION.
@@ -180,8 +191,8 @@ public class BackupManager
         String fileName = "verifit_backup_complet_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date()) + ".json";
         try
         {
-            writeDocument(context, BACKUP_DIR, fileName, toJson(dataStorage));
-            Toast.makeText(context, "Backup complet enregistré dans " + BACKUP_DIR + "/" + fileName, Toast.LENGTH_LONG).show();
+            writeDocument(context, backupDir(), fileName, toJson(dataStorage));
+            Toast.makeText(context, "Backup complet enregistré dans " + backupDir() + "/" + fileName, Toast.LENGTH_LONG).show();
             return true;
         }
         catch (IOException | RuntimeException e)
@@ -201,7 +212,7 @@ public class BackupManager
     public static Uri documentsFolderUri()
     {
         return android.provider.DocumentsContract.buildDocumentUri(
-                "com.android.externalstorage.documents", "primary:" + BACKUP_DIR);
+                "com.android.externalstorage.documents", "primary:" + backupDir());
     }
 
     public static FullBackup readFromUri(Context context, Uri uri) throws IOException
@@ -262,7 +273,7 @@ public class BackupManager
             {
                 try
                 {
-                    writeDocument(appContext, AUTO_DIR, fileName, json);
+                    writeDocument(appContext, autoDir(), fileName, json);
                     pruneAutoSnapshots(appContext);
                 }
                 catch (IOException | RuntimeException e)
@@ -283,7 +294,7 @@ public class BackupManager
         Uri collection = MediaStore.Files.getContentUri("external");
         String[] projection = { MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME };
         String selection = MediaStore.MediaColumns.RELATIVE_PATH + "=? AND " + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?";
-        String[] args = { AUTO_DIR + "/", AUTO_PREFIX + "%" };
+        String[] args = { autoDir() + "/", AUTO_PREFIX + "%" };
 
         Cursor cursor = context.getContentResolver().query(collection, projection, selection, args, MediaStore.MediaColumns.DISPLAY_NAME + " DESC");
         if (cursor == null)

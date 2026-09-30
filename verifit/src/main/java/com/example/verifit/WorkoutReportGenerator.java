@@ -47,11 +47,20 @@ public class WorkoutReportGenerator
     // est renommee, sans repasser par ce fichier.
     public static String generateReport(Context context, WorkoutDay day)
     {
-        StringBuilder report = new StringBuilder();
-
         String appLabel = context.getApplicationContext().getPackageManager()
                 .getApplicationLabel(context.getApplicationContext().getApplicationInfo())
                 .toString();
+        return generateReport(appLabel, day, MainActivity.dataStorage, System.currentTimeMillis());
+    }
+
+    // Construction du texte, sans aucune dependance Android (lot C, etape C.1,
+    // 29/09/2026) : le libelle de l'app, les donnees (pour les PR) et "maintenant"
+    // (fin du chrono s'il tourne encore) sont passes par l'appelant, pour etre fixes
+    // dans les tests JUnit. Resultat identique a avant pour l'appel ci-dessus.
+    static String generateReport(String appLabel, WorkoutDay day, DataStorage dataStorage, long nowMillis)
+    {
+        StringBuilder report = new StringBuilder();
+
         report.append(appLabel).append(" Workout - ").append(formatDateHeader(day.getDate())).append("\n");
 
         // "Comment a Workout" (Vague 3 du plan de migration, retour Romain 07/09/2026) -
@@ -63,7 +72,7 @@ public class WorkoutReportGenerator
             report.append(workoutComment.trim()).append("\n");
         }
 
-        String timeLine = buildTimeLine(day);
+        String timeLine = buildTimeLine(day, nowMillis);
         if (timeLine != null)
         {
             report.append(timeLine).append("\n");
@@ -80,7 +89,7 @@ public class WorkoutReportGenerator
             // que l'ecran et cet export s'accordent toujours sur ce qui est un PR.
             // Cles valeur ("date#reps#weight"), pas identite d'objet : voir
             // DataStorage.getRepRangePRKeys() (revue d'architecture du 28/09/2026).
-            HashSet<String> prKeys = MainActivity.dataStorage.getRepRangePRKeys(exercise.getExercise());
+            HashSet<String> prKeys = dataStorage.getRepRangePRKeys(exercise.getExercise());
 
             for (WorkoutSet set : exercise.getSets())
             {
@@ -135,7 +144,7 @@ public class WorkoutReportGenerator
     // repli automatique sur l'ancien calcul) pour en garder le controle total. Si le
     // chrono n'a pas encore ete arrete au moment du partage, la fin de journee est prise
     // comme "maintenant" (instantane de l'etat actuel de la seance).
-    private static String buildTimeLine(WorkoutDay day)
+    private static String buildTimeLine(WorkoutDay day, long nowMillis)
     {
         Long start = day.getSessionStartTimestamp();
         if (start == null)
@@ -144,7 +153,7 @@ public class WorkoutReportGenerator
         }
 
         long startMillis = start;
-        long endMillis = (day.getSessionEndTimestamp() != null) ? day.getSessionEndTimestamp() : System.currentTimeMillis();
+        long endMillis = (day.getSessionEndTimestamp() != null) ? day.getSessionEndTimestamp() : nowMillis;
 
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.FRENCH);
         String startStr = timeFormat.format(new Date(startMillis));
