@@ -12,8 +12,10 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
@@ -264,16 +266,41 @@ public class RestTimerReceiver extends BroadcastReceiver
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
         {
-            builder.setUsesChronometer(true);
-            builder.setChronometerCountDown(true);
-            builder.setWhen(endTimestampMillis);
+            // Crash UAT du 29/09/2026 (34 plantages en seance, trace adb) :
+            // NotificationCompat.Builder.setChronometerCountDown() de la version
+            // d'androidx.core embarquee ecrit dans un Bundle d'extras jamais cree
+            // (NullPointerException sur Bundle.putBoolean) tant qu'aucun extra n'a ete
+            // ajoute. addExtras() cree ce Bundle avant l'appel.
+            // Try/catch en plus : si ca echouait encore, notification sans decompte
+            // plutot qu'un plantage.
+            try
+            {
+                builder.addExtras(new Bundle());
+                builder.setUsesChronometer(true);
+                builder.setChronometerCountDown(true);
+                builder.setWhen(endTimestampMillis);
+            }
+            catch (RuntimeException e)
+            {
+                Log.e("RestTimerReceiver", "Decompte de la notification impossible", e);
+            }
         }
 
-        NotificationManager notificationManager =
-                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (notificationManager != null)
+        // Cette notification n'est qu'un affichage : l'alarme (son), deja programmee par
+        // l'appelant, et la barre dans l'app restent la source fiable. Un echec ici ne
+        // doit plus jamais faire planter l'ecran de saisie.
+        try
         {
-            notificationManager.notify(NOTIFICATION_ID, builder.build());
+            NotificationManager notificationManager =
+                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null)
+            {
+                notificationManager.notify(NOTIFICATION_ID, builder.build());
+            }
+        }
+        catch (RuntimeException e)
+        {
+            Log.e("RestTimerReceiver", "Notification du repos en cours impossible", e);
         }
     }
 

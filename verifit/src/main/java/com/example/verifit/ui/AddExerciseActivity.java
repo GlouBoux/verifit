@@ -2403,12 +2403,18 @@ public class AddExerciseActivity extends AppCompatActivity {
                 {
                     Double seconds  = Double.parseDouble(et_seconds.getText().toString());
                     seconds = seconds - 10;
-                    if(seconds < 0)
+                    // Plancher a 10 s (au lieu de 0) : une duree nulle n'a pas de sens et
+                    // ne serait pas retenue comme derniere valeur (voir parseRestSeconds()).
+                    if(seconds < 10)
                     {
-                        seconds = 0.0;
+                        seconds = 10.0;
                     }
                     int seconds_int = seconds.intValue();
                     et_seconds.setText(String.valueOf(seconds_int));
+                    if(!TimerRunning)
+                    {
+                        saveSeconds();
+                    }
                 }
             }
         });
@@ -2429,6 +2435,10 @@ public class AddExerciseActivity extends AppCompatActivity {
                     }
                     int seconds_int = seconds.intValue();
                     et_seconds.setText(String.valueOf(seconds_int));
+                    if(!TimerRunning)
+                    {
+                        saveSeconds();
+                    }
                 }
             }
         });
@@ -2463,6 +2473,8 @@ public class AddExerciseActivity extends AppCompatActivity {
                 // entre-temps).
                 TimerRunning = false;
                 updateTimerButtonsLabel();
+                TimeLeftInMillis = START_TIME_IN_MILLIS;
+                updateCountDownText();
                 RestTimerReceiver.clearPersistedEndTimestamp(AddExerciseActivity.this);
                 RestTimerReceiver.cancelOngoingNotification(AddExerciseActivity.this);
                 restTimerBarTicker.refresh();
@@ -2594,21 +2606,56 @@ public class AddExerciseActivity extends AppCompatActivity {
     // (SharedPreferences) meme si le dialogue n'a jamais ete ouvert cette session.
     private void loadTimerDurationFromPrefs()
     {
-        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences",MODE_PRIVATE);
-        String seconds = sharedPreferences.getString("seconds","180");
-
         // Change actual values that timer uses
-        START_TIME_IN_MILLIS = Integer.parseInt(seconds) * 1000;
+        START_TIME_IN_MILLIS = readRestSeconds() * 1000L;
         TimeLeftInMillis = START_TIME_IN_MILLIS;
     }
 
     public void loadSeconds()
     {
         loadTimerDurationFromPrefs();
+        et_seconds.setText(String.valueOf(START_TIME_IN_MILLIS / 1000));
+    }
 
-        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences",MODE_PRIVATE);
-        String seconds = sharedPreferences.getString("seconds","180");
-        et_seconds.setText(seconds);
+    // Retour UAT Romain 30/09/2026 : "je veux que si je mets 90s, il me propose 90s la
+    // prochaine fois, pas 180". La duree etait deja sauvegardee au Start, mais dans le
+    // fichier "shared preferences" qui contient aussi TOUT l'historique (plusieurs Mo) :
+    // apply() le reecrit en arriere-plan, et un plantage de l'app juste apres (cas vecu
+    // en seance) perdait la valeur. Desormais : petit fichier dedie, ecriture immediate
+    // (commit(), quelques octets), et sauvegarde aussi a chaque -10/+10. L'ancienne cle
+    // est reprise une fois puis supprimee.
+    private static final String REST_TIMER_PREFS = "rest_timer";
+    private static final String REST_SECONDS_KEY = "seconds";
+    private static final int DEFAULT_REST_SECONDS = 180;
+
+    private int readRestSeconds()
+    {
+        SharedPreferences timerPrefs = getSharedPreferences(REST_TIMER_PREFS, MODE_PRIVATE);
+        if (!timerPrefs.contains(REST_SECONDS_KEY))
+        {
+            SharedPreferences legacy = getSharedPreferences("shared preferences", MODE_PRIVATE);
+            if (legacy.contains(REST_SECONDS_KEY))
+            {
+                timerPrefs.edit().putInt(REST_SECONDS_KEY, parseRestSeconds(legacy.getString(REST_SECONDS_KEY, null))).commit();
+                legacy.edit().remove(REST_SECONDS_KEY).apply();
+            }
+        }
+        return timerPrefs.getInt(REST_SECONDS_KEY, DEFAULT_REST_SECONDS);
+    }
+
+    // Valeur invalide ou nulle (texte vide, saisie aberrante) : duree par defaut plutot
+    // qu'un NumberFormatException qui ferait planter l'ecran.
+    private static int parseRestSeconds(String text)
+    {
+        try
+        {
+            int seconds = Integer.parseInt(text.trim());
+            return seconds > 0 ? seconds : DEFAULT_REST_SECONDS;
+        }
+        catch (RuntimeException e)
+        {
+            return DEFAULT_REST_SECONDS;
+        }
     }
 
     // Retour Romain 06/09/2026 : volume du bip de fin de repos reglable depuis l'app -
@@ -2660,20 +2707,16 @@ public class AddExerciseActivity extends AppCompatActivity {
 
     public void saveSeconds()
     {
-        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences",MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-
         if(!et_seconds.getText().toString().isEmpty())
         {
-            String seconds = et_seconds.getText().toString();
+            int seconds = parseRestSeconds(et_seconds.getText().toString());
 
             // Change actual values that timer uses
-            START_TIME_IN_MILLIS = Integer.parseInt(seconds) * 1000;
+            START_TIME_IN_MILLIS = seconds * 1000L;
             TimeLeftInMillis = START_TIME_IN_MILLIS;
 
-            // Save to shared preferences
-            editor.putString("seconds",et_seconds.getText().toString());
-            editor.apply();
+            // commit() : ecrit tout de suite (voir readRestSeconds()).
+            getSharedPreferences(REST_TIMER_PREFS, MODE_PRIVATE).edit().putInt(REST_SECONDS_KEY, seconds).commit();
         }
     }
 
