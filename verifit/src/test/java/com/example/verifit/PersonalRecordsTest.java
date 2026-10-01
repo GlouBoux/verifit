@@ -7,7 +7,6 @@ import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 // Records globaux par exercice (DataStorage.calculatePersonalRecords), affiches par
@@ -86,18 +85,40 @@ public class PersonalRecordsTest
         assertNull(ds.getMaxWeightSetPRs().get("Bench"));
     }
 
-    // BUG CONNU (repere pendant C.1, 29/09/2026), a corriger apres decision de Romain :
-    // le "Max set volume" combine les reps max et le poids max du jour, qui ne viennent
-    // pas de la meme serie. Ici la meilleure serie est 60 kg x 12 (720), mais l'app
-    // retient 12 reps x 100 kg (1 200), une serie qui n'a jamais existe.
-    @Ignore("Bug connu : Max set volume melange deux series (voir verifit-lot-C-handoff.md)")
+    // Bug corrige le 30/09/2026 (repere pendant C.1) : le "Max set volume" combinait
+    // les reps max et le poids max du jour, qui ne venaient pas de la meme serie. Ici la
+    // meilleure serie est 60 kg x 12 (720) ; l'app retenait 12 reps x 100 kg (1 200).
     @Test
     public void maxSetVolume_estUneVraieSerie()
     {
         DataStorage s = storage(new String[][] { {"Squat", "Legs"} },
-                day(set("2026-09-01", "Squat", "Legs", 5, 100), set("2026-09-01", "Squat", "Legs", 12, 60)));
+                day(set("2026-09-01", "Squat", "Legs", 5, 100), set("2026-09-01", "Squat", "Legs", 12, 60)),
+                day(set("2026-09-08", "Squat", "Legs", 8, 80)));
         s.calculatePersonalRecords();
         assertEquals(12.0, s.getSetVolumePRs().get("Squat").getReps(), 0.0);
         assertEquals(60.0, s.getSetVolumePRs().get("Squat").getWeight(), 0.0);
+        assertEquals("2026-09-01", s.getMaxVolumeSetPRs().get("Squat").getDate());
+    }
+
+    @Test
+    public void maxSetVolume_battuPlusTard()
+    {
+        DataStorage s = storage(new String[][] { {"Squat", "Legs"} },
+                day(set("2026-09-01", "Squat", "Legs", 12, 60)),
+                day(set("2026-09-08", "Squat", "Legs", 8, 100)));
+        s.calculatePersonalRecords();
+        assertEquals(8.0, s.getSetVolumePRs().get("Squat").getReps(), 0.0);
+        assertEquals(100.0, s.getSetVolumePRs().get("Squat").getWeight(), 0.0);
+    }
+
+    // Bug corrige le 30/09/2026 : les "meilleures series" n'etaient pas remises a zero.
+    @Test
+    public void recalcul_apresSuppressionDesSeries()
+    {
+        ds.workoutDays.clear();
+        ds.calculatePersonalRecords();
+        assertNull(ds.getMaxWeightSetPRs().get("Squat"));
+        assertNull(ds.getMaxRepsSetPRs().get("Squat"));
+        assertNull(ds.getMaxVolumeSetPRs().get("Squat"));
     }
 }

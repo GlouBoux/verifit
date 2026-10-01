@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 // Backup CSV : ecriture (DataStorage.buildCsvBackup) et relecture validee avant tout
@@ -55,9 +54,9 @@ public class CsvBackupTest
         assertEquals(3.0, p.getReps(), 0.0);
         assertEquals(34.5, p.getWeight(), 0.0);
         assertTrue(p.isCompleted());
-        // Virgules et retours a la ligne remplaces pour ne pas decaler les colonnes.
-        assertEquals("dur; tres dur / ligne 2", p.getComment());
-        assertEquals("S1 Ancrage; filet 2 reps", p.getPlanComment());
+        // Virgules gardees (champ entre guillemets), retours a la ligne remplaces.
+        assertEquals("dur, tres dur / ligne 2", p.getComment());
+        assertEquals("S1 Ancrage, filet 2 reps", p.getPlanComment());
         assertFalse(parsed.get(1).isCompleted());
     }
 
@@ -123,15 +122,36 @@ public class CsvBackupTest
         assertTrue(DataStorage.parseCsvSets(rows()).isEmpty());
     }
 
-    // BUG CONNU (repere pendant C.1, 29/09/2026) : un nom d'exercice avec une virgule
-    // (cas reel : "Pendulum Squat, Secu Low, 50°, Pieds Centraux") decale les colonnes,
-    // et le backup CSV ecrit par l'app ne peut plus etre reimporte.
-    @Ignore("Bug connu : nom d'exercice avec virgule (voir verifit-lot-C-handoff.md)")
+    // Bug corrige le 30/09/2026 (repere pendant C.1) : un nom d'exercice avec une
+    // virgule (cas reel : "Pendulum Squat, Secu Low, 50°, Pieds Centraux") decalait les
+    // colonnes, et le backup CSV ecrit par l'app ne pouvait plus etre reimporte.
     @Test
-    public void nomAvecVirgule_allerRetour()
+    public void nomAvecVirguleEtGuillemets_allerRetour()
     {
-        DataStorage ds = storage(new String[][] {}, day(set("2026-09-26", "Pendulum Squat, Secu Low", "Legs", 4, 17)));
-        ArrayList<WorkoutSet> parsed = DataStorage.parseCsvSets(readCsv(ds.buildCsvBackup()));
-        assertEquals("Pendulum Squat, Secu Low", parsed.get(0).getExerciseName());
+        WorkoutSet s = set("2026-09-26", "Pendulum Squat, Secu Low", "Legs", 4, 17);
+        s.setComment("prise \"large\", lent");
+        DataStorage ds = storage(new String[][] {}, day(s));
+        WorkoutSet p = DataStorage.parseCsvSets(readCsv(ds.buildCsvBackup())).get(0);
+        assertEquals("Pendulum Squat, Secu Low", p.getExerciseName());
+        assertEquals("Legs", p.getCategory());
+        assertEquals(17.0, p.getWeight(), 0.0);
+        assertEquals("prise \"large\", lent", p.getComment());
+    }
+
+    @Test
+    public void lectureDUneLigne_guillemets()
+    {
+        assertArrayEquals(new String[] {"a", "b, c", "d\"e", "", "x"}, CSVFile.parseLine("a,\"b, c\",\"d\"\"e\",\"\",x"));
+    }
+
+    @Test
+    public void lectureDUneLigne_compatibleAvecLAncienFormat()
+    {
+        // Meme resultat que l'ancien String.split(",") : champs vides internes gardes,
+        // champs vides de fin ignores, guillemet au milieu d'un champ garde tel quel.
+        assertArrayEquals(new String[] {"2026-01-01", "Squat", "Legs", "100.0", "5.0", "", "false"},
+                CSVFile.parseLine("2026-01-01,Squat,Legs,100.0,5.0,,false,"));
+        assertArrayEquals(new String[] {"a", "dit \"ok\""}, CSVFile.parseLine("a,dit \"ok\""));
+        assertArrayEquals(new String[] {""}, CSVFile.parseLine(""));
     }
 }

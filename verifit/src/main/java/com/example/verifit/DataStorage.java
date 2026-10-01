@@ -253,13 +253,15 @@ public class DataStorage {
     // Workout" APRES copySetsToDay() vers la destination, pour ne pas dupliquer les
     // series (voir MainActivity/DayActivity.moveWorkout()). Supprime le jour lui-meme
     // de workoutDays s'il ne reste plus aucune serie, meme logique que
-    // deleteExerciseSetsLocally() deja utilisee ailleurs pour la suppression.
-    public void removeExerciseSetsFromDay(String date, List<String> exerciseNames)
+    // la suppression d'exercices selectionnes (DayActions).
+    // Renvoie le nombre de series retirees (0 si le jour n'existe pas ou n'a aucune
+    // serie de ces exercices).
+    public int removeExerciseSetsFromDay(String date, List<String> exerciseNames)
     {
         int dayPosition = getDayPosition(date);
         if (dayPosition < 0)
         {
-            return;
+            return 0;
         }
 
         WorkoutDay day = workoutDays.get(dayPosition);
@@ -278,6 +280,7 @@ public class DataStorage {
         {
             workoutDays.remove(dayPosition);
         }
+        return setsToRemove.size();
     }
 
     // Returns index of exercise
@@ -486,6 +489,11 @@ public class DataStorage {
         maxRepsPRs.clear();
         maxWeightPRs.clear();
         lastTimeVolume.clear();
+        // Vides aussi (30/09/2026) : sinon un exercice dont on a supprime les series
+        // gardait son ancienne "meilleure serie" jusqu'au redemarrage de l'app.
+        maxVolumeSetPRs.clear();
+        maxRepsSetPRs.clear();
+        maxWeightSetPRs.clear();
 
         // Initialize Volume Record Hashmap
         for(int i = 0; i < knownExercises.size(); i++)
@@ -517,18 +525,17 @@ public class DataStorage {
 
                         Double setVolume = setVolumePRs.get(knownExercises.get(i).getName()).getReps() * setVolumePRs.get(knownExercises.get(i).getName()).getWeight();
 
-                        // Per Set Volume Personal Records
+                        // Per Set Volume Personal Records : la serie reelle au plus gros
+                        // reps x poids du jour (WorkoutExercise.getMaxVolumeSet()). Corrige le
+                        // 30/09/2026 : on combinait les reps max et le poids max du jour, qui
+                        // ne viennent pas de la meme serie (ex. 12 reps x 100 kg alors que
+                        // les series etaient 5 x 100 et 12 x 60).
                         if(setVolume  < (workoutDays.get(j).getExercises().get(k).getMaxSetVolume()))
                         {
-                            Double maxReps = workoutDays.get(j).getExercises().get(k).getMaxReps();
-                            Double maxWeight = workoutDays.get(j).getExercises().get(k).getMaxWeight();
+                            WorkoutSet bestSet = workoutDays.get(j).getExercises().get(k).getMaxVolumeSet();
 
-                            setVolumePRs.put(knownExercises.get(i).getName(), new RepsWeight(maxReps, maxWeight));
-
-                            WorkoutSet temp_set = new WorkoutSet();
-                            temp_set.setReps(maxReps);
-                            temp_set.setWeight(maxWeight);
-                            maxVolumeSetPRs.put(knownExercises.get(i).getName(), temp_set);
+                            setVolumePRs.put(knownExercises.get(i).getName(), new RepsWeight(bestSet.getReps(), bestSet.getWeight()));
+                            maxVolumeSetPRs.put(knownExercises.get(i).getName(), bestSet);
                         }
 
                         // Actual One Repetition Maximum
@@ -1013,25 +1020,24 @@ public class DataStorage {
     }
 
     // Rend un commentaire ecrivable dans une cellule du CSV de backup. Le lecteur
-    // (CSVFile.read()) decoupe naivement chaque ligne sur "," et ne gere ni guillemets ni
-    // retours a la ligne : une virgule decalerait toutes les colonnes suivantes (Is
-    // Completed, Plan Comment) et un retour a la ligne couperait la ligne en deux. Le
-    // champ "My note" de l'app est multiligne depuis le 21/09/2026, donc le cas n'est
-    // plus theorique : virgule -> ";" et retour a la ligne -> " / " (sauvegarde
-    // legerement modifiee dans ces deux cas, mais lisible et sans jamais corrompre les
-    // autres colonnes ; le stockage interne de l'app - Gson - garde le texte exact).
+    // (CSVFile.read()) lit ligne par ligne : un retour a la ligne couperait la ligne en
+    // deux, il devient " / " (le champ "My note" est multiligne depuis le 21/09/2026 ; le
+    // stockage interne de l'app - Gson - garde le texte exact). Depuis le 30/09/2026 les
+    // virgules sont gardees : le champ est mis entre guillemets (CSVFile.field()) au lieu
+    // de remplacer "," par ";".
     private static String csvSafe(String text)
     {
         if (text == null || text.equals("null"))
         {
             return "";
         }
-        return text.replace("\r\n", " / ").replace("\n", " / ").replace("\r", " / ").replace(",", ";");
+        return CSVFile.field(text.replace("\r\n", " / ").replace("\n", " / ").replace("\r", " / "));
     }
 
     // Contenu complet du backup CSV (en-tete compris), sans aucune dependance Android :
     // separe de l'ecriture MediaStore de writeFile() pour etre teste en JUnit (lot C,
-    // etape C.1, 29/09/2026). Octets ecrits identiques a avant.
+    // etape C.1, 29/09/2026). Noms, categories et commentaires contenant une virgule
+    // sont entre guillemets depuis le 30/09/2026 (voir CSVFile).
     public String buildCsvBackup()
     {
         StringBuilder csv = new StringBuilder();
@@ -1060,8 +1066,8 @@ public class DataStorage {
                 for(int k = 0; k < workoutDays.get(i).getExercises().get(j).getSets().size(); k++)
                 {
                     String Date = workoutDays.get(i).getExercises().get(j).getDate();
-                    String exerciseName = workoutDays.get(i).getExercises().get(j).getSets().get(k).getExerciseName();
-                    String exerciseCategory = workoutDays.get(i).getExercises().get(j).getSets().get(k).getCategory();
+                    String exerciseName = CSVFile.field(workoutDays.get(i).getExercises().get(j).getSets().get(k).getExerciseName());
+                    String exerciseCategory = CSVFile.field(workoutDays.get(i).getExercises().get(j).getSets().get(k).getCategory());
                     Double Weight = workoutDays.get(i).getExercises().get(j).getSets().get(k).getWeight();
                     Double Reps = workoutDays.get(i).getExercises().get(j).getSets().get(k).getReps();
                     boolean isCompleted = workoutDays.get(i).getExercises().get(j).getSets().get(k).isCompleted();
