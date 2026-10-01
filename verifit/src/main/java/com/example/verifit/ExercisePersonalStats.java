@@ -12,17 +12,11 @@ public class ExercisePersonalStats {
     Double totalSets;
     Double totalReps;
     Double totalVolume;
-    Double maxVolume;
     Double maxWeight;
     Double maxReps;
     Double maxSetVolume;
-    Double maxSetVolumeReps;
-    Double MaxSetVolumeWeight;
     Double actual1RM;
     Double estimated1RM;
-    Double averageSetsPerWeek;
-    Double averageSetsPerWeekLastMoth;
-    Double lastWeekSets;
 
     WorkoutSet maxVolumeSet;
     WorkoutSet maxRepsSet;
@@ -94,14 +88,6 @@ public class ExercisePersonalStats {
         this.totalVolume = totalVolume;
     }
 
-    public Double getMaxVolume() {
-        return maxVolume;
-    }
-
-    public void setMaxVolume(Double maxVolume) {
-        this.maxVolume = maxVolume;
-    }
-
     public Double getMaxWeight() {
         return maxWeight;
     }
@@ -132,46 +118,6 @@ public class ExercisePersonalStats {
 
     public void setActual1RM(Double actual1RM) {
         this.actual1RM = actual1RM;
-    }
-
-    public Double getAverageSetsPerWeek() {
-        return averageSetsPerWeek;
-    }
-
-    public void setAverageSetsPerWeek(Double averageSetsPerWeek) {
-        this.averageSetsPerWeek = averageSetsPerWeek;
-    }
-
-    public Double getAverageSetsPerWeekLastMoth() {
-        return averageSetsPerWeekLastMoth;
-    }
-
-    public void setAverageSetsPerWeekLastMoth(Double averageSetsPerWeekLastMoth) {
-        this.averageSetsPerWeekLastMoth = averageSetsPerWeekLastMoth;
-    }
-
-    public Double getLastWeekSets() {
-        return lastWeekSets;
-    }
-
-    public void setLastWeekSets(Double lastWeekSets) {
-        this.lastWeekSets = lastWeekSets;
-    }
-
-    public Double getMaxSetVolumeReps() {
-        return maxSetVolumeReps;
-    }
-
-    public void setMaxSetVolumeReps(Double maxSetVolumeReps) {
-        this.maxSetVolumeReps = maxSetVolumeReps;
-    }
-
-    public Double getMaxSetVolumeWeight() {
-        return MaxSetVolumeWeight;
-    }
-
-    public void setMaxSetVolumeWeight(Double MaxSetVolumeWeight) {
-        this.MaxSetVolumeWeight = MaxSetVolumeWeight;
     }
 
     public WorkoutSet getMaxVolumeSet() {
@@ -206,17 +152,11 @@ public class ExercisePersonalStats {
         this.isFavorite = false;
         this.totalReps = 0.0;
         this.totalVolume = 0.0;
-        this.maxVolume = 0.0;
         this.maxWeight = 0.0;
         this.maxReps = 0.0;
         this.maxSetVolume = 0.0;
-        this.maxSetVolumeReps = 0.0;
-        this.MaxSetVolumeWeight = 0.0;
         this.actual1RM = 0.0;
         this.estimated1RM = 0.0;
-        this.averageSetsPerWeek = 0.0;
-        this.averageSetsPerWeekLastMoth = 0.0;
-        this.lastWeekSets = 0.0;
 
         this.maxVolumeSet = new WorkoutSet();
         this.maxRepsSet = new WorkoutSet();

@@ -68,10 +68,7 @@ public class PersonalRecordsActivity extends AppCompatActivity {
             ExercisePersonalStats exercisePersonalStats = new ExercisePersonalStats();
             exercisePersonalStats.setExerciseName(currentExerciseName);
             exercisePersonalStats.setExerciseCategory(exerciseCategory);
-            exercisePersonalStats.setMaxVolume(MainActivity.dataStorage.getVolumePRs().get(currentExerciseName));
             exercisePersonalStats.setMaxSetVolume(MainActivity.dataStorage.getSetVolumePRs().get(currentExerciseName).getReps() * MainActivity.dataStorage.getSetVolumePRs().get(currentExerciseName).getWeight());
-            exercisePersonalStats.setMaxSetVolumeReps(MainActivity.dataStorage.getSetVolumePRs().get(currentExerciseName).getReps());
-            exercisePersonalStats.setMaxSetVolumeWeight(MainActivity.dataStorage.getSetVolumePRs().get(currentExerciseName).getWeight());
             exercisePersonalStats.setMaxReps(MainActivity.dataStorage.getMaxRepsPRs().get(currentExerciseName));
             exercisePersonalStats.setMaxWeight(MainActivity.dataStorage.getMaxWeightPRs().get(currentExerciseName));
             exercisePersonalStats.setActual1RM(MainActivity.dataStorage.getActualOneRepMaxPRs().get(currentExerciseName));
