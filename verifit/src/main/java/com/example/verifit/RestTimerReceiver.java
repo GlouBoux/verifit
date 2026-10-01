@@ -19,7 +19,7 @@ import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
-import com.example.verifit.ui.MainActivity;
+import com.example.verifit.ui.TabNavigation;
 
 // Retour Romain 06/09/2026 : "d'une facon generale quand je set un timer, je veux que
 // meme telephone verrouille, il sonne pour me dire que je peux reprendre ma serie. Et
@@ -164,7 +164,7 @@ public class RestTimerReceiver extends BroadcastReceiver
             flags |= PendingIntent.FLAG_IMMUTABLE;
         }
         PendingIntent contentIntent = PendingIntent.getActivity(
-                context, NOTIFICATION_ID, new Intent(context, MainActivity.class), flags);
+                context, NOTIFICATION_ID, TabNavigation.resumeAppIntent(context), flags);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.mipmap.ic_launcher)
@@ -245,7 +245,7 @@ public class RestTimerReceiver extends BroadcastReceiver
             flags |= PendingIntent.FLAG_IMMUTABLE;
         }
         PendingIntent contentIntent = PendingIntent.getActivity(
-                context, NOTIFICATION_ID, new Intent(context, MainActivity.class), flags);
+                context, NOTIFICATION_ID, TabNavigation.resumeAppIntent(context), flags);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_ONGOING)
                 .setSmallIcon(R.drawable.ic_alarm_24px)

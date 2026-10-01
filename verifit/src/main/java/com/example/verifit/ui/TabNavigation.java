@@ -1,6 +1,7 @@
 package com.example.verifit.ui;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 
 import com.example.verifit.R;
@@ -95,6 +96,19 @@ public final class TabNavigation
     {
         Intent in = new Intent(from, MainActivity.class);
         in.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        return in;
+    }
+
+    // Intent des notifications du minuteur de repos : ramene l'app au premier plan dans
+    // l'etat ou elle est (comme un tap sur l'icone du lanceur), SANS empiler un nouvel
+    // ecran Workout et SANS fermer l'ecran en cours (ex. saisie d'une serie). Avant le
+    // lot D (D1), les notifications ouvraient un nouveau MainActivity a chaque tap.
+    public static Intent resumeAppIntent(Context context)
+    {
+        Intent in = new Intent(context, MainActivity.class);
+        in.setAction(Intent.ACTION_MAIN);
+        in.addCategory(Intent.CATEGORY_LAUNCHER);
+        in.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
         return in;
     }
 }

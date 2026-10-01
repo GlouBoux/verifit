@@ -2279,7 +2279,7 @@ public class AddExerciseActivity extends AppCompatActivity {
                 flags |= PendingIntent.FLAG_IMMUTABLE;
             }
             PendingIntent showIntent = PendingIntent.getActivity(
-                    this, REST_TIMER_REQUEST_CODE, new Intent(this, MainActivity.class), flags);
+                    this, REST_TIMER_REQUEST_CODE, TabNavigation.resumeAppIntent(this), flags);
 
             alarmManager.setAlarmClock(
                     new AlarmManager.AlarmClockInfo(triggerAtMillis, showIntent),
