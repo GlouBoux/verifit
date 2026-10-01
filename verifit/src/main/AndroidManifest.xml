@@ -75,6 +75,35 @@
         <activity
             android:name=".ui.DiaryActivity"
             android:label="Sessions" />
+        <!-- Lot D (D7, 02/10/2026) : "Ouvrir avec FitEngine" - recoit une seance JSON
+             depuis Drive, un mail, Discord ou un fichier telecharge, et en montre l'apercu
+             (voir ImportSessionActivity). VIEW = ouvrir un fichier, SEND = partager un
+             fichier ou un texte. Les types texte et octet-stream sont acceptes parce que
+             les applis ne declarent pas toutes un fichier .json en application/json ; un
+             fichier qui n'est pas une seance affiche simplement une erreur. exported=true
+             obligatoire pour etre propose par les autres applis : l'ecran ne modifie rien
+             sans confirmation (import a l'etape suivante). -->
+        <activity
+            android:name=".ui.ImportSessionActivity"
+            android:exported="true"
+            android:label="Importer une séance" >
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/json" />
+                <data android:mimeType="text/json" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/json" />
+                <data android:mimeType="text/json" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"

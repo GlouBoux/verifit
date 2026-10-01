@@ -168,7 +168,8 @@ public class SessionImporter {
     // Coaching), sans aucune dependance Android : separee de importFromUri() pour etre
     // testee en JUnit (lot C, etape C.1, 29/09/2026). Renvoie null pour un fichier vide.
     // Leve InvalidSessionException avec le message affiche a l'utilisateur, inchange.
-    static ImportedSession parseSession(String json) throws InvalidSessionException {
+    // Public depuis le lot D (D7) : ImportSessionActivity (package ui) l'appelle pour l'apercu.
+    public static ImportedSession parseSession(String json) throws InvalidSessionException {
         try {
             Gson gson = new Gson();
             return gson.fromJson(json, ImportedSession.class);
@@ -184,7 +185,7 @@ public class SessionImporter {
         }
     }
 
-    static class InvalidSessionException extends Exception {
+    public static class InvalidSessionException extends Exception {
         InvalidSessionException(String message) {
             super(message);
         }
