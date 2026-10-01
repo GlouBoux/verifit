@@ -1188,25 +1188,9 @@ public class DataStorage {
             outputStream.close();
             Toast.makeText(context, "Export JSON Coaching enregistré dans " + Environment.DIRECTORY_DOCUMENTS+"/Verifit", Toast.LENGTH_LONG).show();
 
-            // Lot D (D5) : met aussi a jour le fichier a nom fixe. Provisoire : l'export
-            // automatique de fin de seance (D6) l'ecrira seul, et ce bouton pourra alors
-            // ne plus produire que le fichier date, ou rien.
-            try
-            {
-                FixedNameExport.Result latest = writeLatestCoachingExport(context);
-                if (latest == FixedNameExport.Result.BLOCKED_BY_FOREIGN_FILE)
-                {
-                    Toast.makeText(context, LATEST_COACHING_EXPORT_NAME + " existe deja (installation precedente) et ne peut pas etre modifie : supprime-le dans Fichiers > Documents > Verifit, puis relance l'export.", Toast.LENGTH_LONG).show();
-                }
-                else if (latest != null)
-                {
-                    Toast.makeText(context, LATEST_COACHING_EXPORT_NAME + (latest == FixedNameExport.Result.CREATED ? " cree" : " mis a jour"), Toast.LENGTH_SHORT).show();
-                }
-            }
-            catch (Exception e)
-            {
-                Toast.makeText(context, "Fichier a nom fixe non ecrit : " + e, Toast.LENGTH_LONG).show();
-            }
+            // Lot D (D5) : met aussi a jour le fichier a nom fixe (l'export automatique de
+            // fin de seance, D6, fait la meme chose a l'arret du chrono).
+            exportLatestCoachingAndNotify(context);
         }
         catch (Exception e)
         {
@@ -1236,6 +1220,30 @@ public class DataStorage {
                 context, Environment.DIRECTORY_DOCUMENTS + "/Verifit", "application/json");
         return FixedNameExport.write(
                 store, LATEST_COACHING_EXPORT_NAME, buildCoachingExportJson(exportedAt).getBytes("UTF-8"));
+    }
+
+    // Met a jour verifit_coaching_latest.json et previent l'utilisateur par un toast
+    // (lot D, etape D6) : appele par le bouton "Export JSON" des reglages et, surtout,
+    // automatiquement a l'arret du chrono de seance (SessionTimerController). Ne leve
+    // jamais : un echec d'export ne doit pas gener l'arret du chrono.
+    public void exportLatestCoachingAndNotify(Context context)
+    {
+        try
+        {
+            FixedNameExport.Result latest = writeLatestCoachingExport(context);
+            if (latest == FixedNameExport.Result.BLOCKED_BY_FOREIGN_FILE)
+            {
+                Toast.makeText(context, LATEST_COACHING_EXPORT_NAME + " existe deja (installation precedente) et ne peut pas etre modifie : supprime-le dans Fichiers > Documents > Verifit, puis relance l'export (Reglages > Export JSON).", Toast.LENGTH_LONG).show();
+            }
+            else if (latest != null)
+            {
+                Toast.makeText(context, "Export Coaching " + (latest == FixedNameExport.Result.CREATED ? "cree" : "mis a jour"), Toast.LENGTH_SHORT).show();
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.makeText(context, "Export Coaching non ecrit : " + e, Toast.LENGTH_LONG).show();
+        }
     }
 
     // Contenu de l'export JSON Coaching (contrat lu par sync_verifit_to_excel.py cote

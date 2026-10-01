@@ -452,20 +452,26 @@ public class WorkoutDay {
     }
 
     // Bouton Start / Stop / Resume du dialogue "Workout Time" : demarre (jamais
-    // demarre), arrete (en cours) ou reprend (arrete).
-    public void toggleSession(long nowMillis)
+    // demarre), arrete (en cours) ou reprend (arrete). Renvoie true UNIQUEMENT quand
+    // l'appel vient d'ARRETER une seance en cours (fin de seance : declencheur de
+    // l'export Coaching automatique, lot D etape D6) ; false pour un demarrage ou une
+    // reprise.
+    public boolean toggleSession(long nowMillis)
     {
         if (SessionStartTimestamp == null)
         {
             SessionStartTimestamp = nowMillis;
+            return false;
         }
         else if (isSessionTimerRunning())
         {
             SessionEndTimestamp = nowMillis;
+            return true;
         }
         else
         {
             SessionEndTimestamp = null;
+            return false;
         }
     }
 

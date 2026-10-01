@@ -140,10 +140,18 @@ public final class SessionTimerController
 
         btToggle.setOnClickListener(v ->
         {
-            day.toggleSession(System.currentTimeMillis());
+            boolean stopped = day.toggleSession(System.currentTimeMillis());
             save();
             barTicker.setWorkoutDay(day);
             dialog.dismiss();
+
+            // Fin de seance (chrono arrete) : met a jour l'export Coaching a nom fixe
+            // (lot D, etape D6). Ni le demarrage, ni la reprise, ni l'annulation du chrono
+            // (confirmCancel) n'exportent.
+            if (stopped)
+            {
+                MainActivity.dataStorage.exportLatestCoachingAndNotify(activity.getApplicationContext());
+            }
         });
 
         btClose.setOnClickListener(v -> dialog.dismiss());
