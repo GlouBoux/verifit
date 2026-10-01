@@ -112,6 +112,26 @@ public class SetRestTest
     }
 
     @Test
+    public void labelAt_serieCourante()
+    {
+        List<WorkoutSet> sets = Arrays.asList(set(T0), set(T0 + 135_000L), set(null));
+
+        assertEquals("", SetRest.labelAt(sets, 0));
+        assertEquals("repos 2:15", SetRest.labelAt(sets, 1));
+        assertEquals("", SetRest.labelAt(sets, 2));
+    }
+
+    @Test
+    public void labelAt_positionsInvalidesOuListeNulle()
+    {
+        List<WorkoutSet> sets = Arrays.asList(set(T0), set(T0 + 60_000L));
+
+        assertEquals("", SetRest.labelAt(sets, -1));
+        assertEquals("", SetRest.labelAt(sets, 2));
+        assertEquals("", SetRest.labelAt(null, 1));
+    }
+
+    @Test
     public void label_reposOuVide()
     {
         assertEquals("repos 2:15", SetRest.label(135L));

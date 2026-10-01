@@ -67,6 +67,18 @@ public final class SetRest
         return result;
     }
 
+    // Texte "repos 2:15" de la serie a la position donnee d'une liste d'UN exercice d'UN
+    // jour (ordre d'affichage), ou chaine vide : 1re serie, position hors liste, repos
+    // inconnu. Point d'entree des adaptateurs de series (lot D, D3).
+    public static String labelAt(List<WorkoutSet> setsInOrder, int position)
+    {
+        if (setsInOrder == null || position <= 0 || position >= setsInOrder.size())
+        {
+            return "";
+        }
+        return label(restSeconds(setsInOrder.get(position - 1), setsInOrder.get(position)));
+    }
+
     // "2:15" (minutes:secondes). Jamais appele avec une valeur negative.
     public static String formatRest(long seconds)
     {

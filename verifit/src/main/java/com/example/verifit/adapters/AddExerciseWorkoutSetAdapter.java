@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.verifit.R;
 import com.example.verifit.SetCommentSheet;
 import com.example.verifit.SetDialogs;
+import com.example.verifit.model.SetRest;
 import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.ui.AddExerciseActivity;
 import com.example.verifit.ui.MainActivity;
@@ -161,6 +162,9 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         // en sortie/entree d'ecran).
         int rangeStart = Math.min(fromPosition, toPosition);
         int rangeCount = Math.abs(toPosition - fromPosition) + 1;
+        // +1 : la serie qui suit la plage a un nouveau "precedent", donc un nouveau
+        // repos affiche (lot D, D3).
+        rangeCount = Math.min(rangeCount + 1, Workout_Sets.size() - rangeStart);
         notifyItemRangeChanged(rangeStart, rangeCount);
     }
 
@@ -189,6 +193,11 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         // dans cet adapter) et pendant un glisser-deposer (voir moveItem() plus bas,
         // qui force desormais le rebind de la plage concernee pour la meme raison).
         holder.tv_set_number.setText(String.valueOf(position + 1));
+
+        // Repos reel avant cette serie ("repos 2:15", lot D etape D3, decision Romain
+        // 01/10/2026) : vide pour la 1re serie de l'exercice et quand il est inconnu
+        // (voir SetRest). Calcule depuis la position affichee, comme le numero de serie.
+        holder.tv_set_rest.setText(SetRest.labelAt(Workout_Sets, position));
 
         holder.checkbox.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
         holder.checkbox.setChecked(selectedPositions.contains(position));
@@ -396,6 +405,7 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         TextView tv_reps;
         TextView tv_weight;
         TextView tv_set_number;
+        TextView tv_set_rest;
         CardView cardView;
         CheckBox checkbox;
         CheckBox completedCheckbox;
@@ -410,6 +420,7 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
             tv_reps = itemView.findViewById(R.id.set_reps);
             tv_weight = itemView.findViewById(R.id.tv_date);
             tv_set_number = itemView.findViewById(R.id.tv_set_number);
+            tv_set_rest = itemView.findViewById(R.id.tv_set_rest);
             cardView = itemView.findViewById(R.id.cardview_set);
             checkbox = itemView.findViewById(R.id.set_checkbox);
             completedCheckbox = itemView.findViewById(R.id.set_completed_checkbox);

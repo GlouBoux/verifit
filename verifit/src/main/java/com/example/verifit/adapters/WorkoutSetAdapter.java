@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.verifit.R;
 import com.example.verifit.SetCommentSheet;
 import com.example.verifit.SetDialogs;
+import com.example.verifit.model.SetRest;
 import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.ui.MainActivity;
 
@@ -85,6 +86,11 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
         // adapter est recree entierement (new WorkoutSetAdapter(...)) a chaque bind
         // cote DayExerciseAdapter, donc toujours a jour.
         holder.tv_set_number.setText(String.valueOf(position + 1));
+
+        // Repos reel avant cette serie ("repos 2:15", lot D etape D3, decision Romain
+        // 01/10/2026) : vide pour la 1re serie de l'exercice et quand il est inconnu
+        // (voir SetRest). Calcule depuis la position affichee, comme le numero de serie.
+        holder.tv_set_rest.setText(SetRest.labelAt(Workout_Sets, position));
 
         // Small indicator so a set with a comment is visible at a glance, without
         // having to open it - useful for reviewing imported data too. Deux etats
@@ -212,6 +218,7 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
         TextView tv_reps;
         TextView tv_weight;
         TextView tv_set_number;
+        TextView tv_set_rest;
         CardView cardView;
         ImageView commentIndicator;
         ImageView discrepancyBadge;
@@ -224,6 +231,7 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
             tv_reps = itemView.findViewById(R.id.set_reps);
             tv_weight = itemView.findViewById(R.id.tv_date);
             tv_set_number = itemView.findViewById(R.id.tv_set_number);
+            tv_set_rest = itemView.findViewById(R.id.tv_set_rest);
             cardView = itemView.findViewById(R.id.cardview_set);
             commentIndicator = itemView.findViewById(R.id.set_comment_indicator);
             discrepancyBadge = itemView.findViewById(R.id.set_discrepancy_badge);

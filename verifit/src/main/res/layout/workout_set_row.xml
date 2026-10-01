@@ -162,7 +162,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:layout_marginBottom="10dp"
+                android:layout_marginBottom="16dp"
                 android:gravity="center"
                 android:orientation="horizontal"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -198,7 +198,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:layout_marginBottom="10dp"
+                android:layout_marginBottom="16dp"
                 android:gravity="center_vertical|end"
                 android:orientation="horizontal"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -224,6 +224,23 @@
                     android:text="reps" />
 
             </LinearLayout>
+
+            <!-- Repos reel avant cette serie ("repos 2:15", lot D etape D3, decision Romain
+                 01/10/2026) : petite ligne sous le poids, ancree sur la colonne du poids
+                 comme les autres elements. Vide pour la 1re serie ou si le repos est
+                 inconnu. La marge basse de 16dp des deux blocs poids/reps reserve sa
+                 place sur TOUTES les lignes, pour que la hauteur des lignes reste
+                 identique qu'il y ait un repos affiche ou non. -->
+            <TextView
+                android:id="@+id/tv_set_rest"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="3dp"
+                android:maxLines="1"
+                android:textColor="@color/core_grey_40"
+                android:textSize="11sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="@+id/gl_col_weight_start" />
 
             <!-- BUG corrige le 18/09/2026 (Romain : "toujours pas fonctionne [...]
                  verifie que tu pousses bien au bon endroit") : la case "Serie faite" ne
