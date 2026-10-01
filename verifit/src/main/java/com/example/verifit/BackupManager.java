@@ -217,7 +217,7 @@ public class BackupManager
 
     public static FullBackup readFromUri(Context context, Uri uri) throws IOException
     {
-        return parse(SessionImporter.readAll(uri, context));
+        return parse(TextFiles.readAll(uri, context));
     }
 
     // Remplace toutes les donnees par le backup (deja valide par parse()). Une copie

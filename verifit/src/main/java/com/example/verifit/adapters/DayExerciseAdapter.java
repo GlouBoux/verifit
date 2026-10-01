@@ -26,7 +26,6 @@ import com.example.verifit.ui.MainActivity;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 
 // Adapter for WorkoutExercise Class
@@ -35,31 +34,10 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
     Context ct;
     ArrayList<WorkoutExercise> Exercises;
 
-    // Multi-select delete (retour Romain 05/09/2026), même mécanique que
-    // AddExerciseWorkoutSetAdapter côté séries individuelles.
-    //
-    // Suivi par NOM d'exercice plutôt que par position (retour Romain 05/09/2026) :
-    // depuis que la poignée de réorganisation reste active pendant la sélection
-    // multiple (voir plus bas), une sélection par position deviendrait fausse dès qu'un
-    // glisser-déposer change l'ordre de la liste pendant qu'une sélection est en cours.
-    private boolean selectionMode = false;
-    private final Set<String> selectedExerciseNames = new HashSet<>();
+    // Selection multiple et repli des cartes : voir ExerciseSelection (partage avec
+    // l'autre adapter d'exercices).
+    private final ExerciseSelection selection = new ExerciseSelection();
     private OnSelectionChangedListener selectionChangedListener;
-
-    // Retour Romain 05/09/2026 : le repli des séries doit aussi se déclencher quand on
-    // drague directement (poignée) SANS être passé par le bouton "Select" - avant, le
-    // repli ne dépendait que de selectionMode, or la poignée reste utilisable même hors
-    // sélection multiple.
-    //
-    // Retour Romain 05/09/2026 (bis) : un premier essai remettait tout en "déplié" dès
-    // la fin du geste de drag (clearView) - Romain voyait donc le repli disparaître
-    // tout seul après une seconde. Ce qu'il veut : ça replie au démarrage du drag, et ça
-    // RESTE replié une fois le drag terminé, jusqu'à ce qu'il tape sur la série pour la
-    // rouvrir manuellement - exactement le même mécanisme qu'un repli manuel. D'où
-    // collapsedExerciseNames (suivi par NOM, comme la sélection) plutôt qu'un simple
-    // booléen "dragging" : setDragging(true) replie (et mémorise) toutes les séries au
-    // début du geste ; setDragging(false), à la fin du geste, ne les rouvre plus.
-    private final Set<String> collapsedExerciseNames = new HashSet<>();
 
     // Drag & drop pour réordonner les exercices ("comme FitNotes", retour Romain
     // 05/09/2026) - la poignée de chaque ligne démarre le drag via ce listener,
@@ -108,36 +86,29 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
 
     public void enterSelectionMode()
     {
-        selectionMode = true;
-        selectedExerciseNames.clear();
+        selection.enter();
         notifyDataSetChanged();
     }
 
     public void exitSelectionMode()
     {
-        selectionMode = false;
-        selectedExerciseNames.clear();
+        selection.exit();
         notifyDataSetChanged();
     }
 
     public boolean isSelectionMode()
     {
-        return selectionMode;
+        return selection.isActive();
     }
 
     public void setDragging(boolean dragging)
     {
         if (!dragging)
         {
-            // Fin du geste : volontairement un no-op, voir le commentaire sur
-            // collapsedExerciseNames plus haut - tout reste replié.
+            // Fin du geste : volontairement rien, tout reste replie (voir ExerciseSelection).
             return;
         }
-
-        for (WorkoutExercise exercise : Exercises)
-        {
-            collapsedExerciseNames.add(exercise.getExercise());
-        }
+        selection.collapseAll(Exercises);
         notifyDataSetChanged();
     }
 
@@ -147,22 +118,13 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
         {
             return;
         }
-
-        String exerciseName = Exercises.get(position).getExercise();
-        if (collapsedExerciseNames.contains(exerciseName))
-        {
-            collapsedExerciseNames.remove(exerciseName);
-        }
-        else
-        {
-            collapsedExerciseNames.add(exerciseName);
-        }
+        selection.toggleCollapsed(Exercises.get(position).getExercise());
         notifyItemChanged(position);
     }
 
     public int getSelectedCount()
     {
-        return selectedExerciseNames.size();
+        return selection.count();
     }
 
     // Retour Romain implicite (Vague 2, 07/09/2026) : dans l'ordre d'AFFICHAGE
@@ -173,15 +135,7 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
     // (suppression groupee), qui ne se soucie pas de l'ordre.
     public List<String> getSelectedExerciseNames()
     {
-        List<String> ordered = new ArrayList<>();
-        for (WorkoutExercise exercise : Exercises)
-        {
-            if (selectedExerciseNames.contains(exercise.getExercise()))
-            {
-                ordered.add(exercise.getExercise());
-            }
-        }
-        return ordered;
+        return selection.selectedInOrder(Exercises);
     }
 
     private void toggleSelection(int position)
@@ -190,22 +144,9 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
         {
             return;
         }
-
-        String exerciseName = Exercises.get(position).getExercise();
-        if (selectedExerciseNames.contains(exerciseName))
-        {
-            selectedExerciseNames.remove(exerciseName);
-        }
-        else
-        {
-            selectedExerciseNames.add(exerciseName);
-        }
+        selection.toggle(Exercises.get(position).getExercise());
         notifyItemChanged(position);
-
-        if (selectionChangedListener != null)
-        {
-            selectionChangedListener.onSelectionChanged(selectedExerciseNames.size());
-        }
+        notifySelectionChanged();
     }
 
     // "All" (retour Romain 08/09/2026) : sélectionne d'un coup tous les exercices
@@ -216,22 +157,16 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
     // cocher" classique (tout / rien) plutôt qu'une action à sens unique.
     public void selectAll()
     {
-        if (!Exercises.isEmpty() && selectedExerciseNames.size() == Exercises.size())
-        {
-            selectedExerciseNames.clear();
-        }
-        else
-        {
-            for (WorkoutExercise exercise : Exercises)
-            {
-                selectedExerciseNames.add(exercise.getExercise());
-            }
-        }
+        selection.selectAllOrNone(Exercises);
         notifyDataSetChanged();
+        notifySelectionChanged();
+    }
 
+    private void notifySelectionChanged()
+    {
         if (selectionChangedListener != null)
         {
-            selectionChangedListener.onSelectionChanged(selectedExerciseNames.size());
+            selectionChangedListener.onSelectionChanged(selection.count());
         }
     }
 
@@ -266,9 +201,9 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
         holder.recyclerView.setAdapter(workoutSetAdapter);
         holder.recyclerView.setLayoutManager(new LinearLayoutManager(ct));
 
-        holder.checkbox.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
-        holder.imageView.setVisibility(selectionMode ? View.GONE : View.VISIBLE);
-        holder.checkbox.setChecked(selectedExerciseNames.contains(Exercises.get(position).getExercise()));
+        holder.checkbox.setVisibility(selection.isActive() ? View.VISIBLE : View.GONE);
+        holder.imageView.setVisibility(selection.isActive() ? View.GONE : View.VISIBLE);
+        holder.checkbox.setChecked(selection.isSelected(Exercises.get(position).getExercise()));
 
         // Indicateur de progression "X / Y series" (Mark Sets Complete, retour Romain
         // 17/09/2026) - voir bindCompletionProgress() plus bas.
@@ -285,7 +220,7 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
         // la sortie du mode sélection) et/ou si cette série précise a été repliée
         // manuellement ou par un glisser-déposer (repli persistant, voir
         // collapsedExerciseNames - se rouvre uniquement en tapant dessus).
-        boolean collapsed = selectionMode || collapsedExerciseNames.contains(Exercises.get(position).getExercise());
+        boolean collapsed = selection.isCollapsed(Exercises.get(position).getExercise());
         if (collapsed)
         {
             holder.recyclerView.setVisibility(View.GONE);
@@ -302,7 +237,7 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
             @Override
             public void onClick(View view)
             {
-                if (!selectionMode)
+                if (!selection.isActive())
                 {
                     startIntent(holder.getAdapterPosition());
                 }
@@ -458,7 +393,7 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
                 cardview_exercise2.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    if (selectionMode)
+                    if (selection.isActive())
                     {
                         toggleSelection(getAdapterPosition());
                         return;

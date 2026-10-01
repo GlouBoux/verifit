@@ -426,6 +426,56 @@ public class WorkoutDay {
         return SessionStartTimestamp != null && SessionEndTimestamp == null;
     }
 
+    // Demarrage automatique du chrono de seance quand une serie arrive (saisie dans
+    // l'ecran d'exercice, ou Import Session) : demarre s'il n'a jamais tourne (si le
+    // reglage "Auto Start" est actif), reprend s'il avait ete arrete (toujours, quel que
+    // soit le reglage : une seance qui continue visiblement ne doit pas rester
+    // "arretee"). Renvoie true si quelque chose a change (a sauvegarder). Lot C.3
+    // (01/10/2026) : cette regle etait copiee dans AddExerciseActivity et SessionImporter.
+    public boolean startOrResumeSession(boolean autoStartEnabled, long nowMillis)
+    {
+        if (SessionStartTimestamp == null)
+        {
+            if (!autoStartEnabled)
+            {
+                return false;
+            }
+            SessionStartTimestamp = nowMillis;
+            return true;
+        }
+        if (SessionEndTimestamp != null)
+        {
+            SessionEndTimestamp = null;
+            return true;
+        }
+        return false;
+    }
+
+    // Bouton Start / Stop / Resume du dialogue "Workout Time" : demarre (jamais
+    // demarre), arrete (en cours) ou reprend (arrete).
+    public void toggleSession(long nowMillis)
+    {
+        if (SessionStartTimestamp == null)
+        {
+            SessionStartTimestamp = nowMillis;
+        }
+        else if (isSessionTimerRunning())
+        {
+            SessionEndTimestamp = nowMillis;
+        }
+        else
+        {
+            SessionEndTimestamp = null;
+        }
+    }
+
+    // "Cancel Timer" : efface le chrono, les series ne sont jamais touchees.
+    public void cancelSession()
+    {
+        SessionStartTimestamp = null;
+        SessionEndTimestamp = null;
+    }
+
     // --- Comment a Workout (Vague 3 du plan de migration, retour Romain 07/09/2026) ---
 
     // Ne renvoie jamais null (voir le commentaire du champ Comment ci-dessus) - les

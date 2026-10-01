@@ -22,9 +22,7 @@ import com.example.verifit.ui.AddExerciseActivity;
 import com.example.verifit.ui.MainActivity;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 
 // Adapter for WorkoutExercise Class
@@ -33,33 +31,11 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
     Context ct;
     ArrayList<WorkoutExercise> Exercises;
 
-    // Multi-select delete + drag reorder (retour Romain 05/09/2026), même mécanique que
-    // DayExerciseAdapter (écran DayActivity) - voir ce fichier pour le détail des choix.
-    // Ici c'est l'onglet Workout (accueil), l'écran qu'on ouvre tous les jours.
-    //
-    // Suivi par NOM d'exercice plutôt que par position : la poignée de réorganisation
-    // reste active pendant la sélection multiple, donc une sélection par position
-    // deviendrait fausse dès qu'un glisser-déposer change l'ordre de la liste pendant
-    // qu'une sélection est en cours.
-    private boolean selectionMode = false;
-    private final Set<String> selectedExerciseNames = new HashSet<>();
+    // Selection multiple et repli des cartes : voir ExerciseSelection (partage avec
+    // l'autre adapter d'exercices).
+    private final ExerciseSelection selection = new ExerciseSelection();
     private OnSelectionChangedListener selectionChangedListener;
     private OnStartDragListener dragListener;
-
-    // Retour Romain 05/09/2026 : le repli des séries doit aussi se déclencher quand on
-    // drague directement (poignée) SANS être passé par le bouton "Select" - avant, le
-    // repli ne dépendait que de selectionMode, or la poignée reste utilisable même hors
-    // sélection multiple.
-    //
-    // Retour Romain 05/09/2026 (bis) : un premier essai remettait tout en "déplié" dès
-    // la fin du geste de drag (clearView) - Romain voyait donc le repli disparaître
-    // tout seul après une seconde. Ce qu'il veut : ça replie au démarrage du drag, et ça
-    // RESTE replié une fois le drag terminé, jusqu'à ce qu'il tape sur la série pour la
-    // rouvrir manuellement - exactement le même mécanisme qu'un repli manuel. D'où
-    // collapsedExerciseNames (suivi par NOM, comme la sélection) plutôt qu'un simple
-    // booléen "dragging" : setDragging(true) replie (et mémorise) toutes les séries au
-    // début du geste ; setDragging(false), à la fin du geste, ne les rouvre plus.
-    private final Set<String> collapsedExerciseNames = new HashSet<>();
 
     // WorkoutDay de cette page (Vague 2, retour Romain 07/09/2026) - uniquement pour
     // retrouver le groupe de superset de chaque exercice (barre coloree), meme role
@@ -101,36 +77,29 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
 
     public void enterSelectionMode()
     {
-        selectionMode = true;
-        selectedExerciseNames.clear();
+        selection.enter();
         notifyDataSetChanged();
     }
 
     public void exitSelectionMode()
     {
-        selectionMode = false;
-        selectedExerciseNames.clear();
+        selection.exit();
         notifyDataSetChanged();
     }
 
     public boolean isSelectionMode()
     {
-        return selectionMode;
+        return selection.isActive();
     }
 
     public void setDragging(boolean dragging)
     {
         if (!dragging)
         {
-            // Fin du geste : volontairement un no-op, voir le commentaire sur
-            // collapsedExerciseNames plus haut - tout reste replié.
+            // Fin du geste : volontairement rien, tout reste replie (voir ExerciseSelection).
             return;
         }
-
-        for (WorkoutExercise exercise : Exercises)
-        {
-            collapsedExerciseNames.add(exercise.getExercise());
-        }
+        selection.collapseAll(Exercises);
         notifyDataSetChanged();
     }
 
@@ -140,22 +109,13 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
         {
             return;
         }
-
-        String exerciseName = Exercises.get(position).getExercise();
-        if (collapsedExerciseNames.contains(exerciseName))
-        {
-            collapsedExerciseNames.remove(exerciseName);
-        }
-        else
-        {
-            collapsedExerciseNames.add(exerciseName);
-        }
+        selection.toggleCollapsed(Exercises.get(position).getExercise());
         notifyItemChanged(position);
     }
 
     public int getSelectedCount()
     {
-        return selectedExerciseNames.size();
+        return selection.count();
     }
 
     // Dans l'ordre d'AFFICHAGE actuel (voir DayExerciseAdapter, meme correctif) - sert
@@ -163,15 +123,7 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
     // ecran (MainActivity.groupSelectedExercises()).
     public List<String> getSelectedExerciseNames()
     {
-        List<String> ordered = new ArrayList<>();
-        for (WorkoutExercise exercise : Exercises)
-        {
-            if (selectedExerciseNames.contains(exercise.getExercise()))
-            {
-                ordered.add(exercise.getExercise());
-            }
-        }
-        return ordered;
+        return selection.selectedInOrder(Exercises);
     }
 
     private void toggleSelection(int position)
@@ -180,22 +132,9 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
         {
             return;
         }
-
-        String exerciseName = Exercises.get(position).getExercise();
-        if (selectedExerciseNames.contains(exerciseName))
-        {
-            selectedExerciseNames.remove(exerciseName);
-        }
-        else
-        {
-            selectedExerciseNames.add(exerciseName);
-        }
+        selection.toggle(Exercises.get(position).getExercise());
         notifyItemChanged(position);
-
-        if (selectionChangedListener != null)
-        {
-            selectionChangedListener.onSelectionChanged(selectedExerciseNames.size());
-        }
+        notifySelectionChanged();
     }
 
     // "All" (retour Romain 08/09/2026), meme mecanique que DayExerciseAdapter -
@@ -203,22 +142,16 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
     // 08/09/2026, bis).
     public void selectAll()
     {
-        if (!Exercises.isEmpty() && selectedExerciseNames.size() == Exercises.size())
-        {
-            selectedExerciseNames.clear();
-        }
-        else
-        {
-            for (WorkoutExercise exercise : Exercises)
-            {
-                selectedExerciseNames.add(exercise.getExercise());
-            }
-        }
+        selection.selectAllOrNone(Exercises);
         notifyDataSetChanged();
+        notifySelectionChanged();
+    }
 
+    private void notifySelectionChanged()
+    {
         if (selectionChangedListener != null)
         {
-            selectionChangedListener.onSelectionChanged(selectedExerciseNames.size());
+            selectionChangedListener.onSelectionChanged(selection.count());
         }
     }
 
@@ -253,9 +186,9 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
         holder.recyclerView.setAdapter(workoutSetAdapter);
         holder.recyclerView.setLayoutManager(new LinearLayoutManager(ct));
 
-        holder.checkbox.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
-        holder.imageView.setVisibility(selectionMode ? View.GONE : View.VISIBLE);
-        holder.checkbox.setChecked(selectedExerciseNames.contains(Exercises.get(position).getExercise()));
+        holder.checkbox.setVisibility(selection.isActive() ? View.VISIBLE : View.GONE);
+        holder.imageView.setVisibility(selection.isActive() ? View.GONE : View.VISIBLE);
+        holder.checkbox.setChecked(selection.isSelected(Exercises.get(position).getExercise()));
 
         // Retour Romain 05/09/2026 : la poignée de réorganisation reste disponible
         // PENDANT la sélection multiple aussi (avant, elle disparaissait en sélection).
@@ -266,7 +199,7 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
         // la sortie du mode sélection) et/ou si cette série précise a été repliée
         // manuellement ou par un glisser-déposer (repli persistant, voir
         // collapsedExerciseNames - se rouvre uniquement en tapant dessus).
-        boolean collapsed = selectionMode || collapsedExerciseNames.contains(Exercises.get(position).getExercise());
+        boolean collapsed = selection.isCollapsed(Exercises.get(position).getExercise());
         if (collapsed)
         {
             holder.recyclerView.setVisibility(View.GONE);
@@ -287,7 +220,7 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
             @Override
             public void onClick(View view)
             {
-                if (selectionMode)
+                if (selection.isActive())
                 {
                     toggleSelection(holder.getAdapterPosition());
                     return;
@@ -300,7 +233,7 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
                 }
 
                 String exerciseName = Exercises.get(adapterPosition).getExercise();
-                if (collapsedExerciseNames.contains(exerciseName))
+                if (selection.isCollapsed(exerciseName))
                 {
                     toggleCollapse(adapterPosition);
                     return;

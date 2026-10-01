@@ -7,12 +7,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 // Reads a JSON file mapping exact exercise names to notes text
@@ -39,7 +35,7 @@ public class ExerciseNotesImporter {
 
         String json;
         try {
-            json = readAll(uri, context);
+            json = TextFiles.readAll(uri, context);
         } catch (IOException e) {
             result.success = false;
             result.errorMessage = "Could not read file: " + e.getMessage();
@@ -85,29 +81,5 @@ public class ExerciseNotesImporter {
         result.success = true;
         result.summary = summary;
         return result;
-    }
-
-    private static String readAll(Uri uri, Context context) throws IOException {
-        InputStream inputStream = context.getContentResolver().openInputStream(uri);
-        if (inputStream == null) {
-            throw new IOException("Unable to open selected file");
-        }
-
-        StringBuilder builder = new StringBuilder();
-        BufferedReader reader = null;
-        try {
-            reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                builder.append(line).append('\n');
-            }
-        } finally {
-            if (reader != null) {
-                reader.close();
-            } else {
-                inputStream.close();
-            }
-        }
-        return builder.toString();
     }
 }

@@ -3,7 +3,6 @@ package com.example.verifit;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.net.Uri;
 
 import com.example.verifit.model.ImportedExercise;
@@ -12,11 +11,7 @@ import com.example.verifit.model.WorkoutDay;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 
 // Reads a JSON file describing one workout session (see docs/session-import-format.md)
@@ -95,7 +90,7 @@ public class SessionImporter {
 
         String json;
         try {
-            json = readAll(uri, context);
+            json = TextFiles.readAll(uri, context);
         } catch (IOException e) {
             result.success = false;
             result.errorMessage = "Could not read file: " + e.getMessage();
@@ -155,11 +150,9 @@ public class SessionImporter {
         // addSetExistingWorkoutDay() - les deux SEULS endroits qui demarraient jusqu'ici
         // ce chrono (voir leur javadoc, startOrResumeSessionTimer()). Or Romain travaille
         // toujours depuis un Import Session (jamais en tapant chaque serie a la main), le
-        // chrono ne demarrait donc en pratique jamais tout seul. Meme reglage "Auto
-        // Start" que AddExerciseActivity.isSessionAutoStartEnabled() (meme fichier de
-        // preferences, meme cle - dupliquee ici plutot que de faire dependre les donnees
-        // de l'UI, meme convention que les dialogues deja dupliques entre adapters dans
-        // ce projet).
+        // chrono ne demarrait donc en pratique jamais tout seul. Meme regle et meme
+        // reglage "Auto Start" que l'ecran de saisie (WorkoutDay.startOrResumeSession(),
+        // SessionTimerTicker.isAutoStartEnabled()).
         startOrResumeSessionTimerAfterImport(context, dataStorage, summary.date);
 
         // Persist straight away, same as every other mutation in DataStorage.
@@ -208,43 +201,7 @@ public class SessionImporter {
         if (dayPosition < 0) {
             return;
         }
-
-        WorkoutDay day = dataStorage.getWorkoutDays().get(dayPosition);
-
-        if (day.getSessionStartTimestamp() == null) {
-            SharedPreferences sharedPreferences = context.getSharedPreferences("shared preferences", Context.MODE_PRIVATE);
-            boolean autoStartEnabled = sharedPreferences.getBoolean("session_auto_start", true);
-            if (!autoStartEnabled) {
-                return;
-            }
-            day.setSessionStartTimestamp(System.currentTimeMillis());
-        } else if (day.getSessionEndTimestamp() != null) {
-            day.setSessionEndTimestamp(null);
-        }
-    }
-
-    // Aussi utilisee par BackupManager.readFromUri() (restauration d'un backup complet).
-    static String readAll(Uri uri, Context context) throws IOException {
-        InputStream inputStream = context.getContentResolver().openInputStream(uri);
-        if (inputStream == null) {
-            throw new IOException("Unable to open selected file");
-        }
-
-        StringBuilder builder = new StringBuilder();
-        BufferedReader reader = null;
-        try {
-            reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                builder.append(line).append('\n');
-            }
-        } finally {
-            if (reader != null) {
-                reader.close();
-            } else {
-                inputStream.close();
-            }
-        }
-        return builder.toString();
+        dataStorage.getWorkoutDays().get(dayPosition)
+                .startOrResumeSession(SessionTimerTicker.isAutoStartEnabled(context), System.currentTimeMillis());
     }
 }

@@ -1,5 +1,6 @@
 package com.example.verifit;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.TextView;
@@ -90,5 +91,22 @@ public class SessionTimerTicker
         long seconds = elapsedSeconds % 60;
 
         display.setText(String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds));
+    }
+
+    // Reglage "Auto Start" du chrono de seance (retour Romain 07/09/2026, dialogue
+    // Workout Time Settings), actif par defaut comme sur FitNotes. Lot C.3 (01/10/2026) :
+    // la cle etait recopiee dans AddExerciseActivity, DayActivity et SessionImporter.
+    private static final String AUTO_START_PREF_KEY = "session_auto_start";
+
+    public static boolean isAutoStartEnabled(Context context)
+    {
+        return context.getSharedPreferences("shared preferences", Context.MODE_PRIVATE)
+                .getBoolean(AUTO_START_PREF_KEY, true);
+    }
+
+    public static void setAutoStartEnabled(Context context, boolean enabled)
+    {
+        context.getSharedPreferences("shared preferences", Context.MODE_PRIVATE)
+                .edit().putBoolean(AUTO_START_PREF_KEY, enabled).apply();
     }
 }
