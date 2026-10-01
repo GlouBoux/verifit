@@ -87,6 +87,22 @@ public class WorkoutDayTest
         assertTrue("un superset d'un seul exercice disparait", d.getSupersetGroups().isEmpty());
     }
 
+    // Suppression d'exercices selectionnes (DayActions) et "Move a Workout".
+    @Test
+    public void retirerDesExercicesDUnJour()
+    {
+        WorkoutDay d = sample();
+        DataStorage ds = storage(new String[][] {}, d);
+
+        assertEquals(1, ds.removeExerciseSetsFromDay("2026-09-26", Arrays.asList("Curl")));
+        assertEquals(Collections.singletonList("Squat"), d.getExerciseOrder());
+        assertEquals(0, ds.removeExerciseSetsFromDay("2026-09-26", Arrays.asList("Curl")));
+        assertEquals(0, ds.removeExerciseSetsFromDay("2026-01-01", Arrays.asList("Squat")));
+
+        assertEquals(2, ds.removeExerciseSetsFromDay("2026-09-26", Arrays.asList("Squat")));
+        assertTrue("jour sans serie retire", ds.workoutDays.isEmpty());
+    }
+
     @Test
     public void insererUneSerie_positionBornee()
     {
