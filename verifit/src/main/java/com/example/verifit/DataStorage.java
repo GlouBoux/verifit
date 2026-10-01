@@ -1206,12 +1206,7 @@ public class DataStorage {
         for (int i = 0; i < workoutDays.size(); i++)
         {
             WorkoutDay day = workoutDays.get(i);
-            ArrayList<CoachingExportSet> exportSets = new ArrayList<CoachingExportSet>();
-            for (int j = 0; j < day.getSets().size(); j++)
-            {
-                exportSets.add(new CoachingExportSet(day.getSets().get(j)));
-            }
-            export.addDay(new CoachingExportDay(day.getDate(), exportSets));
+            export.addDay(CoachingExportDay.fromWorkoutSets(day.getDate(), day.getSets()));
         }
 
         Gson gson = new Gson();

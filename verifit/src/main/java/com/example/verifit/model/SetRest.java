@@ -1,7 +1,9 @@
 package com.example.verifit.model;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 
 /**
@@ -63,6 +65,28 @@ public final class SetRest
         for (int i = 0; i < setsInOrder.size(); i++)
         {
             result.add(i == 0 ? null : restSeconds(setsInOrder.get(i - 1), setsInOrder.get(i)));
+        }
+        return result;
+    }
+
+    // Repos de chaque serie d'un JOUR entier (tous exercices melanges, dans l'ordre du
+    // jour), aligne sur la liste donnee. Le "precedent" d'une serie est la derniere serie
+    // VUE du meme exercice (donc correct pour des supersets / exercices alternes) ; la 1re
+    // serie de chaque exercice vaut null. Sert a l'export Coaching (lot D, D4).
+    public static List<Long> restSecondsForDay(List<WorkoutSet> daySets)
+    {
+        List<Long> result = new ArrayList<>();
+        if (daySets == null)
+        {
+            return result;
+        }
+
+        Map<String, WorkoutSet> lastByExercise = new HashMap<>();
+        for (WorkoutSet set : daySets)
+        {
+            String key = set.getExerciseName() == null ? "" : set.getExerciseName();
+            result.add(restSeconds(lastByExercise.get(key), set));
+            lastByExercise.put(key, set);
         }
         return result;
     }

@@ -102,6 +102,41 @@ public class SetRestTest
         assertNull(rest.get(0));
     }
 
+    private static WorkoutSet setOf(String exercise, Long timestamp)
+    {
+        WorkoutSet s = new WorkoutSet("2026-10-01", exercise, "Cat", 5.0, 100.0);
+        s.setTimestamp(timestamp);
+        return s;
+    }
+
+    @Test
+    public void jour_exercicesAlternesChacunAvecSonPrecedent()
+    {
+        // Superset A/B : A1 B1 A2 B2 - le repos de A2 se compte depuis A1, pas depuis B1.
+        List<WorkoutSet> day = Arrays.asList(
+                setOf("A", T0), setOf("B", T0 + 30_000L),
+                setOf("A", T0 + 150_000L), setOf("B", T0 + 200_000L));
+        List<Long> rest = SetRest.restSecondsForDay(day);
+
+        assertEquals(4, rest.size());
+        assertNull(rest.get(0));
+        assertNull(rest.get(1));
+        assertEquals(Long.valueOf(150), rest.get(2));
+        assertEquals(Long.valueOf(170), rest.get(3));
+    }
+
+    @Test
+    public void jour_exerciceSansNomEtListeVideOuNulle()
+    {
+        List<WorkoutSet> day = Arrays.asList(setOf(null, T0), setOf(null, T0 + 60_000L));
+        List<Long> rest = SetRest.restSecondsForDay(day);
+        assertNull(rest.get(0));
+        assertEquals(Long.valueOf(60), rest.get(1));
+
+        assertEquals(0, SetRest.restSecondsForDay(new ArrayList<WorkoutSet>()).size());
+        assertEquals(0, SetRest.restSecondsForDay(null).size());
+    }
+
     @Test
     public void format_minutesEtSecondes()
     {

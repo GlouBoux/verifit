@@ -38,8 +38,18 @@ public class CoachingExportSet
     // si cette serie n'a jamais ete importee (saisie manuelle, import CSV d'historique).
     private final Double plannedReps;
     private final Double plannedWeight;
+    // Repos reellement pris avant cette serie, en secondes (lot D, D4, 01/10/2026) :
+    // champ OPTIONNEL, absent du JSON (Gson n'ecrit pas les null) pour la 1re serie d'un
+    // exercice ou quand il est inconnu (voir SetRest). Ajout compatible : schemaVersion
+    // reste a 1, les lecteurs qui ignorent les cles inconnues ne sont pas affectes.
+    private final Long restSeconds;
 
     public CoachingExportSet(WorkoutSet set)
+    {
+        this(set, null);
+    }
+
+    public CoachingExportSet(WorkoutSet set, Long restSeconds)
     {
         this.date = set.getDate();
         this.exercise = set.getExerciseName();
@@ -51,5 +61,6 @@ public class CoachingExportSet
         this.planComment = set.hasPlanComment() ? set.getPlanComment() : null;
         this.plannedReps = set.getPlannedReps();
         this.plannedWeight = set.getPlannedWeight();
+        this.restSeconds = restSeconds;
     }
 }
