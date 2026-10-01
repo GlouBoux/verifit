@@ -57,7 +57,22 @@ public class SessionImporter {
     // l'utilisateur).
     public static void importWithDuplicateCheck(final Activity activity, final Uri uri, final DataStorage dataStorage,
                                                 final String fallbackDate, final OnImportDone onDone) {
-        Result first = safeImport(uri, activity, dataStorage, fallbackDate, false);
+        runWithDuplicateCheck(activity, allowDuplicate -> safeImport(uri, activity, dataStorage, fallbackDate, allowDuplicate), onDone);
+    }
+
+    // Meme logique, a partir du TEXTE JSON deja lu (lot D, D8 : ImportSessionActivity,
+    // qui a lu le fichier recu d'une autre appli, ou le JSON partage comme texte).
+    public static void importJsonWithDuplicateCheck(final Activity activity, final String json, final DataStorage dataStorage,
+                                                    final String fallbackDate, final OnImportDone onDone) {
+        runWithDuplicateCheck(activity, allowDuplicate -> safeImportJson(json, activity, dataStorage, fallbackDate, allowDuplicate), onDone);
+    }
+
+    private interface ImportAttempt {
+        Result run(boolean allowDuplicate);
+    }
+
+    private static void runWithDuplicateCheck(final Activity activity, final ImportAttempt attempt, final OnImportDone onDone) {
+        Result first = attempt.run(false);
         if (!first.alreadyImported) {
             onDone.onImportDone(first);
             return;
@@ -69,7 +84,7 @@ public class SessionImporter {
                         + " série(s) importée(s) pour les exercices de ce fichier.\n\n"
                         + "Importer quand même ajoutera ces séries une seconde fois.")
                 .setPositiveButton("Importer quand même", (dialog, which) ->
-                        onDone.onImportDone(safeImport(uri, activity, dataStorage, fallbackDate, true)))
+                        onDone.onImportDone(attempt.run(true)))
                 .setNegativeButton("Annuler", null)
                 .show();
     }
@@ -85,17 +100,35 @@ public class SessionImporter {
         }
     }
 
-    public static Result importFromUri(Uri uri, Context context, DataStorage dataStorage, String fallbackDate, boolean allowDuplicate) {
-        Result result = new Result();
+    private static Result safeImportJson(String json, Context context, DataStorage dataStorage, String fallbackDate, boolean allowDuplicate) {
+        try {
+            return importFromJson(json, context, dataStorage, fallbackDate, allowDuplicate);
+        } catch (Exception e) {
+            Result result = new Result();
+            result.success = false;
+            result.errorMessage = e.toString();
+            return result;
+        }
+    }
 
+    public static Result importFromUri(Uri uri, Context context, DataStorage dataStorage, String fallbackDate, boolean allowDuplicate) {
         String json;
         try {
             json = TextFiles.readAll(uri, context);
         } catch (IOException e) {
+            Result result = new Result();
             result.success = false;
             result.errorMessage = "Could not read file: " + e.getMessage();
             return result;
         }
+        return importFromJson(json, context, dataStorage, fallbackDate, allowDuplicate);
+    }
+
+    // Import a partir du texte JSON (lot D, D8) : tout ce que faisait importFromUri()
+    // apres la lecture du fichier. Une date invalide (ni "AAAA-MM-JJ", ni une vraie
+    // date) est refusee : elle servirait de cle de jour dans les donnees.
+    public static Result importFromJson(String json, Context context, DataStorage dataStorage, String fallbackDate, boolean allowDuplicate) {
+        Result result = new Result();
 
         ImportedSession session;
         try {
@@ -112,10 +145,17 @@ public class SessionImporter {
             return result;
         }
 
+        String targetDate = session.getDate().isEmpty() ? fallbackDate : session.getDate();
+        String dateProblem = SessionPreview.dateProblem(targetDate);
+        if (dateProblem != null) {
+            result.success = false;
+            result.errorMessage = dateProblem;
+            return result;
+        }
+
         // Point 1.5 : seance deja importee ce jour-la ? Detection AVANT toute
         // modification (et avant la copie automatique, inutile si on n'importe pas).
         if (!allowDuplicate) {
-            String targetDate = session.getDate().isEmpty() ? fallbackDate : session.getDate();
             HashSet<String> exerciseNames = new HashSet<String>();
             for (ImportedExercise exercise : session.getExercises()) {
                 exerciseNames.add(exercise.getName());

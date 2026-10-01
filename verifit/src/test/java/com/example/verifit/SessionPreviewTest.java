@@ -188,4 +188,20 @@ public class SessionPreviewTest
         assertFalse(p.isImportable());
         assertNotNull(p.problem());
     }
+
+    @Test
+    public void dateProblemIsNullForAValidDateAndNamesTheValueOtherwise()
+    {
+        assertNull(SessionPreview.dateProblem("2026-10-05"));
+        assertEquals("Date invalide : « 05/10/2026 » (format attendu : AAAA-MM-JJ).", SessionPreview.dateProblem("05/10/2026"));
+        assertEquals("Date invalide : «  » (format attendu : AAAA-MM-JJ).", SessionPreview.dateProblem(null));
+    }
+
+    @Test
+    public void previewAndImporterShareTheSameDateMessage()
+    {
+        SessionPreview p = SessionPreview.of(session("{\"date\":\"2026-02-30\",\"exercises\":["
+                + "{\"name\":\"Squat\",\"sets\":[{\"weight\":100,\"reps\":5}]}]}"), "2026-10-03", null);
+        assertEquals(SessionPreview.dateProblem("2026-02-30"), p.problem());
+    }
 }

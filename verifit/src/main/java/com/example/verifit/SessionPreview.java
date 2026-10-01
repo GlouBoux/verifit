@@ -123,6 +123,17 @@ public final class SessionPreview
         return weight + " x " + Math.round(reps);
     }
 
+    // Message d'erreur si la date n'est pas utilisable, sinon null. Partage avec
+    // SessionImporter (meme refus a l'apercu et a l'import).
+    static String dateProblem(String date)
+    {
+        if (isValidIsoDate(date))
+        {
+            return null;
+        }
+        return "Date invalide : « " + (date == null ? "" : date) + " » (format attendu : AAAA-MM-JJ).";
+    }
+
     // Strictement "AAAA-MM-JJ" et une vraie date (pas de 2026-02-30, ni de 2026-1-5) : le
     // jour sert de cle dans les donnees de l'app.
     static boolean isValidIsoDate(String value)
@@ -167,9 +178,10 @@ public final class SessionPreview
     // Ce qui empeche d'importer, ou null si l'import est possible.
     public String problem()
     {
-        if (!dateValid)
+        String dateProblem = dateProblem(date);
+        if (dateProblem != null)
         {
-            return "Date invalide : « " + date + " » (format attendu : AAAA-MM-JJ).";
+            return dateProblem;
         }
         if (exercises.isEmpty())
         {

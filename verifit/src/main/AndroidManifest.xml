@@ -82,7 +82,7 @@
              les applis ne declarent pas toutes un fichier .json en application/json ; un
              fichier qui n'est pas une seance affiche simplement une erreur. exported=true
              obligatoire pour etre propose par les autres applis : l'ecran ne modifie rien
-             sans confirmation (import a l'etape suivante). -->
+             tant que l'utilisateur n'a pas appuye sur "Importer". -->
         <activity
             android:name=".ui.ImportSessionActivity"
             android:exported="true"

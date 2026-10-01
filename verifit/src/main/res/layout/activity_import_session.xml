@@ -41,13 +41,38 @@
         </LinearLayout>
     </ScrollView>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/bt_import_close"
-        style="@style/Widget.Verifit.Button.Flat"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:layout_margin="8dp"
-        android:text="Fermer" />
+        android:gravity="end"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/bt_import_close"
+            style="@style/Widget.Verifit.Button.Flat"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Fermer" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/bt_import_open_app"
+            style="@style/Widget.Verifit.Button.Flat"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ouvrir l'app"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/bt_import_confirm"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginLeft="8dp"
+            android:text="Importer"
+            android:textAllCaps="false"
+            android:visibility="gone" />
+
+    </LinearLayout>
 
 </LinearLayout>
