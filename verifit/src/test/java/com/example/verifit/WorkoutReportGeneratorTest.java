@@ -59,7 +59,7 @@ public class WorkoutReportGeneratorTest
     private static final String EXPECTED_BODY =
             "** Assisted HSPU FP **\n"
             + "- 40.0 kgs x 4 reps [PR]\n"
-            + "- 38.0 kgs x 3 reps\n"
+            + "- 38.0 kgs x 3 reps [Échec d'un 5 RM]\n"
             + "- 50.0 kgs x 2 reps [PR. S1 — Note : Echec d'un 7]\n"
             + "** Curl **\n"
             + "- 20.0 kgs x 8 reps [PR. a / b]";
@@ -102,6 +102,23 @@ public class WorkoutReportGeneratorTest
         ds.workoutDays = reload(ds.workoutDays);
         String report = WorkoutReportGenerator.generateReport("Verifit", ds.workoutDays.get(0), ds, 0L);
         assertTrue(report, report.endsWith(EXPECTED_BODY));
+    }
+
+    // "Échec d'un N RM" (retour Romain 01/10/2026, voir FailedRmCalculator) : jamais
+    // pour un echauffement, et jamais en meme temps que [PR].
+    @Test
+    public void echecEtEchauffement()
+    {
+        WorkoutSet warmup = set("2026-09-04", "Curl", "Biceps", 5, 10);
+        warmup.setPlanComment("Échauffement");
+        WorkoutSet failed = set("2026-09-04", "Curl", "Biceps", 6, 18);
+        failed.setComment("dur");
+        WorkoutDay d = day(set("2026-09-04", "Curl", "Biceps", 8, 20), warmup, failed);
+        String report = WorkoutReportGenerator.generateReport("Verifit", d, storage(new String[][] {}, d), 0L);
+        assertTrue(report, report.endsWith("** Curl **\n"
+                + "- 20.0 kgs x 8 reps [PR]\n"
+                + "- 10.0 kgs x 5 reps [Échauffement]\n"
+                + "- 18.0 kgs x 6 reps [Échec d'un 9 RM. dur]"));
     }
 
     @Test

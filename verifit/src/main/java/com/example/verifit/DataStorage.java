@@ -721,6 +721,36 @@ public class DataStorage {
         return prKeys;
     }
 
+    // "Echec d'un N RM" du Share workout (retour Romain 01/10/2026) : pour chaque serie
+    // de travail de cet exercice qui ne bat aucun record, N = le plus petit nombre de reps
+    // pour lequel son poids aurait ete un PR. Cles "date#reps#weight" (repRangePRKey),
+    // comme getRepRangePRKeys(). Regle et exemples : FailedRmCalculator.
+    public HashMap<String, Integer> getFailedRmByKey(String exerciseName)
+    {
+        ArrayList<WorkoutDay> sortedDays = new ArrayList<WorkoutDay>(workoutDays);
+        Collections.sort(sortedDays, new Comparator<WorkoutDay>() {
+            @Override
+            public int compare(WorkoutDay a, WorkoutDay b)
+            {
+                return a.getDate().compareTo(b.getDate());
+            }
+        });
+
+        ArrayList<WorkoutSet> exerciseSets = new ArrayList<WorkoutSet>();
+        for (WorkoutDay day : sortedDays)
+        {
+            for (WorkoutSet set : day.getSets())
+            {
+                if (set.getExerciseName() != null && set.getExerciseName().equals(exerciseName))
+                {
+                    exerciseSets.add(set);
+                }
+            }
+        }
+
+        return FailedRmCalculator.compute(exerciseSets);
+    }
+
     // Saves Workout_Days Array List in shared preferences
     // For some reason when I pass the context it works so let's roll with it :D
     public void saveWorkoutData(Context ct)

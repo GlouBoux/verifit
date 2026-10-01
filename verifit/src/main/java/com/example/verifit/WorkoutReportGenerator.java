@@ -11,6 +11,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
 
@@ -22,7 +23,7 @@ import java.util.Locale;
 //   Time: 17:43 – 22:15 (4h 31m)
 //   ** Assisted HSPU FP **
 //   - 40.0 kgs x 4 reps
-//   - 50.0 kgs x 2 reps [Echec d'un 7. <commentaire libre de la serie>]
+//   - 50.0 kgs x 2 reps [Échec d'un 7 RM. <commentaire libre de la serie>]
 //   - 41.0 kgs x 14 reps [PR]
 //   ** Assisted Pelican **
 //   ...
@@ -90,10 +91,14 @@ public class WorkoutReportGenerator
             // Cles valeur ("date#reps#weight"), pas identite d'objet : voir
             // DataStorage.getRepRangePRKeys() (revue d'architecture du 28/09/2026).
             HashSet<String> prKeys = dataStorage.getRepRangePRKeys(exercise.getExercise());
+            // "Echec d'un N RM" (01/10/2026) : serie de travail sans PR, N = plus petit
+            // nombre de reps pour lequel ce poids aurait ete un record. Voir
+            // FailedRmCalculator.
+            HashMap<String, Integer> failedRm = dataStorage.getFailedRmByKey(exercise.getExercise());
 
             for (WorkoutSet set : exercise.getSets())
             {
-                report.append(formatSetLine(set, prKeys)).append("\n");
+                report.append(formatSetLine(set, prKeys, failedRm)).append("\n");
             }
         }
 
@@ -170,17 +175,21 @@ public class WorkoutReportGenerator
     }
 
     // "- 40.0 kgs x 4 reps", avec l'annotation entre crochets quand pertinente :
-    // "[PR]" (record), "[<commentaire>]" (commentaire libre de la serie), ou
+    // "[PR]" (record), "[Échec d'un N RM]" (serie hors PR, voir FailedRmCalculator),
+    // "[<commentaire>]" (commentaire libre de la serie), ou
     // "[PR. <commentaire>]" quand les deux sont presents (retour Romain 06/09/2026,
     // PR en premier - c'est le motif observe dans son propre export FitNotes).
-    private static String formatSetLine(WorkoutSet set, HashSet<String> prKeys)
+    private static String formatSetLine(WorkoutSet set, HashSet<String> prKeys, HashMap<String, Integer> failedRm)
     {
         int reps = (int) Math.round(set.getReps());
         String weight = set.getWeight().toString();
 
         StringBuilder line = new StringBuilder("- ").append(weight).append(" kgs x ").append(reps).append(" reps");
 
-        boolean isPR = prKeys.contains(DataStorage.repRangePRKey(set.getDate(), reps, set.getWeight()));
+        String setKey = DataStorage.repRangePRKey(set.getDate(), reps, set.getWeight());
+        boolean isPR = prKeys.contains(setKey);
+        // Mutuellement exclusif avec [PR] : une serie qui bat un record n'est pas un echec.
+        Integer failedRmN = isPR ? null : failedRm.get(setKey);
 
         // Plan du script (WorkoutSet.planComment) ET note perso (WorkoutSet.comment) -
         // retour Romain 21/09/2026, "les deux". Le plan d'abord, tel quel ; la note a la
@@ -205,12 +214,12 @@ public class WorkoutReportGenerator
         }
         boolean hasComment = !annotation.isEmpty();
 
-        if (isPR || hasComment)
+        if (isPR || failedRmN != null || hasComment)
         {
             line.append(" [");
-            if (isPR)
+            if (isPR || failedRmN != null)
             {
-                line.append("PR");
+                line.append(isPR ? "PR" : "Échec d'un " + failedRmN + " RM");
                 if (hasComment)
                 {
                     line.append(". ");

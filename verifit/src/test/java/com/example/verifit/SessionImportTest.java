@@ -128,6 +128,15 @@ public class SessionImportTest
     }
 
     @Test
+    public void lectureDuFichier_utf8LigneParLigne() throws Exception
+    {
+        String content = "{\"date\": \"2026-09-26\",\r\n \"comment\": \"Séance\"}";
+        String read = TextFiles.readAll(new java.io.ByteArrayInputStream(content.getBytes("UTF-8")));
+        assertEquals("{\"date\": \"2026-09-26\",\n \"comment\": \"Séance\"}\n", read);
+        assertEquals("Séance", parse(read).getComment());
+    }
+
+    @Test
     public void fichiersInvalides_messagesAffiches() throws Exception
     {
         try
