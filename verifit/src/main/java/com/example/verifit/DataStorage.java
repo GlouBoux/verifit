@@ -1187,12 +1187,55 @@ public class DataStorage {
             outputStream.write(buildCoachingExportJson(exportedAt).getBytes());
             outputStream.close();
             Toast.makeText(context, "Export JSON Coaching enregistré dans " + Environment.DIRECTORY_DOCUMENTS+"/Verifit", Toast.LENGTH_LONG).show();
+
+            // Lot D (D5) : met aussi a jour le fichier a nom fixe. Provisoire : l'export
+            // automatique de fin de seance (D6) l'ecrira seul, et ce bouton pourra alors
+            // ne plus produire que le fichier date, ou rien.
+            try
+            {
+                FixedNameExport.Result latest = writeLatestCoachingExport(context);
+                if (latest == FixedNameExport.Result.BLOCKED_BY_FOREIGN_FILE)
+                {
+                    Toast.makeText(context, LATEST_COACHING_EXPORT_NAME + " existe deja (installation precedente) et ne peut pas etre modifie : supprime-le dans Fichiers > Documents > Verifit, puis relance l'export.", Toast.LENGTH_LONG).show();
+                }
+                else if (latest != null)
+                {
+                    Toast.makeText(context, LATEST_COACHING_EXPORT_NAME + (latest == FixedNameExport.Result.CREATED ? " cree" : " mis a jour"), Toast.LENGTH_SHORT).show();
+                }
+            }
+            catch (Exception e)
+            {
+                Toast.makeText(context, "Fichier a nom fixe non ecrit : " + e, Toast.LENGTH_LONG).show();
+            }
         }
         catch (Exception e)
         {
             System.out.println(e.toString());
             Toast.makeText(context, e.toString(), Toast.LENGTH_LONG).show();
         }
+    }
+
+    // Nom FIXE de l'export Coaching "dernier etat" (lot D, etape D5, 01/10/2026) : toujours
+    // le meme fichier, mis a jour sur place, pour que la synchro vers le PC (Syncthing)
+    // n'accumule pas "(1)", "(2)"... Meme dossier que les autres exports (Documents/Verifit).
+    public static final String LATEST_COACHING_EXPORT_NAME = "verifit_coaching_latest.json";
+
+    // Ecrit (ou met a jour) verifit_coaching_latest.json avec l'etat actuel des seances.
+    // Android 10+ seulement (meme garde que les autres exports) : renvoie null en dessous.
+    // BLOCKED_BY_FOREIGN_FILE = un fichier du meme nom d'une installation precedente
+    // occupe la place (voir FixedNameExport) : a signaler a l'utilisateur.
+    public FixedNameExport.Result writeLatestCoachingExport(Context context) throws IOException
+    {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
+        {
+            return null;
+        }
+
+        String exportedAt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
+        MediaStoreExportStore store = new MediaStoreExportStore(
+                context, Environment.DIRECTORY_DOCUMENTS + "/Verifit", "application/json");
+        return FixedNameExport.write(
+                store, LATEST_COACHING_EXPORT_NAME, buildCoachingExportJson(exportedAt).getBytes("UTF-8"));
     }
 
     // Contenu de l'export JSON Coaching (contrat lu par sync_verifit_to_excel.py cote
