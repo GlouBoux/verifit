@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.Date;
 
 /**
- * Backup JSON COMPLET de verifit et copies automatiques (revue d'architecture du
+ * Backup JSON COMPLET de l'app (FitEngine) et copies automatiques (revue d'architecture du
  * 28/09/2026, point 1.4).
  *
  * Pourquoi : le backup CSV, seule sauvegarde restaurable jusqu'ici, perd une partie des
@@ -36,9 +36,9 @@ import java.util.Date;
  * les exercices connus et les objectifs, avec le meme Gson que la sauvegarde interne.
  *
  * Trois usages :
- * - export manuel (Reglages) dans Documents/Verifit/ ;
+ * - export manuel (Reglages) dans Documents/FitEngine/ ;
  * - restauration (Reglages), apres confirmation, qui REMPLACE toutes les donnees ;
- * - copies automatiques dans Documents/Verifit/auto/ : une par jour a l'ouverture de
+ * - copies automatiques dans Documents/FitEngine/auto/ : une par jour a l'ouverture de
  *   l'app, et une juste avant chaque operation qui remplace ou efface des donnees
  *   (import CSV, restauration, effacement complet, import de seance). Les
  *   KEEP_AUTO_SNAPSHOTS plus recentes sont gardees, les plus anciennes supprimees.
@@ -51,10 +51,12 @@ public class BackupManager
 {
     private static final String TAG = "BackupManager";
 
-    public static final String FORMAT = "verifit-full-backup";
+    // Les backups faits avant le renommage portent l'ancien format (AppNames.LEGACY_BACKUP_FORMAT) :
+    // parse() les accepte aussi.
+    public static final String FORMAT = AppNames.BACKUP_FORMAT;
     public static final int SCHEMA_VERSION = 1;
 
-    private static final String AUTO_PREFIX = "verifit_auto_";
+    private static final String AUTO_PREFIX = AppNames.FILE_PREFIX + "_auto_";
     private static final int KEEP_AUTO_SNAPSHOTS = 15;
 
     private static final String PREFS_NAME = "shared preferences";
@@ -65,12 +67,12 @@ public class BackupManager
     // restent utilisables dans les tests JUnit locaux (android.jar bouchon).
     private static String backupDir()
     {
-        return Environment.DIRECTORY_DOCUMENTS + "/Verifit";
+        return Environment.DIRECTORY_DOCUMENTS + "/" + AppNames.EXPORT_FOLDER;
     }
 
     private static String autoDir()
     {
-        return Environment.DIRECTORY_DOCUMENTS + "/Verifit/auto";
+        return Environment.DIRECTORY_DOCUMENTS + "/" + AppNames.EXPORT_FOLDER + "/" + AppNames.AUTO_SUBFOLDER;
     }
 
     // Contenu du fichier. Les noms de champs SONT le format du fichier : ne pas les
@@ -116,7 +118,7 @@ public class BackupManager
 
     // Lit et VALIDE un backup complet, sans toucher aux donnees de l'app. Leve
     // IllegalArgumentException avec un message lisible si le fichier n'est pas un backup
-    // complet verifit (ex. l'export JSON Coaching, un CSV) ou s'il est incomplet.
+    // complet de l'app (ex. l'export JSON Coaching, un CSV) ou s'il est incomplet.
     public static FullBackup parse(String json)
     {
         // Retour Romain 29/09/2026 : un export CSV choisi par erreur (noms tres proches)
@@ -129,7 +131,7 @@ public class BackupManager
         }
         if (!trimmed.startsWith("{"))
         {
-            throw new IllegalArgumentException("ce fichier n'est pas un backup complet verifit (ce n'est pas du JSON, probablement un export CSV). Le bon fichier s'appelle verifit_backup_complet_<date>.json");
+            throw new IllegalArgumentException("ce fichier n'est pas un backup complet FitEngine (ce n'est pas du JSON, probablement un export CSV). Le bon fichier s'appelle " + AppNames.FULL_BACKUP_FILE_PREFIX + "<date>.json");
         }
 
         FullBackup backup;
@@ -142,13 +144,13 @@ public class BackupManager
             throw new IllegalArgumentException("fichier JSON invalide (" + e.getMessage() + ")");
         }
 
-        if (backup == null || !FORMAT.equals(backup.format))
+        if (backup == null || !AppNames.isBackupFormat(backup.format))
         {
-            throw new IllegalArgumentException("ce fichier n'est pas un backup complet verifit (le bon fichier s'appelle verifit_backup_complet_<date>.json)");
+            throw new IllegalArgumentException("ce fichier n'est pas un backup complet FitEngine (le bon fichier s'appelle " + AppNames.FULL_BACKUP_FILE_PREFIX + "<date>.json)");
         }
         if (backup.schemaVersion > SCHEMA_VERSION)
         {
-            throw new IllegalArgumentException("backup cree par une version plus recente de verifit (format " + backup.schemaVersion + ")");
+            throw new IllegalArgumentException("backup cree par une version plus recente de l'app (format " + backup.schemaVersion + ")");
         }
         if (backup.workoutDays == null || backup.knownExercises == null)
         {
@@ -188,7 +190,7 @@ public class BackupManager
             return false;
         }
 
-        String fileName = "verifit_backup_complet_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date()) + ".json";
+        String fileName = AppNames.FULL_BACKUP_FILE_PREFIX + new SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date()) + ".json";
         try
         {
             writeDocument(context, backupDir(), fileName, toJson(dataStorage));
@@ -205,7 +207,7 @@ public class BackupManager
 
     // ---------------------------------------------------------------- restauration
 
-    // Dossier Documents/Verifit, pour ouvrir le selecteur de fichiers directement dedans
+    // Dossier Documents/FitEngine, pour ouvrir le selecteur de fichiers directement dedans
     // (Intent EXTRA_INITIAL_URI, Android 8+). Retour Romain 29/09/2026 : la vue
     // "Documents" du selecteur (categorie, pas le vrai dossier) n'affichait que les
     // exports CSV et masquait les fichiers .json.
@@ -281,7 +283,7 @@ public class BackupManager
                     Log.e(TAG, "Copie automatique impossible (" + fileName + ")", e);
                 }
             }
-        }, "verifit-auto-backup").start();
+        }, AppNames.FILE_PREFIX + "-auto-backup").start();
         return true;
     }
 

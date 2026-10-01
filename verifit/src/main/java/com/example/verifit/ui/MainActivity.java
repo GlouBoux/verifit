@@ -19,6 +19,7 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.example.verifit.AppNames;
 import com.example.verifit.DataStorage;
 import com.example.verifit.R;
 import com.example.verifit.SessionImporter;
@@ -38,7 +39,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements BottomNavigationView.OnNavigationItemSelectedListener {
 
-    public static DataStorage dataStorage = new DataStorage(); // Holds all Verifit data and handles file I/O
+    public static DataStorage dataStorage = new DataStorage(); // Holds all app data and handles file I/O
     public static String dateSelected; // Used for other activities to get the selected date, by default it's set to today
     public static ViewPager2 viewPager2; // View Pager that is used in main activity
     public static final int READ_REQUEST_CODE = 42;
@@ -47,7 +48,7 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     // les deux ecrans sont des Activity separees, pas de conflit possible, mais autant
     // eviter la confusion en cas de lecture croisee du code.
     public static final int IMPORT_SESSION_REQUEST_CODE = 78;
-    public static String EXPORT_FILENAME = "verifit_backup";
+    public static String EXPORT_FILENAME = AppNames.FILE_PREFIX + "_backup";
 
     public FloatingActionButton fab;
 
@@ -118,9 +119,8 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     {
         setExportBackupName();
 
-        // Retour Romain 05/09/2026 : "Verifit" ne voulait rien dire pour lui - renommé
-        // "Workout" (l'app garde son nom "Verifit" par ailleurs, seul ce titre d'écran
-        // change).
+        // Retour Romain 05/09/2026 : l'ancien nom de l'app ne voulait rien dire pour lui -
+        // titre d'écran renommé "Workout" (l'app s'appelle FitEngine par ailleurs).
         getSupportActionBar().setTitle("Workout");
 
         // From Settings Activity when importing CSV
@@ -281,7 +281,7 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     // Formats backup name in case of export
     public static void setExportBackupName()
     {
-        EXPORT_FILENAME = "verifit";
+        EXPORT_FILENAME = AppNames.FILE_PREFIX;
         Format formatter = new SimpleDateFormat("_yyyy-MM-dd_HH:mm:ss");
         String str_date = formatter.format(new Date());
         EXPORT_FILENAME = EXPORT_FILENAME + str_date;

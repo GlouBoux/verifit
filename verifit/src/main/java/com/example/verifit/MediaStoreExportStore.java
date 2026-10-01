@@ -20,7 +20,7 @@ public class MediaStoreExportStore implements FixedNameExport.Store<Uri>
 {
     private final ContentResolver resolver;
     private final String mimeType;
-    // Dossier relatif tel qu'ecrit a l'insertion, ex. "Documents/Verifit" ; MediaStore le
+    // Dossier relatif tel qu'ecrit a l'insertion, ex. "Documents/FitEngine" ; MediaStore le
     // stocke avec un "/" final, d'ou la requete sur relativePath + "/".
     private final String relativePath;
 

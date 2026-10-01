@@ -20,6 +20,7 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 
+import com.example.verifit.AppNames;
 import com.example.verifit.BackupManager;
 import com.example.verifit.BuildConfig;
 import com.example.verifit.R;
@@ -177,7 +178,7 @@ public class SettingsActivity extends AppCompatActivity {
                 // recopier a la main.
                 String buildInfo = getBuildInfo();
                 ClipboardManager clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-                ClipData clip = ClipData.newPlainText("verifit version", buildInfo);
+                ClipData clip = ClipData.newPlainText(AppNames.FILE_PREFIX + " version", buildInfo);
                 clipboard.setPrimaryClip(clip);
                 Toast.makeText(getContext(), "Copied: " + buildInfo, Toast.LENGTH_SHORT).show();
             }
@@ -216,7 +217,7 @@ public class SettingsActivity extends AppCompatActivity {
                     .setMessage("Backup du " + exportedAt + " : " + backup.getWorkoutDays().size() + " jours, "
                             + backup.countSets() + " séries, " + backup.getKnownExercises().size() + " exercices, "
                             + backup.getGoals().size() + " objectifs.\n\nToutes les données actuelles seront remplacées. "
-                            + "Une copie de l'état actuel est d'abord enregistrée dans Documents/Verifit/auto.")
+                            + "Une copie de l'état actuel est d'abord enregistrée dans Documents/" + AppNames.EXPORT_FOLDER + "/" + AppNames.AUTO_SUBFOLDER + ".")
                     .setPositiveButton("Restaurer", (dialog, which) -> {
                         BackupManager.restore(getContext(), MainActivity.dataStorage, backup);
                         Toast.makeText(getContext(), "Backup restauré", Toast.LENGTH_LONG).show();

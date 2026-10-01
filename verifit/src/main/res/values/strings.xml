@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Vérifit DEV</string>
+    <string name="app_name">FitEngine DEV</string>
 
     <!-- Volet de navigation entre exercices (retour Romain 18/09/2026) - description
          d'accessibilite de l'icone hamburger de AddExerciseActivity (ActionBarDrawerToggle,

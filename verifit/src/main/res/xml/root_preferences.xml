@@ -18,7 +18,7 @@
 
         <!-- Export JSON dedie au pipeline Coaching (retour Romain 24/09/2026, voir
              claude/verifit-migration-plan.md story 2.2) - complement de "Export"
-             (CSV) ci-dessus, meme dossier Documents/Verifit. -->
+             (CSV) ci-dessus, meme dossier Documents/FitEngine. -->
         <Preference
             app:key="exportjson"
             app:summary="Export to phone storage (for Coaching)"
@@ -27,16 +27,16 @@
 
         <!-- Backup complet (point 1.4 de la revue d'architecture du 28/09/2026) : tout ce
              que l'app sauvegarde (voir BackupManager), contrairement au CSV ci-dessus.
-             Des copies automatiques sont aussi faites dans Documents/Verifit/auto. -->
+             Des copies automatiques sont aussi faites dans Documents/FitEngine/auto. -->
         <Preference
             app:key="exportfullbackup"
-            app:summary="Tout exporter (séances, prévu, chrono, supersets, objectifs, notes) dans Documents/Verifit"
+            app:summary="Tout exporter (séances, prévu, chrono, supersets, objectifs, notes) dans Documents/FitEngine"
             app:title="Backup complet"
             app:useSimpleSummaryProvider="false" />
 
         <Preference
             app:key="importfullbackup"
-            app:summary="Remplace toutes les données. Copies automatiques dans Documents/Verifit/auto"
+            app:summary="Remplace toutes les données. Copies automatiques dans Documents/FitEngine/auto"
             app:title="Restaurer un backup complet"
             app:useSimpleSummaryProvider="false" />
 

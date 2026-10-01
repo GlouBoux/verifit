@@ -6,9 +6,9 @@ import java.io.OutputStream;
 
 /**
  * Ecriture d'un fichier sous un nom FIXE, mis a jour sur place (lot D, etape D5,
- * 01/10/2026) : sert a l'export Coaching automatique (verifit_coaching_latest.json), pour
+ * 01/10/2026) : sert a l'export Coaching automatique (fitengine_coaching_latest.json), pour
  * que le fichier synchronise vers le PC garde toujours le meme nom au lieu d'accumuler
- * "verifit_coaching_latest (1).json", "(2)"... comme le fait MediaStore a chaque insert.
+ * "fitengine_coaching_latest (1).json", "(2)"... comme le fait MediaStore a chaque insert.
  *
  * Logique pure, separee de MediaStore (interface Store, implementee par
  * MediaStoreExportStore sur Android) pour etre testee en JUnit.

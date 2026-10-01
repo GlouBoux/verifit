@@ -352,7 +352,7 @@ public class DataStorage {
             // colonnes) : reste a false par defaut, coherent avec la decision 1 de
             // claude/fitnotes-feature-mark-sets-complete.md. Presente (7e colonne) pour
             // un CSV issu du script scripts/convert_fitnotes_to_verifit_csv.py mis a
-            // jour, ou d'un export Verifit (writeFile() ci-dessous) - voir la decision
+            // jour, ou d'un export de l'app (writeFile() ci-dessous) - voir la decision
             // migration du meme document.
             boolean isCompleted = false;
             if(row.length >= 7)
@@ -1122,7 +1122,7 @@ public class DataStorage {
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName); // file name required to contain extestion file mime
                 values.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain");
-                values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS+"/Verifit"); //DIRECTORY
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS+"/"+AppNames.EXPORT_FOLDER); //DIRECTORY
                 Uri extVolumeUri = MediaStore.Files.getContentUri("external");
                 Uri fileUri = context.getContentResolver().insert(extVolumeUri, values);
                 outputStream = context.getContentResolver().openOutputStream(fileUri);
@@ -1135,7 +1135,7 @@ public class DataStorage {
             }
             outputStream.write(buildCsvBackup().getBytes());
             outputStream.close();
-            Toast.makeText(context, "Backup saved in " + Environment.DIRECTORY_DOCUMENTS+"/Verifit" , Toast.LENGTH_LONG).show();
+            Toast.makeText(context, "Backup saved in " + Environment.DIRECTORY_DOCUMENTS+"/"+AppNames.EXPORT_FOLDER , Toast.LENGTH_LONG).show();
         }
         catch (Exception e)
         {
@@ -1148,14 +1148,14 @@ public class DataStorage {
     // complement de l'export CSV ci-dessus (writeFile()) - retour Romain 24/09/2026,
     // voir claude/verifit-migration-plan.md, story 2.2 du Groupe 2 ("il n'existe
     // aujourd'hui aucun chemin d'extraction equivalent a FitNotes pour les donnees
-    // verifit"). Contrairement au CSV, qui n'expose ni plannedWeight/plannedReps ni un
+    // l'app"). Contrairement au CSV, qui n'expose ni plannedWeight/plannedReps ni un
     // format extensible sans decaler des colonnes (voir le commentaire de writeFile()
     // ci-dessus sur ce point deja rencontre plusieurs fois), ce JSON expose directement
     // les memes champs que le modele interne (WorkoutSet), a travers un DTO dedie
     // (CoachingExportSet) qui isole ce contrat des futurs changements internes.
     //
     // Meme mecanique d'ecriture que writeFile() (Storage Access Framework, meme dossier
-    // Documents/Verifit, meme prefixe de nom de fichier EXPORT_FILENAME deja calcule
+    // Documents/FitEngine, meme prefixe de nom de fichier EXPORT_FILENAME deja calcule
     // par MainActivity.setExportBackupName() avant l'appel) - seule differe l'extension
     // (.json) et le contenu ecrit. Reutilise le flux plat WorkoutDay.getSets() (jamais
     // WorkoutDay.getExercises()[].getSets(), qui est une liste DERIVEE et sujette au bug
@@ -1172,7 +1172,7 @@ public class DataStorage {
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
                 values.put(MediaStore.MediaColumns.MIME_TYPE, "application/json");
-                values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS+"/Verifit");
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS+"/"+AppNames.EXPORT_FOLDER);
                 Uri extVolumeUri = MediaStore.Files.getContentUri("external");
                 Uri fileUri = context.getContentResolver().insert(extVolumeUri, values);
                 outputStream = context.getContentResolver().openOutputStream(fileUri);
@@ -1186,7 +1186,7 @@ public class DataStorage {
             String exportedAt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
             outputStream.write(buildCoachingExportJson(exportedAt).getBytes());
             outputStream.close();
-            Toast.makeText(context, "Export JSON Coaching enregistré dans " + Environment.DIRECTORY_DOCUMENTS+"/Verifit", Toast.LENGTH_LONG).show();
+            Toast.makeText(context, "Export JSON Coaching enregistré dans " + Environment.DIRECTORY_DOCUMENTS+"/"+AppNames.EXPORT_FOLDER, Toast.LENGTH_LONG).show();
 
             // Lot D (D5) : met aussi a jour le fichier a nom fixe (l'export automatique de
             // fin de seance, D6, fait la meme chose a l'arret du chrono).
@@ -1201,10 +1201,10 @@ public class DataStorage {
 
     // Nom FIXE de l'export Coaching "dernier etat" (lot D, etape D5, 01/10/2026) : toujours
     // le meme fichier, mis a jour sur place, pour que la synchro vers le PC (Syncthing)
-    // n'accumule pas "(1)", "(2)"... Meme dossier que les autres exports (Documents/Verifit).
-    public static final String LATEST_COACHING_EXPORT_NAME = "verifit_coaching_latest.json";
+    // n'accumule pas "(1)", "(2)"... Meme dossier que les autres exports (Documents/FitEngine).
+    public static final String LATEST_COACHING_EXPORT_NAME = AppNames.LATEST_COACHING_EXPORT_NAME;
 
-    // Ecrit (ou met a jour) verifit_coaching_latest.json avec l'etat actuel des seances.
+    // Ecrit (ou met a jour) fitengine_coaching_latest.json avec l'etat actuel des seances.
     // Android 10+ seulement (meme garde que les autres exports) : renvoie null en dessous.
     // BLOCKED_BY_FOREIGN_FILE = un fichier du meme nom d'une installation precedente
     // occupe la place (voir FixedNameExport) : a signaler a l'utilisateur.
@@ -1217,12 +1217,12 @@ public class DataStorage {
 
         String exportedAt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
         MediaStoreExportStore store = new MediaStoreExportStore(
-                context, Environment.DIRECTORY_DOCUMENTS + "/Verifit", "application/json");
+                context, Environment.DIRECTORY_DOCUMENTS + "/" + AppNames.EXPORT_FOLDER, "application/json");
         return FixedNameExport.write(
                 store, LATEST_COACHING_EXPORT_NAME, buildCoachingExportJson(exportedAt).getBytes("UTF-8"));
     }
 
-    // Met a jour verifit_coaching_latest.json et previent l'utilisateur par un toast
+    // Met a jour fitengine_coaching_latest.json et previent l'utilisateur par un toast
     // (lot D, etape D6) : appele par le bouton "Export JSON" des reglages et, surtout,
     // automatiquement a l'arret du chrono de seance (SessionTimerController). Ne leve
     // jamais : un echec d'export ne doit pas gener l'arret du chrono.
@@ -1233,7 +1233,7 @@ public class DataStorage {
             FixedNameExport.Result latest = writeLatestCoachingExport(context);
             if (latest == FixedNameExport.Result.BLOCKED_BY_FOREIGN_FILE)
             {
-                Toast.makeText(context, LATEST_COACHING_EXPORT_NAME + " existe deja (installation precedente) et ne peut pas etre modifie : supprime-le dans Fichiers > Documents > Verifit, puis relance l'export (Reglages > Export JSON).", Toast.LENGTH_LONG).show();
+                Toast.makeText(context, LATEST_COACHING_EXPORT_NAME + " existe deja (installation precedente) et ne peut pas etre modifie : supprime-le dans Fichiers > Documents > " + AppNames.EXPORT_FOLDER + ", puis relance l'export (Reglages > Export JSON).", Toast.LENGTH_LONG).show();
             }
             else if (latest != null)
             {
