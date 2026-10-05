@@ -1959,6 +1959,15 @@ public class DataStorage {
 
         if(summary.setsImported > 0)
         {
+            // Commentaire de SEANCE du JSON (ex. "Cycle A - Volume", pose par
+            // workout_engine.py : retour Romain 06/10/2026, il deduit le cycle a generer
+            // en relisant la derniere seance executee) -> "Comment Workout" du jour
+            // (WorkoutDay.Comment, affiche en haut de DayActivity). Auparavant lu mais
+            // jamais enregistre. Jamais d'ecrasement d'une note deja tapee a la main : si
+            // le jour a deja un commentaire, le texte importe est ajoute a la ligne, sauf
+            // s'il y figure deja (re-import confirme, meme seance).
+            applyImportedWorkoutComment(day, session.getComment());
+
             if(isNewDay)
             {
                 workoutDays.add(day);
@@ -1967,6 +1976,27 @@ public class DataStorage {
         }
 
         return summary;
+    }
+
+    // Regle de fusion du commentaire de seance importe (voir mergeImportedSession()).
+    // Package-private et statique : testable en JUnit sans Android.
+    static void applyImportedWorkoutComment(WorkoutDay day, String importedComment)
+    {
+        String imported = importedComment == null ? "" : importedComment.trim();
+        if(imported.isEmpty())
+        {
+            return;
+        }
+
+        String existing = day.getComment().trim();
+        if(existing.isEmpty())
+        {
+            day.setComment(imported);
+        }
+        else if(!existing.contains(imported))
+        {
+            day.setComment(existing + "\n" + imported);
+        }
     }
 
 }

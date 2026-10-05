@@ -41,10 +41,10 @@ inside the app.
 | Field | Required | Notes |
 |---|---|---|
 | `date` | no | `yyyy-MM-dd`. If omitted, the sets are added to whichever day you opened "Import Session" from. |
-| `comment` | no | Day-level note. Currently read but not stored anywhere (the app has no concept of a day-level comment) — kept for forward compatibility. |
+| `comment` | no | Day-level note. Since 2026-10-06 it is stored as the day's "Comment Workout" (`WorkoutDay.Comment`, shown at the top of the day screen; `workout_engine.py` sends e.g. `Cycle A - Volume`). Never overwrites a note already typed by hand: if the day already has a comment, the imported text is appended on a new line (unless it is already in it). |
 | `exercises[].name` | **yes** | Matched against known exercises by exact string (Verifit has no exercise IDs, only names — same reason "Duplicate Exercise" exists). A name not seen before is created automatically. |
 | `exercises[].bodyPart` | no | One of `Chest`, `Back`, `Shoulders`, `Biceps`, `Triceps`, `Legs`, `Abs` (see `R.array.Categories`), but not enforced. Only used when `name` is a **new** exercise — if the exercise already exists, its existing body part is kept (a re-import never silently reclassifies it). Leave empty for a new exercise and just edit its category once in the app afterwards. |
-| `exercises[].comment` | no | Per-exercise comment (e.g. machine settings), stored once per exercise for that day, same as the existing "add exercise" screen. |
+| `exercises[].comment` | no | Per-exercise comment. **Currently read but not stored by the import** (`mergeImportedSession()` only reads sets). |
 | `exercises[].sets[].weight` | **yes** | kg, numeric. |
 | `exercises[].sets[].reps` | **yes** | numeric. |
 | `exercises[].sets[].comment` | no | Per-set **plan** text (typically the generator's analysis, e.g. `S1 Ancrage — nouveau PR estimé +4.5 kg (+9.9 %) vs 45.5 kg — théorique 50.1 kg — filet 2 reps`). Since 2026-09-21 it is stored in the set's separate, read-only `planComment` field (shown in the "Plan" block of the set comment panel, one ` — ` segment per line) and **never** in the user's own note (`comment`, the "My note" block). Keep this text format stable: `pr_tracking.py` (Coaching repo) parses it with ` — ` / `vs X kg` / `théorique X kg` / `filet N`, and skips sets whose comment is exactly `Échauffement`. |
