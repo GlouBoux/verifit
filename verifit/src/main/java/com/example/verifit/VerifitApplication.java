@@ -43,7 +43,15 @@ public class VerifitApplication extends Application {
             }
             @Override public void onActivityStarted(Activity activity) {}
             @Override public void onActivityResumed(Activity activity) {}
-            @Override public void onActivityPaused(Activity activity) {}
+            // Lot D, etape D9 (05/10/2026) : quand l'utilisateur quitte un ecran (autre
+            // ecran de l'app, ou retour a l'accueil Android), un re-export Coaching en
+            // attente apres une correction de seance est execute tout de suite, sans
+            // attendre son delai : Android peut tuer l'app juste apres. Sans effet s'il n'y
+            // a rien en attente (voir DataStorage.flushCoachingReexport()).
+            @Override
+            public void onActivityPaused(Activity activity) {
+                MainActivity.dataStorage.flushCoachingReexport();
+            }
             @Override public void onActivityStopped(Activity activity) {}
             @Override public void onActivitySaveInstanceState(Activity activity, Bundle outState) {}
             @Override public void onActivityDestroyed(Activity activity) {}

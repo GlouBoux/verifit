@@ -11,6 +11,8 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.widget.Toast;
@@ -74,6 +76,17 @@ public class DataStorage {
     // saveKnownExerciseData() refusent d'ecrire tant que le chargement n'a pas eu lieu.
     private boolean workoutDataLoaded = false;
     private boolean knownExercisesLoaded = false;
+
+    // Lot D, etape D9 (05/10/2026) : re-export automatique du fichier Coaching quand une
+    // seance DEJA ARRETEE est corrigee (reps, poids, note, case "faite", ajout ou
+    // suppression de serie). Voir CoachingReexportTracker pour la regle et
+    // scheduleCoachingReexport() plus bas pour le declenchement.
+    private final CoachingReexportTracker coachingReexportTracker = new CoachingReexportTracker();
+    private Handler coachingReexportHandler;
+    private Runnable pendingCoachingReexport;
+    // Delai avant re-export : regroupe une rafale de corrections (plusieurs series de
+    // suite) en un seul ecrit, au lieu d'un fichier reecrit puis resynchronise a chaque tap.
+    private static final long COACHING_REEXPORT_DELAY_MS = 3000L;
 
     // Charge (une seule fois par process) seances, exercices connus et objectifs depuis
     // la sauvegarde. Appele par VerifitApplication a la creation de chaque Activity,
@@ -768,6 +781,62 @@ public class DataStorage {
         String json = gson.toJson(workoutDays);
         editor.putString("workouts",json);
         editor.apply();
+
+        // D9 : si une seance arretee vient d'etre corrigee, refaire l'export Coaching.
+        scheduleCoachingReexport(ct.getApplicationContext());
+    }
+
+    // Planifie (apres COACHING_REEXPORT_DELAY_MS, delai relance a chaque nouvelle
+    // sauvegarde) la verification "un jour au chrono arrete differe-t-il du fichier
+    // exporte ?". La verification et l'ecriture se font au declenchement, pas ici : une
+    // sauvegarde reste aussi legere qu'avant. Fil principal uniquement.
+    private void scheduleCoachingReexport(final Context appContext)
+    {
+        if (coachingReexportHandler == null)
+        {
+            coachingReexportHandler = new Handler(Looper.getMainLooper());
+        }
+        if (pendingCoachingReexport != null)
+        {
+            coachingReexportHandler.removeCallbacks(pendingCoachingReexport);
+        }
+        pendingCoachingReexport = new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                pendingCoachingReexport = null;
+                runCoachingReexportIfNeeded(appContext);
+            }
+        };
+        coachingReexportHandler.postDelayed(pendingCoachingReexport, COACHING_REEXPORT_DELAY_MS);
+    }
+
+    // Execute tout de suite un re-export en attente (sans attendre le delai) : appele
+    // quand l'utilisateur quitte un ecran (VerifitApplication.onActivityPaused), pour ne
+    // pas perdre une correction si Android tue l'app juste apres. Sans effet s'il n'y a
+    // rien en attente.
+    public void flushCoachingReexport()
+    {
+        if (pendingCoachingReexport == null)
+        {
+            return;
+        }
+        Runnable pending = pendingCoachingReexport;
+        coachingReexportHandler.removeCallbacks(pending);
+        pending.run();
+    }
+
+    private void runCoachingReexportIfNeeded(Context appContext)
+    {
+        if (!workoutDataLoaded || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
+        {
+            return;
+        }
+        if (coachingReexportTracker.stoppedDayChanged(workoutDays))
+        {
+            exportLatestCoachingAndNotify(appContext);
+        }
     }
 
     // Loads Workout_Days Array List from shared preferences
@@ -797,6 +866,10 @@ public class DataStorage {
             // Un jour qui echouerait a se reconstruire (donnee corrompue) garde une liste
             // d'exercices vide plutot que d'empecher le chargement de tout l'historique.
             rebuildAllDerivedData();
+
+            // D9 : l'etat charge sert de reference "deja exporte" (sans cela, la premiere
+            // sauvegarde apres un redemarrage de l'app refairait l'export a tort).
+            coachingReexportTracker.remember(workoutDays);
 
             workoutDataLoaded = true;
         }
@@ -843,6 +916,7 @@ public class DataStorage {
 
         workoutDataLoaded = true;
         knownExercisesLoaded = true;
+        coachingReexportTracker.remember(workoutDays); // D9 : une restauration ne declenche pas de re-export
         saveWorkoutData(context);
         saveKnownExerciseData(context);
         saveGoalsData(context);
@@ -1218,8 +1292,16 @@ public class DataStorage {
         String exportedAt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
         MediaStoreExportStore store = new MediaStoreExportStore(
                 context, Environment.DIRECTORY_DOCUMENTS + "/" + AppNames.EXPORT_FOLDER, "application/json");
-        return FixedNameExport.write(
+        FixedNameExport.Result result = FixedNameExport.write(
                 store, LATEST_COACHING_EXPORT_NAME, buildCoachingExportJson(exportedAt).getBytes("UTF-8"));
+
+        // D9 : le fichier vient d'etre ecrit, cet etat devient la reference "deja exporte"
+        // (arret du chrono, bouton Export JSON et re-export automatique passent tous ici).
+        if (result != FixedNameExport.Result.BLOCKED_BY_FOREIGN_FILE)
+        {
+            coachingReexportTracker.remember(workoutDays);
+        }
+        return result;
     }
 
     // Met a jour fitengine_coaching_latest.json et previent l'utilisateur par un toast
