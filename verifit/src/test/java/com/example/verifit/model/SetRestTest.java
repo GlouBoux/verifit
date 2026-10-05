@@ -166,6 +166,75 @@ public class SetRestTest
         assertEquals("", SetRest.labelAt(null, 1));
     }
 
+    // Serie issue d'un Import Session : aucun horodatage au depart.
+    private static WorkoutSet imported()
+    {
+        return new WorkoutSet("2026-10-05", "Row TG", "Back", 3.0, 40.0);
+    }
+
+    @Test
+    public void validation_serieImporteeSansHorodatageEnRecoitUn()
+    {
+        WorkoutSet s = imported();
+        assertEquals(false, s.hasTimestamp());
+
+        assertEquals(true, s.stampValidationIfMissing(T0));
+        assertEquals(true, s.hasTimestamp());
+        assertEquals(Long.valueOf(T0), s.getTimestamp());
+    }
+
+    @Test
+    public void validation_premierGesteGagneJamaisDEcrasement()
+    {
+        WorkoutSet s = imported();
+        s.stampValidationIfMissing(T0);
+
+        // Un second geste (Update, nouvelle coche) plus tard ne change rien.
+        assertEquals(false, s.stampValidationIfMissing(T0 + 600_000L));
+        assertEquals(Long.valueOf(T0), s.getTimestamp());
+
+        // Meme chose pour une serie saisie via Save (horodatage deja pose a la creation).
+        WorkoutSet saved = set(T0 + 5_000L);
+        assertEquals(false, saved.stampValidationIfMissing(T0 + 900_000L));
+        assertEquals(Long.valueOf(T0 + 5_000L), saved.getTimestamp());
+    }
+
+    @Test
+    public void validation_seriesImporteesCocheesAfficheLeRepos()
+    {
+        // Cas du retour UAT : plan importe, series cochees a 90 s puis 150 s d'ecart.
+        WorkoutSet s1 = imported();
+        WorkoutSet s2 = imported();
+        WorkoutSet s3 = imported();
+        List<WorkoutSet> sets = Arrays.asList(s1, s2, s3);
+
+        // Avant toute validation : aucun repos, aucun libelle.
+        assertEquals("", SetRest.labelAt(sets, 1));
+
+        s1.stampValidationIfMissing(T0);
+        s2.stampValidationIfMissing(T0 + 90_000L);
+        s3.stampValidationIfMissing(T0 + 240_000L);
+
+        assertEquals("", SetRest.labelAt(sets, 0));
+        assertEquals("repos 1:30", SetRest.labelAt(sets, 1));
+        assertEquals("repos 2:30", SetRest.labelAt(sets, 2));
+    }
+
+    @Test
+    public void validation_serieNonCocheeCasseSeulementSesVoisines()
+    {
+        // La 2e n'est jamais validee : pas de repos pour elle ni pour la 3e.
+        WorkoutSet s1 = imported();
+        WorkoutSet s2 = imported();
+        WorkoutSet s3 = imported();
+        s1.stampValidationIfMissing(T0);
+        s3.stampValidationIfMissing(T0 + 240_000L);
+        List<WorkoutSet> sets = Arrays.asList(s1, s2, s3);
+
+        assertEquals("", SetRest.labelAt(sets, 1));
+        assertEquals("", SetRest.labelAt(sets, 2));
+    }
+
     @Test
     public void label_reposOuVide()
     {

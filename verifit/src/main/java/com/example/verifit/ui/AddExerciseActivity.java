@@ -446,6 +446,11 @@ public class AddExerciseActivity extends AppCompatActivity {
         updatedSet.setReps(reps);
         updatedSet.setWeight(weight);
 
+        // Repos reel (retour UAT Romain 05/10/2026) : une serie importee n'a pas
+        // d'horodatage ; le premier Update (ou la case "serie faite") en pose un. Jamais
+        // d'ecrasement d'un horodatage existant. Annuler l'Update n'y touche pas.
+        updatedSet.stampValidationIfMissing(System.currentTimeMillis());
+
         // Manually update data because of bad design choices
         MainActivity.dataStorage.getWorkoutDays().get(finalI).UpdateData();
 

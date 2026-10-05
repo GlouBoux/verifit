@@ -164,6 +164,21 @@ public class WorkoutSet {
     }
 
 
+    // Pose l'horodatage de validation SEULEMENT s'il n'y en a pas deja un (retour UAT
+    // Romain 05/10/2026 : les series importees n'en avaient jamais, donc aucun repos
+    // affiche). Regle "le premier geste gagne" (Save, Update ou case "serie faite") :
+    // jamais d'ecrasement d'un horodatage existant. Retourne vrai s'il a ete pose.
+    public boolean stampValidationIfMissing(long nowMillis)
+    {
+        if (this.timestamp != null)
+        {
+            return false;
+        }
+        this.timestamp = nowMillis;
+        return true;
+    }
+
+
     // Vrai si la serie a un plan du script (planComment non vide).
     public boolean hasPlanComment()
     {

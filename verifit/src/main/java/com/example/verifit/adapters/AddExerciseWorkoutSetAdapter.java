@@ -223,9 +223,27 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
                 }
 
                 boolean isCompleted = holder.completedCheckbox.isChecked();
-                Workout_Sets.get(adapterPosition).setCompleted(isCompleted);
+                WorkoutSet tapped = Workout_Sets.get(adapterPosition);
+                tapped.setCompleted(isCompleted);
+
+                // Repos reel (retour UAT Romain 05/10/2026) : les series importees n'ont
+                // jamais d'horodatage (seul clickSave() en posait un), donc aucun repos
+                // ne s'affichait. La premiere validation (Save, Update ou case cochee)
+                // pose l'horodatage ; on n'ecrase jamais un horodatage deja present, et
+                // decocher n'efface rien.
+                if (isCompleted)
+                {
+                    tapped.stampValidationIfMissing(System.currentTimeMillis());
+                }
 
                 MainActivity.dataStorage.saveWorkoutData(ct);
+
+                // Le libelle "repos" de cette serie et de la suivante en depend.
+                notifyItemChanged(adapterPosition);
+                if (adapterPosition + 1 < Workout_Sets.size())
+                {
+                    notifyItemChanged(adapterPosition + 1);
+                }
             }
         });
 
