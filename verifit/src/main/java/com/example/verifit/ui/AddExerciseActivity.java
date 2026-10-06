@@ -1852,12 +1852,22 @@ public class AddExerciseActivity extends AppCompatActivity {
         ExerciseHistoryExerciseAdapter workoutExerciseAdapter4 = new ExerciseHistoryExerciseAdapter(AddExerciseActivity.this, allPerformedSessions);
 
 
-        // Crash Here
-        recyclerView.setAdapter(workoutExerciseAdapter4);
+        // Le layoutManager doit etre pose AVANT l'adapter : l'adapter ajoute son scroll
+        // infini des qu'il est attache (onAttachedToRecyclerView) et lit le layoutManager.
         recyclerView.setLayoutManager(new LinearLayoutManager(AddExerciseActivity.this));
+        recyclerView.setAdapter(workoutExerciseAdapter4);
 
 
         alertDialog.show();
+
+        // Fenetre plus large et plus haute (retour Romain 06/10/2026, historique "pas
+        // propre") : le dialogue par defaut est etroit, ce qui faisait casser "reps" sur
+        // deux lignes. Pleine largeur, 90 % de la hauteur de l'ecran.
+        if (alertDialog.getWindow() != null)
+        {
+            int windowHeight = (int) (getResources().getDisplayMetrics().heightPixels * 0.9f);
+            alertDialog.getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, windowHeight);
+        }
 
         return super.onOptionsItemSelected(item);
     }

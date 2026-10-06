@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- En-tete de jour de l'historique (style FitNotes : date en majuscules + trait bleu).
+     Un tap ouvre les stats du jour (meme dialogue qu'avant). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/hist_header_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:orientation="vertical"
+    android:paddingStart="16dp"
+    android:paddingLeft="16dp"
+    android:paddingTop="20dp"
+    android:paddingEnd="16dp"
+    android:paddingRight="16dp">
+
+    <TextView
+        android:id="@+id/hist_date"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="LUNDI, SEPTEMBRE 14"
+        android:textAllCaps="true"
+        android:textColor="@color/core_black"
+        android:textSize="18sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:layout_marginTop="6dp"
+        android:background="@color/colorPrimary" />
+
+</LinearLayout>

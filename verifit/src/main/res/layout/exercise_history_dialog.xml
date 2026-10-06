@@ -1,45 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+<!-- Historique d'un exercice (menu "Exercise History").
+     Refonte 06/10/2026 (retour Romain : "l'onglet history n'est pas aligne, ce n'est pas
+     propre, fais comme FitNotes, scroll infini") : une seule liste a plat (en-tete de
+     date + lignes de series, voir ExerciseHistoryExerciseAdapter) au lieu de cartes
+     imbriquees, et la hauteur est donnee par un poids (0dp + layout_weight) pour que la
+     liste occupe toute la fenetre. La fenetre elle-meme est agrandie en largeur par
+     AddExerciseActivity.setupExerciseHistory(). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/tv_exercise_name"
-        android:layout_width="300dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginLeft="20dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:text="Hammer Strength Seated Dumbell Press"
         android:textColor="@color/colorPrimary"
-        android:textSize="22sp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-    </TextView>
-
+        android:textSize="22sp" />
 
     <View
         android:id="@+id/blue_line"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginTop="20dp"
-        android:background="@color/colorPrimary"
-        app:layout_constraintTop_toBottomOf="@+id/tv_exercise_name"
-        tools:layout_editor_absoluteX="16dp" />
+        android:layout_marginTop="12dp"
+        android:background="@color/colorPrimary" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView_Exercise_History"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginBottom="20dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/blue_line" />
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="8dp" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

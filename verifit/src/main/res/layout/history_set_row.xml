@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ligne de serie de l'historique, colonnes ALIGNEES comme un tableau (retour Romain
+     06/10/2026, modele FitNotes) :
+       [commentaire 24dp] [ecart 24dp] [trophee 24dp] [n° 24dp] [poids ........ kg] [reps ........ reps]
+     - Chaque badge vit dans un FrameLayout de largeur FIXE : bindIndicator() met l'icone
+       commentaire en GONE quand il n'y a rien a montrer, ce qui, sans ce conteneur,
+       decalerait toutes les colonnes suivantes.
+     - Poids et reps : deux cellules de meme poids (layout_weight=1), chacune = nombre
+       aligne a droite + unite de largeur FIXE juste apres, donc le bord droit de tous les
+       nombres tombe au meme x sur toutes les lignes, que le nombre ait 1 ou 3 chiffres.
+     - Aucune case a cocher ici (l'historique est en lecture seule), contrairement a
+       workout_set_row.xml dont les colonnes absolues de 194dp debordaient dans le dialogue
+       et faisaient passer "reps" a la ligne ("rep / s"). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/hist_set_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:minHeight="52dp"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingLeft="12dp"
+        android:paddingEnd="16dp"
+        android:paddingRight="16dp">
+
+        <FrameLayout
+            android:layout_width="24dp"
+            android:layout_height="24dp">
+
+            <ImageView
+                android:id="@+id/hist_comment_icon"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@null"
+                android:padding="2dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_comment_24px"
+                android:visibility="gone"
+                app:tint="@color/colorPrimary" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="24dp"
+            android:layout_height="24dp">
+
+            <ImageView
+                android:id="@+id/hist_discrepancy_badge"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@null"
+                android:padding="2dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_error_outline_24px"
+                android:visibility="gone"
+                app:tint="@color/red" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="24dp"
+            android:layout_height="24dp">
+
+            <ImageView
+                android:id="@+id/hist_pr_badge"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@null"
+                android:padding="2dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_emoji_events_24px"
+                android:visibility="gone"
+                app:tint="@color/colorPrimary" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/hist_set_number"
+            android:layout_width="24dp"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:text="1"
+            android:textColor="@color/core_grey_40"
+            android:textSize="14sp" />
+
+        <!-- Cellule poids -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_vertical|end"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/hist_weight"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="300.5"
+                android:textColor="@color/core_black"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="34dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginLeft="4dp"
+                android:maxLines="1"
+                android:text="kg" />
+        </LinearLayout>
+
+        <!-- Cellule reps -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_vertical|end"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/hist_reps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="20"
+                android:textColor="@color/core_black"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginLeft="4dp"
+                android:maxLines="1"
+                android:text="reps" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginLeft="12dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:background="@color/core_grey_02" />
+
+</LinearLayout>
