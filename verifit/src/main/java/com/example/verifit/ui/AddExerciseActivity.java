@@ -19,8 +19,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.graphics.Matrix;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -31,20 +29,15 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.WindowManager;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.verifit.KeyboardHider;
-import com.example.verifit.MonthXAxisFormatter;
 import com.example.verifit.RestTimerBarTicker;
 import com.example.verifit.RestTimerReceiver;
 import com.example.verifit.SessionTimerTicker;
@@ -57,24 +50,12 @@ import com.example.verifit.model.SupersetGroup;
 import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
-import com.github.mikephil.charting.animation.Easing;
-import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.components.Legend;
-import com.github.mikephil.charting.components.XAxis;
-import com.github.mikephil.charting.data.Entry;
-import com.github.mikephil.charting.data.LineData;
-import com.github.mikephil.charting.data.LineDataSet;
-import com.github.mikephil.charting.highlight.Highlight;
-import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
 import com.google.android.material.button.MaterialButton;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class AddExerciseActivity extends AppCompatActivity {
 
@@ -164,8 +145,6 @@ public class AddExerciseActivity extends AppCompatActivity {
     // à CHAQUE serie sans y avoir consenti serait plus intrusif - à activer
     // explicitement dans la boite de dialogue "Timer".
     private static final String REST_TIMER_AUTO_START_PREF_KEY = "rest_timer_auto_start";
-
-    private AlertDialog currentDialog = null;
 
     // Multi-select delete (retour Romain 05/09/2026) : sélectionner plusieurs séries et
     // les supprimer en un coup, au lieu d'un "Clear" fastidieux série par série.
@@ -1544,116 +1523,15 @@ public class AddExerciseActivity extends AppCompatActivity {
             startActivity(intent);
         }
 
-        // Exercise Stats Chart
-        else if (item.getItemId() == R.id.graph) {
-
-
-            // Prepare to show exercise history dialog box
-            LayoutInflater inflater = LayoutInflater.from(AddExerciseActivity.this);
-            View view = inflater.inflate(R.layout.exercise_graph_dialog, null);
-            AlertDialog alertDialog = new AlertDialog.Builder(AddExerciseActivity.this)
-                    .setView(view)
-                    .create();
-
-            // Get Chart Object
-            LineChart lineChart = view.findViewById(R.id.lineChart);
-
-            // Create Array List that will hold graph data
-            ArrayList<Entry> volumeValues = new ArrayList<>();
-            ArrayList<Entry> maxWeightValues = new ArrayList<>();
-            ArrayList<Entry> totalRepsValues = new ArrayList<>();
-
-
-            ArrayList<String> workoutDates = new ArrayList<>();
-            ArrayList<String> workoutMonths = new ArrayList<>();
-
-            int x = 0;
-
-            // Get Exercise Volume
-            for (int i = 0; i < MainActivity.dataStorage.getWorkoutDays().size(); i++) {
-                for (int j = 0; j < MainActivity.dataStorage.getWorkoutDays().get(i).getExercises().size(); j++) {
-                    WorkoutExercise currentExercise = MainActivity.dataStorage.getWorkoutDays().get(i).getExercises().get(j);
-
-                    if (currentExercise.getExercise().equals(exercise_name)) {
-                        volumeValues.add(new Entry(x, currentExercise.getVolume().floatValue()));
-
-                        maxWeightValues.add(new Entry(x, currentExercise.getMaxWeight().floatValue()));
-
-                        totalRepsValues.add(new Entry(x, currentExercise.getTotalReps().floatValue()));
-
-                        // Add the date corresponding to the data point
-                        workoutDates.add(MainActivity.dataStorage.getWorkoutDays().get(i).getDate());
-
-                        // Add the month corresponding to the data point
-                        String date = MainActivity.dataStorage.getWorkoutDays().get(i).getDate();
-                        String month = getMonthFromDateString(date);
-                        workoutMonths.add(month);
-
-                        x++;
-                    }
-                }
-            }
-
-            if(x == 0)
-            {
-                SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(AddExerciseActivity.this);
-                snackBarWithMessage.showSnackbar("No data found");
-                return super.onOptionsItemSelected(item);
-            }
-
-
-            // Chart Data Spinner
-            Spinner graph_value_spinner = view.findViewById(R.id.graph_spinner);
-            String[] graph_value_spinner_options = {"Volume", "Weight", "Reps"};
-            ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, graph_value_spinner_options);
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            graph_value_spinner.setAdapter(adapter);
-            graph_value_spinner.setSelection(0);
-
-
-            // Chart Timeframe Spinner
-            Spinner graph_time_spinner = view.findViewById(R.id.graph_time_spinner);
-            String[] graph_time_spinner_options = {"All Time", "Last Year", "6 months", "3 months", "1 month"};
-            ArrayAdapter<String> adapter1 = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, graph_time_spinner_options);
-            adapter1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            graph_time_spinner.setAdapter(adapter1);
-            graph_time_spinner.setSelection(0);
-
-
-            graph_value_spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                @Override
-                public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                    String selectedOption1 = graph_time_spinner.getSelectedItem().toString();
-                    String selectedOption2 = graph_value_spinner_options[i];
-
-                    setupChartWithOptions(selectedOption1, selectedOption2, volumeValues, maxWeightValues,totalRepsValues, workoutDates, workoutMonths, alertDialog, lineChart);
-                }
-
-                @Override
-                public void onNothingSelected(AdapterView<?> adapterView) {
-                    // Do nothing
-                }
-            });
-
-
-            graph_time_spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                @Override
-                public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                    String selectedOption1 = graph_time_spinner_options[i];
-                    String selectedOption2 = graph_value_spinner.getSelectedItem().toString();
-
-                    setupChartWithOptions(selectedOption1, selectedOption2, volumeValues, maxWeightValues,totalRepsValues, workoutDates, workoutMonths, alertDialog, lineChart);
-                }
-
-                @Override
-                public void onNothingSelected(AdapterView<?> adapterView) {
-                    // Do nothing
-                }
-            });
-
-
-            // Default option is volume
-            setupLineChart(alertDialog, volumeValues, lineChart, workoutMonths, workoutDates,"kg", false);
+        // Onglet Graph (retour Romain 06/10/2026 : "l'onglet graph est inutilisable
+        // actuellement [...] reprend ce que fait FitNotes"). L'ancien dialogue "Progress"
+        // (Volume / Weight / Reps, axe Y masque) est remplace par un ecran complet :
+        // voir ExerciseGraphActivity.
+        else if (item.getItemId() == R.id.graph)
+        {
+            Intent graphIntent = new Intent(this, ExerciseGraphActivity.class);
+            graphIntent.putExtra(ExerciseGraphActivity.EXTRA_EXERCISE_NAME, exercise_name);
+            startActivity(graphIntent);
         }
 
         // Retour Romain 07/09/2026 : reglage "quels boutons je veux display" a cote du
@@ -1707,110 +1585,6 @@ public class AddExerciseActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void setupChartWithOptions(String selectedOption1, String selectedOption2, ArrayList<Entry> volumeValues, ArrayList<Entry> maxWeightValues,ArrayList<Entry> totalRepsValues, ArrayList<String> workoutDates, ArrayList<String> workoutMonths, AlertDialog alertDialog, LineChart lineChart){
-        String label = new String();
-        ArrayList<Entry> actualValues = new ArrayList<>();
-        ArrayList<Entry> finalValues = new ArrayList<>();
-
-
-        if(selectedOption2.equals("Weight"))
-        {
-            actualValues = maxWeightValues;
-            label = "kg";
-        }
-        else if(selectedOption2.equals("Volume"))
-        {
-            actualValues = volumeValues;
-            label = "kg";
-        }
-        else if(selectedOption2.equals("Reps"))
-        {
-            actualValues = totalRepsValues;
-            label = "reps";
-        }
-
-        int index = -1;
-
-        if(selectedOption1.equals("All Time"))
-        {
-            index = 0;
-        }
-        else if(selectedOption1.equals("Last Year"))
-        {
-            index = getIndexOfLastXMonths(workoutDates, 12);
-        }
-        else if(selectedOption1.equals("6 months"))
-        {
-            index = getIndexOfLastXMonths(workoutDates, 6);
-        }
-        else if(selectedOption1.equals("3 months"))
-        {
-            index = getIndexOfLastXMonths(workoutDates, 3);
-        }
-        else if(selectedOption1.equals("1 month"))
-        {
-            index = getIndexOfLastXMonths(workoutDates, 1);
-        }
-
-        // Show all
-        if(index == -1)
-        {
-            index = actualValues.size();
-        }
-
-        finalValues = new ArrayList<>(actualValues.subList(index, actualValues.size()));
-        setupLineChart(alertDialog, finalValues , lineChart, workoutMonths, workoutDates, label, true);
-    }
-
-    private int getIndexOfLastXMonths(ArrayList<String> workoutDates, int months){
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MONTH, -months);
-        Date oneMonthBefore = calendar.getTime();
-
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        String givenDate = dateFormat.format(oneMonthBefore);
-        return findFirstDateAfter(workoutDates, givenDate);
-    }
-
-    public int findFirstDateAfter(ArrayList<String> workoutDates, String givenDate) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        Date givenDateObj;
-        try {
-            givenDateObj = dateFormat.parse(givenDate);
-        } catch (ParseException e) {
-            e.printStackTrace();
-            return -1; // If the given date cannot be parsed
-        }
-
-        for (int i = 0; i < workoutDates.size(); i++) {
-            Date currentDateObj;
-            try {
-                currentDateObj = dateFormat.parse(workoutDates.get(i));
-            } catch (ParseException e) {
-                e.printStackTrace();
-                continue;
-            }
-
-            if (currentDateObj.after(givenDateObj)) {
-                return i;
-            }
-        }
-
-        return -1; // If no date is found after the given date
-    }
-
-    private String getMonthFromDateString(String dateString) {
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-            Date date = sdf.parse(dateString);
-            SimpleDateFormat monthFormat = new SimpleDateFormat("MMM dd", Locale.getDefault());
-            return monthFormat.format(date);
-        } catch (ParseException e)
-        {
-            e.printStackTrace();
-            return "";
-        }
-    }
 
 
     public boolean setupExerciseHistory(MenuItem item) {
@@ -1873,150 +1647,6 @@ public class AddExerciseActivity extends AppCompatActivity {
     }
 
 
-    public void setupLineChart(AlertDialog alertDialog, ArrayList<Entry> volumeValues, LineChart lineChart, ArrayList<String> workoutMonths, ArrayList<String> workoutDates, String label, boolean showYaxis) {
-        LineDataSet volumeSet = new LineDataSet(volumeValues, label);
-        LineData data = new LineData(volumeSet);
-
-        // Style the line and the values
-        volumeSet.setLineWidth(3f);
-        volumeSet.setColor(ContextCompat.getColor(AddExerciseActivity.this, R.color.colorPrimary));
-        volumeSet.setCircleColor(ContextCompat.getColor(AddExerciseActivity.this, R.color.colorPrimary));
-        volumeSet.setCircleRadius(2f);
-        volumeSet.setCircleHoleColor(ContextCompat.getColor(AddExerciseActivity.this, R.color.colorPrimary));
-        volumeSet.setValueTextSize(10f);
-        volumeSet.setValueTextColor(Color.BLACK);
-//        volumeSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
-        // Remove circles around data points
-        volumeSet.setDrawCircles(true);
-
-        // Hide data values next to points
-        volumeSet.setDrawValues(false);
-
-        // Style the chart
-        lineChart.setData(data);
-        lineChart.getDescription().setEnabled(false);
-        lineChart.setDrawGridBackground(false);
-        lineChart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
-        lineChart.getXAxis().setDrawGridLines(false);
-        lineChart.getAxisLeft().setDrawGridLines(false);
-        lineChart.getAxisRight().setEnabled(false);
-
-        // Enable horizontal grid lines
-        lineChart.getAxisLeft().setDrawGridLines(true);
-        lineChart.getAxisLeft().setGridColor(Color.LTGRAY);
-        lineChart.getAxisLeft().setGridLineWidth(1f);
-
-
-        // Disable Y-axis line
-        lineChart.getAxisLeft().setDrawAxisLine(false);
-        lineChart.getAxisLeft().setDrawLabels(false);
-
-        // Hide Y-axis values
-        lineChart.getAxisLeft().setEnabled(true);
-        lineChart.getAxisLeft().setTextSize(0f);
-        lineChart.getXAxis().setEnabled(true);
-
-        // Set the custom X-axis value formatter
-        XAxis xAxis = lineChart.getXAxis();
-        xAxis.setValueFormatter(new MonthXAxisFormatter(workoutMonths));
-        xAxis.setGranularity(2f); // Set minimum interval to 1
-        xAxis.setGranularityEnabled(true); // Enable granularity
-
-        xAxis.setLabelCount(5, false); // Display only 5 labels on the X-axis
-
-
-        // Enable pinch zooming
-        lineChart.setPinchZoom(true);
-
-        // Enable scaling (zooming) on both X and Y axes
-        lineChart.setScaleEnabled(true);
-
-        lineChart.animateXY(1000, 1000, Easing.EaseInOutCubic);
-
-        // Reset chart
-        lineChart.fitScreen();
-        lineChart.getViewPortHandler().refresh(new Matrix(), lineChart, true);
-        lineChart.invalidate();
-
-
-        // Zoom in to show the last X points
-//        int pointsToShow = 10;
-//        lineChart.setVisibleXRange(pointsToShow, pointsToShow);
-//        lineChart.moveViewToX(volumeValues.size() - pointsToShow);
-
-
-        // Style legend
-        Legend legend = lineChart.getLegend();
-        legend.setOrientation(Legend.LegendOrientation.VERTICAL);
-        legend.setHorizontalAlignment(Legend.LegendHorizontalAlignment.LEFT);
-        legend.setVerticalAlignment(Legend.LegendVerticalAlignment.CENTER);
-        legend.setDrawInside(true);
-        legend.setXOffset(30f); // Adjust this value to move the legend horizontally
-        legend.setYOffset(-270); // Adjust this value to move the legend vertically
-        legend.setTextSize(12f);
-        legend.setTextColor(Color.BLACK);
-        legend.setForm(Legend.LegendForm.LINE);
-        legend.setFormLineWidth(3f);
-        legend.setFormSize(14f);
-
-        lineChart.setOnChartValueSelectedListener(new OnChartValueSelectedListener() {
-            @Override
-            public void onValueSelected(Entry e, Highlight h) {
-                popupChartAlertDialog(e, workoutMonths, label);
-            }
-
-            @Override
-            public void onNothingSelected() {
-                // Do nothing
-            }
-        });
-
-
-        // Show Chart Dialog box
-        alertDialog.show();
-    }
-
-    public void popupChartAlertDialog(Entry e, ArrayList<String> workoutMonths, String label) {
-        float xValue = e.getX();
-
-        // Dismiss the current dialog if it is showing
-        if (currentDialog != null && currentDialog.isShowing()) {
-            currentDialog.dismiss();
-        }
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(AddExerciseActivity.this);
-        builder.setTitle(workoutMonths.get((int) xValue));
-
-        LayoutInflater inflater = LayoutInflater.from(AddExerciseActivity.this);
-        View dialogView = inflater.inflate(R.layout.custom_alert_dialog, null);
-        builder.setView(dialogView);
-
-        TextView messageTextView = dialogView.findViewById(R.id.message_text_view);
-        messageTextView.setText(String.valueOf(e.getY()) + " " + label);
-
-        AlertDialog dialog = builder.create();
-
-        // Set custom width (in pixels)
-        int customWidth = 600; // You can change this value to your desired width
-
-        // Set the layout parameters
-        WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams();
-        layoutParams.copyFrom(dialog.getWindow().getAttributes());
-        layoutParams.width = customWidth;
-        layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
-
-        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.WHITE));
-
-
-        // Show the dialog
-        dialog.show();
-
-        // Apply the layout parameters
-        dialog.getWindow().setAttributes(layoutParams);
-
-        // Set the current dialog to the newly created dialog
-        currentDialog = dialog;
-    }
 
     public void setupTimer() {
 

@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Onglet Graph d'un exercice (retour Romain 06/10/2026 : "l'onglet graph est inutilisable
+     actuellement [...] reprend ce que fait FitNotes (sans la totalite)"). Remplace l'ancien
+     dialogue exercise_graph_dialog.xml : ecran complet, axe Y lisible, selecteur de periode
+     1m/3m/6m/1y/all, detail du point touche, analyse en clair sous le graphique. Les
+     couleurs passent par les memes noms que le reste de l'app (values-night les adapte). -->
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/core_grey_05"
+    android:fillViewport="true"
+    tools:context=".ui.ExerciseGraphActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingBottom="16dp">
+
+        <!-- Type de graphique + nombre de reps (visible seulement quand il sert) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginLeft="12dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginRight="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Spinner
+                android:id="@+id/graph_type_spinner"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:spinnerMode="dropdown" />
+
+            <Spinner
+                android:id="@+id/graph_reps_spinner"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginLeft="8dp"
+                android:minWidth="110dp"
+                android:spinnerMode="dropdown"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Selecteur de periode (rempli par ExerciseGraphActivity) -->
+        <LinearLayout
+            android:id="@+id/period_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginLeft="8dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginRight="8dp"
+            android:orientation="horizontal" />
+
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/exercise_line_chart"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginLeft="4dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginRight="12dp" />
+
+        <!-- Detail du point touche, avec navigation precedent / suivant -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/detail_card"
+            style="@style/CardView.Light"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginLeft="12dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginRight="12dp"
+            app:cardBackgroundColor="@color/core_white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="8dp">
+
+                <ImageButton
+                    android:id="@+id/btn_prev_point"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Point précédent"
+                    android:src="@drawable/ic_keyboard_arrow_left_24px"
+                    app:tint="@color/colorPrimary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:paddingStart="8dp"
+                    android:paddingLeft="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingRight="8dp">
+
+                    <TextView
+                        android:id="@+id/tv_detail_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/core_grey_55"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/tv_detail_main"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/core_black"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_detail_sub"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/core_grey_55"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btn_next_point"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Point suivant"
+                    android:src="@drawable/ic_keyboard_arrow_right_24px"
+                    app:tint="@color/colorPrimary" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Analyse en clair : tendance, derniere seance, record, points faibles -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/analysis_card"
+            style="@style/CardView.Light"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginLeft="12dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginRight="12dp"
+            app:cardBackgroundColor="@color/core_white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Analyse"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_analysis"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:lineSpacingExtra="3dp"
+                    android:textColor="@color/core_black"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+    </LinearLayout>
+</ScrollView>

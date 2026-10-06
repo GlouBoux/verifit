@@ -1,10 +1,4 @@
 <resources>
-    <!-- Liste du Spinner de exercise_graph_dialog.xml (heritee du modele Android Studio). -->
-    <string-array name="reply_entries">
-        <item>Reply</item>
-        <item>Reply to all</item>
-    </string-array>
-
     <!-- Preference "Theme" (Reglages > General, retour Romain 16/09/2026 : "le bouton
          Light/Dark/Système dans les Réglages, comme FitNotes") - voir ThemeHelper.java
          et VerifitApplication.java pour l'application reelle du choix. -->

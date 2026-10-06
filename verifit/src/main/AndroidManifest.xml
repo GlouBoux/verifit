@@ -69,6 +69,12 @@
             android:name=".ui.RepRangeRecordsActivity"
             android:label="Historique par nombre de reps"
             android:parentActivityName=".ui.PersonalRecordsActivity" />
+        <!-- Onglet Graph d'un exercice (retour Romain 06/10/2026 : "l'onglet graph est
+             inutilisable actuellement") : remplace l'ancien dialogue "Progress". Ouvert depuis
+             le menu de la fiche de l'exercice (AddExerciseActivity), Retour revient a la fiche. -->
+        <activity
+            android:name=".ui.ExerciseGraphActivity"
+            android:label="Graph" />
         <activity
             android:name=".ui.AddExerciseActivity"
             android:label="Add Exercise" />

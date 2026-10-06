@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Menu "..." de l'onglet Graph, memes options que FitNotes (Graph Points, Trend Line,
+     Y-Axis From 0). Etats memorises dans les preferences (voir ExerciseGraphActivity). -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/graph_opt_trend"
+        android:checkable="true"
+        android:title="Trend Line"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/graph_opt_points"
+        android:checkable="true"
+        android:title="Graph Points"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/graph_opt_from_zero"
+        android:checkable="true"
+        android:title="Y-Axis From 0"
+        app:showAsAction="never" />
+</menu>
