@@ -74,23 +74,27 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tv_notes_label" />
 
+    <!-- Retour Romain 14/10/2026 (harmonisation des boutons) : regle unique de l'app,
+         action principale a DROITE, action secondaire/annulation a sa gauche (convention
+         Android, deja suivie par les AlertDialog systeme). Ici : Save (ou Duplicate) a droite, Cancel a gauche.
+         Seules les contraintes horizontales ont ete permutees, les id ne changent pas. -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_login_signup"
         style="@style/Widget.Verifit.Button.Flat"
         android:textColor="@color/colorPrimary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="100dp"
-        android:layout_marginLeft="100dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginEnd="100dp"
+        android:layout_marginRight="100dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/bt_cancel"
         android:layout_marginTop="20dp"
-        android:layout_marginEnd="10dp"
-        android:layout_marginRight="10dp"
         android:layout_marginBottom="30dp"
         android:text="Save"
         android:textAllCaps="false"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/bt_cancel"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/et_exercise_notes" />
 
     <com.google.android.material.button.MaterialButton
@@ -99,15 +103,15 @@
         android:textColor="@color/colorPrimary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
-        android:layout_marginLeft="10dp"
+        android:layout_marginStart="100dp"
+        android:layout_marginLeft="100dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginRight="10dp"
+        app:layout_constraintEnd_toStartOf="@+id/bt_login_signup"
+        app:layout_constraintStart_toStartOf="parent"
         android:layout_marginTop="20dp"
-        android:layout_marginEnd="100dp"
-        android:layout_marginRight="100dp"
         android:text="Cancel"
         android:textAllCaps="false"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/bt_login_signup"
         app:layout_constraintTop_toBottomOf="@+id/et_exercise_notes" />
 
     <View

@@ -258,15 +258,21 @@
         app:layout_constraintStart_toEndOf="@+id/minus_reps"
         app:layout_constraintTop_toBottomOf="@+id/textView4" />
 
+    <!-- Retour Romain 14/10/2026 (harmonisation des boutons) : regle unique de l'app,
+         action principale a DROITE, action secondaire/annulation a sa gauche (convention
+         Android, deja suivie par les AlertDialog systeme). Ici : Save/Update a droite, Clear/Delete a gauche.
+         Seules les contraintes horizontales ont ete permutees, les id ne changent pas. -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_clear"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="5dp"
-        android:layout_marginLeft="5dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginEnd="5dp"
+        android:layout_marginRight="5dp"
+        app:layout_constraintEnd_toStartOf="@+id/bt_login_signup"
+        app:layout_constraintStart_toStartOf="parent"
         android:layout_marginTop="20dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginRight="20dp"
         android:clickable="true"
         android:onClick="clickClear"
         android:text="Clear"
@@ -274,27 +280,25 @@
         android:textColor="@color/colorPrimary"
         app:backgroundTint="@color/core_white"
         app:cornerRadius="10dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/bt_login_signup"
         app:layout_constraintTop_toBottomOf="@+id/et_reps" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_login_signup"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginLeft="20dp"
+        android:layout_marginStart="5dp"
+        android:layout_marginLeft="5dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginRight="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/bt_clear"
         android:layout_marginTop="20dp"
-        android:layout_marginEnd="5dp"
-        android:layout_marginRight="5dp"
         android:clickable="true"
         android:onClick="clickSave"
         android:text="Save"
         android:textAllCaps="false"
         android:textColor="@color/core_white"
         app:cornerRadius="10dp"
-        app:layout_constraintEnd_toStartOf="@+id/bt_clear"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/et_reps" />
 
     <androidx.recyclerview.widget.RecyclerView

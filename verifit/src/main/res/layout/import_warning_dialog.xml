@@ -26,23 +26,27 @@
     </TextView>
 
 
+    <!-- Retour Romain 14/10/2026 (harmonisation des boutons) : regle unique de l'app,
+         action principale a DROITE, action secondaire/annulation a sa gauche (convention
+         Android, deja suivie par les AlertDialog systeme). Ici : Overwrite a droite (rouge), Cancel a gauche.
+         Seules les contraintes horizontales ont ete permutees, les id ne changent pas. -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_yes3"
         style="@style/Widget.Verifit.Button.Flat"
         android:textColor="@color/red"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="100dp"
-        android:layout_marginLeft="100dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginEnd="100dp"
+        android:layout_marginRight="100dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/bt_no3"
         android:layout_marginTop="30dp"
-        android:layout_marginEnd="10dp"
-        android:layout_marginRight="10dp"
         android:layout_marginBottom="30dp"
         android:text="Overwrite"
         android:textAllCaps="false"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/bt_no3"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/blue_line" />
 
     <com.google.android.material.button.MaterialButton
@@ -51,16 +55,16 @@
         android:textColor="@color/core_black"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
-        android:layout_marginLeft="10dp"
+        android:layout_marginStart="100dp"
+        android:layout_marginLeft="100dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginRight="10dp"
+        app:layout_constraintEnd_toStartOf="@+id/bt_yes3"
+        app:layout_constraintStart_toStartOf="parent"
         android:layout_marginTop="30dp"
-        android:layout_marginEnd="100dp"
-        android:layout_marginRight="100dp"
         android:text="Cancel"
         android:textAllCaps="false"
         app:iconTint="@color/core_white"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/bt_yes3"
         app:layout_constraintTop_toBottomOf="@+id/blue_line" />
 
     <View

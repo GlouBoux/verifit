@@ -211,19 +211,24 @@ public final class SessionTimerController
 
     // "Cancel Timer" (irreversible) : efface le chrono, les series ne sont pas touchees.
     // Textes en anglais, comme le reste du dialogue.
+    // Retour Romain 14/10/2026 (harmonisation des boutons) : le bouton qui CONFIRME
+    // s'appelait lui aussi "Cancel Timer", alors que partout ailleurs "Cancel" veut dire
+    // "fermer sans rien faire". Renomme "Erase Timer" (ce que fait reellement
+    // cancelSession()) / "Keep Timer". Pas "Stop Timer" : ce libelle designe deja
+    // l'arret normal du chrono (bt_workout_time_toggle), une action differente.
     private void confirmCancel(WorkoutDay day, AlertDialog workoutTimeDialog)
     {
         new AlertDialog.Builder(activity)
                 .setTitle("Cancel Timer")
                 .setMessage("Cancel the timer for this workout? Sets already logged will not be deleted.")
-                .setPositiveButton("Cancel Timer", (dlg, which) ->
+                .setPositiveButton("Erase Timer", (dlg, which) ->
                 {
                     day.cancelSession();
                     save();
                     barTicker.setWorkoutDay(day);
                     workoutTimeDialog.dismiss();
                 })
-                .setNegativeButton("Back", null)
+                .setNegativeButton("Keep Timer", null)
                 .show();
     }
 }
