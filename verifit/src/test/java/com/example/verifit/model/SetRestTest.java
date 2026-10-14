@@ -2,6 +2,7 @@ package com.example.verifit.model;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 
 import org.junit.Test;
 
@@ -61,47 +62,6 @@ public class SetRestTest
         assertNull(SetRest.restSeconds(set(T0), set(T0 + 1801_000L)));
     }
 
-    @Test
-    public void exercice_premiereSerieSansRepos()
-    {
-        List<WorkoutSet> sets = Arrays.asList(set(T0), set(T0 + 120_000L), set(T0 + 300_000L));
-        List<Long> rest = SetRest.restSecondsForExercise(sets);
-
-        assertEquals(3, rest.size());
-        assertNull(rest.get(0));
-        assertEquals(Long.valueOf(120), rest.get(1));
-        assertEquals(Long.valueOf(180), rest.get(2));
-    }
-
-    @Test
-    public void exercice_serieSansHorodatageNeCasseQueSesVoisines()
-    {
-        // La serie du milieu vient d'un import (pas d'horodatage) : elle n'a pas de
-        // repos, et la suivante non plus (pas de point de depart connu).
-        List<WorkoutSet> sets = Arrays.asList(set(T0), set(null), set(T0 + 300_000L), set(T0 + 400_000L));
-        List<Long> rest = SetRest.restSecondsForExercise(sets);
-
-        assertNull(rest.get(0));
-        assertNull(rest.get(1));
-        assertNull(rest.get(2));
-        assertEquals(Long.valueOf(100), rest.get(3));
-    }
-
-    @Test
-    public void exercice_listeVideOuNulle()
-    {
-        assertEquals(0, SetRest.restSecondsForExercise(new ArrayList<WorkoutSet>()).size());
-        assertEquals(0, SetRest.restSecondsForExercise(null).size());
-    }
-
-    @Test
-    public void exercice_uneSeuleSerie()
-    {
-        List<Long> rest = SetRest.restSecondsForExercise(Arrays.asList(set(T0)));
-        assertEquals(1, rest.size());
-        assertNull(rest.get(0));
-    }
-
     private static WorkoutSet setOf(String exercise, Long timestamp)
     {
         WorkoutSet s = new WorkoutSet("2026-10-01", exercise, "Cat", 5.0, 100.0);
@@ -110,9 +70,10 @@ public class SetRestTest
     }
 
     @Test
-    public void jour_exercicesAlternesChacunAvecSonPrecedent()
+    public void jour_exercicesAlternesReposDepuisLaDerniereSerieCochee()
     {
-        // Superset A/B : A1 B1 A2 B2 - le repos de A2 se compte depuis A1, pas depuis B1.
+        // Regle du 14/10/2026 : A1 B1 A2 B2 - le repos de A2 se compte depuis B1 (derniere
+        // serie cochee, tous exercices), plus depuis A1. 1re serie de chaque exercice : null.
         List<WorkoutSet> day = Arrays.asList(
                 setOf("A", T0), setOf("B", T0 + 30_000L),
                 setOf("A", T0 + 150_000L), setOf("B", T0 + 200_000L));
@@ -121,8 +82,81 @@ public class SetRestTest
         assertEquals(4, rest.size());
         assertNull(rest.get(0));
         assertNull(rest.get(1));
-        assertEquals(Long.valueOf(150), rest.get(2));
-        assertEquals(Long.valueOf(170), rest.get(3));
+        assertEquals(Long.valueOf(120), rest.get(2));
+        assertEquals(Long.valueOf(50), rest.get(3));
+    }
+
+    @Test
+    public void jour_precedentChercheParHorodatagePasParOrdreDeListe()
+    {
+        // Le jour est range par exercice (toutes les A puis toutes les B), pas dans
+        // l'ordre chronologique : le precedent de A2 est B1, liste apres lui.
+        WorkoutSet a1 = setOf("A", T0 + 10_000L);
+        WorkoutSet a2 = setOf("A", T0 + 200_000L);
+        WorkoutSet b1 = setOf("B", T0);
+        WorkoutSet b2 = setOf("B", T0 + 100_000L);
+        List<WorkoutSet> day = Arrays.asList(a1, a2, b1, b2);
+        List<Long> rest = SetRest.restSecondsForDay(day);
+
+        assertNull(rest.get(0));
+        assertEquals(Long.valueOf(100), rest.get(1));
+        assertNull(rest.get(2));
+        assertEquals(Long.valueOf(90), rest.get(3));
+        assertSame(b2, SetRest.previousValidatedInDay(day, a2));
+        assertSame(b1, SetRest.previousValidatedInDay(day, a1));
+        assertNull(SetRest.previousValidatedInDay(day, b1));
+    }
+
+    @Test
+    public void jour_serieNonCocheeIgnoree()
+    {
+        // B1 jamais cochee (pas d'horodatage) : le precedent de A2 reste A1.
+        List<WorkoutSet> day = Arrays.asList(
+                setOf("A", T0), setOf("B", null), setOf("A", T0 + 150_000L));
+        assertEquals(Long.valueOf(150), SetRest.restSecondsForDay(day).get(2));
+        assertNull(SetRest.restSecondsForDay(day).get(1));
+    }
+
+    @Test
+    public void jour_pauseLongueDepuisLaDerniereSerie()
+    {
+        List<WorkoutSet> day = Arrays.asList(setOf("A", T0), setOf("A", T0 + 1801_000L));
+        assertNull(SetRest.restSecondsForDay(day).get(1));
+    }
+
+    // Cas reel (seance du 12/10/2026, retour Romain 14/10/2026) : Assisted Pelican
+    // alterne avec Assisted HSPU FP. L'ancienne regle affichait 11:34 / 12:17 / 12:22
+    // sur les Pelican ; les vrais repos sont 6:25 / 6:21 / 12:22.
+    private static long hms(int h, int m, int s)
+    {
+        return T0 + ((h * 60L + m) * 60L + s) * 1000L;
+    }
+
+    @Test
+    public void jour_casReelPelicanAlterneAvecHspu()
+    {
+        WorkoutSet p1 = setOf("Assisted Pelican", hms(18, 15, 15));
+        WorkoutSet p2 = setOf("Assisted Pelican", hms(18, 26, 49));
+        WorkoutSet p3 = setOf("Assisted Pelican", hms(18, 39, 6));
+        WorkoutSet p4 = setOf("Assisted Pelican", hms(18, 51, 29));
+        WorkoutSet h1 = setOf("Assisted HSPU FP", hms(18, 12, 7));
+        WorkoutSet h2 = setOf("Assisted HSPU FP", hms(18, 20, 24));
+        WorkoutSet h3 = setOf("Assisted HSPU FP", hms(18, 32, 45));
+        // Ordre du jour tel que l'app le stocke : par exercice.
+        List<WorkoutSet> day = Arrays.asList(p1, p2, p3, p4, h1, h2, h3);
+        List<WorkoutSet> pelican = Arrays.asList(p1, p2, p3, p4);
+        List<WorkoutSet> hspu = Arrays.asList(h1, h2, h3);
+
+        assertEquals("", SetRest.labelAt(pelican, 0, day));
+        assertEquals("repos 6:25", SetRest.labelAt(pelican, 1, day));
+        assertEquals("repos 6:21", SetRest.labelAt(pelican, 2, day));
+        assertEquals("repos 12:23", SetRest.labelAt(pelican, 3, day));
+        assertEquals("", SetRest.labelAt(hspu, 0, day));
+        assertEquals("repos 5:09", SetRest.labelAt(hspu, 1, day));
+        assertEquals("repos 5:56", SetRest.labelAt(hspu, 2, day));
+
+        assertEquals(Arrays.asList(null, 385L, 381L, 743L, null, 309L, 356L),
+                SetRest.restSecondsForDay(day));
     }
 
     @Test
@@ -151,19 +185,32 @@ public class SetRestTest
     {
         List<WorkoutSet> sets = Arrays.asList(set(T0), set(T0 + 135_000L), set(null));
 
-        assertEquals("", SetRest.labelAt(sets, 0));
-        assertEquals("repos 2:15", SetRest.labelAt(sets, 1));
-        assertEquals("", SetRest.labelAt(sets, 2));
+        assertEquals("", SetRest.labelAt(sets, 0, sets));
+        assertEquals("repos 2:15", SetRest.labelAt(sets, 1, sets));
+        assertEquals("", SetRest.labelAt(sets, 2, sets));
     }
 
     @Test
-    public void labelAt_positionsInvalidesOuListeNulle()
+    public void labelAt_positionsInvalidesOuListesNulles()
     {
         List<WorkoutSet> sets = Arrays.asList(set(T0), set(T0 + 60_000L));
 
-        assertEquals("", SetRest.labelAt(sets, -1));
-        assertEquals("", SetRest.labelAt(sets, 2));
-        assertEquals("", SetRest.labelAt(null, 1));
+        assertEquals("", SetRest.labelAt(sets, -1, sets));
+        assertEquals("", SetRest.labelAt(sets, 2, sets));
+        assertEquals("", SetRest.labelAt(null, 1, sets));
+        assertEquals("", SetRest.labelAt(sets, 1, null));
+    }
+
+    @Test
+    public void labelAt_premiereSerieDeLExerciceToujoursVide()
+    {
+        // Option A (Romain, 14/10/2026) : meme si une autre serie a ete cochee juste
+        // avant, la 1re serie de l'exercice n'affiche pas de repos.
+        WorkoutSet b1 = setOf("B", T0);
+        WorkoutSet a1 = setOf("A", T0 + 60_000L);
+        List<WorkoutSet> day = Arrays.asList(a1, b1);
+
+        assertEquals("", SetRest.labelAt(Arrays.asList(a1), 0, day));
     }
 
     // Serie issue d'un Import Session : aucun horodatage au depart.
@@ -209,21 +256,22 @@ public class SetRestTest
         List<WorkoutSet> sets = Arrays.asList(s1, s2, s3);
 
         // Avant toute validation : aucun repos, aucun libelle.
-        assertEquals("", SetRest.labelAt(sets, 1));
+        assertEquals("", SetRest.labelAt(sets, 1, sets));
 
         s1.stampValidationIfMissing(T0);
         s2.stampValidationIfMissing(T0 + 90_000L);
         s3.stampValidationIfMissing(T0 + 240_000L);
 
-        assertEquals("", SetRest.labelAt(sets, 0));
-        assertEquals("repos 1:30", SetRest.labelAt(sets, 1));
-        assertEquals("repos 2:30", SetRest.labelAt(sets, 2));
+        assertEquals("", SetRest.labelAt(sets, 0, sets));
+        assertEquals("repos 1:30", SetRest.labelAt(sets, 1, sets));
+        assertEquals("repos 2:30", SetRest.labelAt(sets, 2, sets));
     }
 
     @Test
-    public void validation_serieNonCocheeCasseSeulementSesVoisines()
+    public void validation_serieNonCocheeIgnoreeParLaSuivante()
     {
-        // La 2e n'est jamais validee : pas de repos pour elle ni pour la 3e.
+        // La 2e n'est jamais validee : pas de repos pour elle ; la 3e se compte depuis
+        // la derniere serie cochee, donc la 1re (regle du 14/10/2026).
         WorkoutSet s1 = imported();
         WorkoutSet s2 = imported();
         WorkoutSet s3 = imported();
@@ -231,8 +279,8 @@ public class SetRestTest
         s3.stampValidationIfMissing(T0 + 240_000L);
         List<WorkoutSet> sets = Arrays.asList(s1, s2, s3);
 
-        assertEquals("", SetRest.labelAt(sets, 1));
-        assertEquals("", SetRest.labelAt(sets, 2));
+        assertEquals("", SetRest.labelAt(sets, 1, sets));
+        assertEquals("repos 4:00", SetRest.labelAt(sets, 2, sets));
     }
 
     @Test

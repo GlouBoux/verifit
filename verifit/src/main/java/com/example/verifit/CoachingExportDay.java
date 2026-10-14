@@ -21,7 +21,8 @@ public class CoachingExportDay
     }
 
     // Construit le jour a partir des series du modele, en ajoutant le repos reel de
-    // chaque serie (SetRest.restSecondsForDay, lot D etape D4).
+    // chaque serie (SetRest.restSecondsForDay, lot D etape D4) : temps depuis la
+    // derniere serie validee du jour, tous exercices confondus (regle du 14/10/2026).
     public static CoachingExportDay fromWorkoutSets(String date, List<WorkoutSet> daySets)
     {
         List<Long> rests = SetRest.restSecondsForDay(daySets);

@@ -51,13 +51,15 @@ public class CoachingExportRestTest
     }
 
     @Test
-    public void exercicesAlternesCalculesParExercice()
+    public void exercicesAlternesReposDepuisLaDerniereSerieCochee()
     {
+        // Regle du 14/10/2026 : le repos de A2 se compte depuis B1 (derniere serie
+        // cochee du jour), pas depuis A1 ; B1 (1re serie de B) n'a pas de repos.
         JsonArray sets = setsOf(exportOf(
                 set("A", T0), set("B", T0 + 30_000L), set("A", T0 + 150_000L)));
 
         assertFalse(sets.get(1).getAsJsonObject().has("restSeconds"));
-        assertEquals(150, sets.get(2).getAsJsonObject().get("restSeconds").getAsInt());
+        assertEquals(120, sets.get(2).getAsJsonObject().get("restSeconds").getAsInt());
     }
 
     @Test

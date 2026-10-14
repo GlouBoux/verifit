@@ -168,6 +168,20 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         notifyItemRangeChanged(rangeStart, rangeCount);
     }
 
+    // Toutes les series du jour affiche (MainActivity.dateSelected, le meme jour que
+    // Workout_Sets, voir AddExerciseActivity.updateTodaysExercises()), pour le repos
+    // "depuis la derniere serie cochee" (retour Romain 14/10/2026, voir SetRest).
+    // Relu a chaque bind : toujours a jour apres un Save/une case cochee.
+    private List<WorkoutSet> selectedDaySets()
+    {
+        int dayPosition = MainActivity.dataStorage.getDayPosition(MainActivity.dateSelected);
+        if (dayPosition < 0)
+        {
+            return Workout_Sets;
+        }
+        return MainActivity.dataStorage.getWorkoutDays().get(dayPosition).getSets();
+    }
+
     @NonNull
     @Override
     public MyViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType)
@@ -194,10 +208,11 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         // qui force desormais le rebind de la plage concernee pour la meme raison).
         holder.tv_set_number.setText(String.valueOf(position + 1));
 
-        // Repos reel avant cette serie ("repos 2:15", lot D etape D3, decision Romain
-        // 01/10/2026) : vide pour la 1re serie de l'exercice et quand il est inconnu
-        // (voir SetRest). Calcule depuis la position affichee, comme le numero de serie.
-        holder.tv_set_rest.setText(SetRest.labelAt(Workout_Sets, position));
+        // Repos reel avant cette serie ("repos 2:15", lot D etape D3) : temps depuis la
+        // derniere serie cochee du jour, tous exercices confondus (retour Romain
+        // 14/10/2026) ; vide pour la 1re serie de l'exercice et quand il est inconnu
+        // (voir SetRest).
+        holder.tv_set_rest.setText(SetRest.labelAt(Workout_Sets, position, selectedDaySets()));
 
         holder.checkbox.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
         holder.checkbox.setChecked(selectedPositions.contains(position));

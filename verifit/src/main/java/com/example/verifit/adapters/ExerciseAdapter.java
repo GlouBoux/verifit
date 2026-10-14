@@ -596,6 +596,7 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
             MainActivity.dataStorage.editExercise(exercise_name,new_exercise_name,new_exercise_category);
             MainActivity.dataStorage.saveWorkoutData(ct);
             MainActivity.dataStorage.saveKnownExerciseData(ct);
+            MainActivity.dataStorage.saveGoalsData(ct); // editExercise() renomme aussi les Goals (14/10/2026)
             notifyDataSetChanged();
         }
 

@@ -18,6 +18,7 @@ import com.example.verifit.R;
 import com.example.verifit.model.SupersetGroup;
 import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
+import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.ui.AddExerciseActivity;
 import com.example.verifit.ui.MainActivity;
 
@@ -165,6 +166,19 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
         notifyItemMoved(fromPosition, toPosition);
     }
 
+    // Toutes les series du jour (tous exercices affiches), pour le repos "depuis la
+    // derniere serie cochee" (retour Romain 14/10/2026, voir SetRest). Tire de
+    // Exercises, la meme source que les series affichees.
+    private List<WorkoutSet> allDaySets()
+    {
+        List<WorkoutSet> all = new ArrayList<>();
+        for (WorkoutExercise exercise : Exercises)
+        {
+            all.addAll(exercise.getSets());
+        }
+        return all;
+    }
+
     @NonNull
     @Override
     public MyViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType)
@@ -182,7 +196,7 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
 
         // Recycler View Stuff
         // Change RecyclerView items
-        WorkoutSetAdapter workoutSetAdapter = new WorkoutSetAdapter(ct, Exercises.get(position).getSets());
+        WorkoutSetAdapter workoutSetAdapter = new WorkoutSetAdapter(ct, Exercises.get(position).getSets(), allDaySets());
         holder.recyclerView.setAdapter(workoutSetAdapter);
         holder.recyclerView.setLayoutManager(new LinearLayoutManager(ct));
 

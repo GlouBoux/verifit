@@ -20,6 +20,7 @@ import com.example.verifit.ui.MainActivity;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 // Adapter for WorkoutSet Class
@@ -52,10 +53,16 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
     // cycle sauvegarde/chargement avait eu lieu.
     private final HashSet<String> prSetKeys;
 
-    public WorkoutSetAdapter(Context ct, ArrayList<WorkoutSet> Workout_Sets)
+    // Toutes les series du jour affiche (tous exercices) : le repos d'une serie se
+    // mesure depuis la derniere serie cochee du jour, quel que soit l'exercice (retour
+    // Romain 14/10/2026, voir SetRest).
+    private final List<WorkoutSet> daySets;
+
+    public WorkoutSetAdapter(Context ct, ArrayList<WorkoutSet> Workout_Sets, List<WorkoutSet> daySets)
     {
         this.ct = ct;
         this.Workout_Sets = Workout_Sets;
+        this.daySets = daySets;
         this.prSetKeys = (!Workout_Sets.isEmpty() && Workout_Sets.get(0).getExerciseName() != null)
                 ? MainActivity.dataStorage.getRepRangePRKeys(Workout_Sets.get(0).getExerciseName())
                 : new HashSet<String>();
@@ -87,10 +94,11 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
         // cote DayExerciseAdapter, donc toujours a jour.
         holder.tv_set_number.setText(String.valueOf(position + 1));
 
-        // Repos reel avant cette serie ("repos 2:15", lot D etape D3, decision Romain
-        // 01/10/2026) : vide pour la 1re serie de l'exercice et quand il est inconnu
-        // (voir SetRest). Calcule depuis la position affichee, comme le numero de serie.
-        holder.tv_set_rest.setText(SetRest.labelAt(Workout_Sets, position));
+        // Repos reel avant cette serie ("repos 2:15", lot D etape D3) : temps depuis la
+        // derniere serie cochee du jour, tous exercices confondus (retour Romain
+        // 14/10/2026) ; vide pour la 1re serie de l'exercice et quand il est inconnu
+        // (voir SetRest).
+        holder.tv_set_rest.setText(SetRest.labelAt(Workout_Sets, position, daySets));
 
         // Small indicator so a set with a comment is visible at a glance, without
         // having to open it - useful for reviewing imported data too. Deux etats

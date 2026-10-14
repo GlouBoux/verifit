@@ -19,6 +19,7 @@ import android.widget.Toast;
 
 import com.example.verifit.model.Exercise;
 import com.example.verifit.model.Goal;
+import com.example.verifit.model.SupersetGroup;
 import com.example.verifit.model.ImportedExercise;
 import com.example.verifit.model.ImportedSession;
 import com.example.verifit.model.ImportedSet;
@@ -1750,6 +1751,51 @@ public class DataStorage {
                             workoutDays.get(i).getExercises().get(j).getSets().get(k).setCategory(new_exercise_bodypart);
                         }
                     }
+                }
+            }
+
+            // Renommage (14/10/2026) : l'ordre manuel des exercices du jour et les
+            // supersets sont rattaches au NOM. Sans ce report, UpdateData() retirait
+            // l'ancien nom de ExerciseOrder (retainAll) et recollait le nouveau en fin
+            // de liste sur chaque seance passee, et l'exercice sortait de son superset.
+            ArrayList<String> order = workoutDays.get(i).getExerciseOrder();
+            if (order != null)
+            {
+                for (int j = 0; j < order.size(); j++)
+                {
+                    if (order.get(j).equals(exercise_name))
+                    {
+                        order.set(j, new_exercise_name);
+                    }
+                }
+            }
+
+            ArrayList<SupersetGroup> groups = workoutDays.get(i).getSupersetGroups();
+            if (groups != null)
+            {
+                for (SupersetGroup group : groups)
+                {
+                    ArrayList<String> names = group.getExerciseNames();
+                    if (names == null) continue;
+                    for (int j = 0; j < names.size(); j++)
+                    {
+                        if (names.get(j).equals(exercise_name))
+                        {
+                            names.set(j, new_exercise_name);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Objectifs (Goals) : egalement rattaches au nom de l'exercice.
+        if (goals != null)
+        {
+            for (Goal goal : goals)
+            {
+                if (exercise_name.equals(goal.getExerciseName()))
+                {
+                    goal.setExerciseName(new_exercise_name);
                 }
             }
         }

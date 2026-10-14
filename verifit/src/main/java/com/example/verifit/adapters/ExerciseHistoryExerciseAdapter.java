@@ -265,7 +265,7 @@ public class ExerciseHistoryExerciseAdapter extends RecyclerView.Adapter<Recycle
 
                 SetRow setRow = (SetRow) row;
                 ArrayList<WorkoutSet> sets = Exercises.get(setRow.exerciseIndex).getSets();
-                new WorkoutSetAdapter(ct, sets).showSetDialog(setRow.setIndex);
+                new WorkoutSetAdapter(ct, sets, sets).showSetDialog(setRow.setIndex);
                 return true;
             }
         });
