@@ -20,6 +20,7 @@ import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.ui.AddExerciseActivity;
+import com.example.verifit.ui.ExerciseActions;
 import com.example.verifit.ui.MainActivity;
 
 import java.util.ArrayList;
@@ -258,6 +259,21 @@ public class ViewPagerExerciseAdapter extends RecyclerView.Adapter<ViewPagerExer
                 MainActivity.dateSelected = Exercises.get(adapterPosition).getDate();
                 ct.startActivity(in);
             }
+        });
+
+        // Retour Romain 14/10/2026 : appui long sur la carte -> Edit / Duplicate de
+        // l'exercice sans passer par la liste Exercises (voir ExerciseActions). Rien en
+        // mode selection (le tap y coche deja, pas de menu par-dessus).
+        holder.cardview_exercise2.setOnLongClickListener(view ->
+        {
+            int adapterPosition = holder.getAdapterPosition();
+            if (selection.isActive() || adapterPosition < 0 || adapterPosition >= Exercises.size())
+            {
+                return false;
+            }
+            ExerciseActions.showCardMenu(ct, view, Exercises.get(adapterPosition).getExercise(),
+                    this::notifyDataSetChanged);
+            return true;
         });
 
         holder.dragHandle.setOnTouchListener((v, event) -> {

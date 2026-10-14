@@ -75,18 +75,27 @@
 
     </item>
 
-    <!-- "Exercise Notes" (retour Romain 28/09/2026, feature deja presente dans FitNotes) :
-         notes persistees sur la definition de l'exercice (Exercise.notes), visibles a
-         chaque seance. L'ancien item "Exercise Comments" (commentaire du jour, qui
-         ecrasait les notes de serie) a ete supprime le 29/09/2026. Voir
-         AddExerciseActivity.onOptionsItemSelected(), R.id.exercise_notes. -->
+    <!-- Retour Romain 14/10/2026 : "quand je suis sur un exo je dois pouvoir travailler
+         a partir de lui" (renommer, cloner) sans repasser par la liste Exercises. Memes
+         dialogues que l'appui long de la liste (voir ui/ExerciseActions). "Edit Exercise"
+         remplace l'ancien item "Exercise Notes" (28/09/2026) : son dialogue contient
+         deja les notes, en plus du nom et de la categorie. Tous deux epinglables via
+         Toolbar Settings. Un tap sur le nom de l'exercice dans la barre du haut ouvre
+         aussi Edit (voir AddExerciseActivity.setupTitleTapToEdit()). -->
     <item
-        android:id="@+id/exercise_notes"
-        android:icon="@drawable/notebook"
-        android:title="Exercise Notes"
+        android:id="@+id/edit_exercise"
+        android:icon="@drawable/ic_create_24px"
+        android:title="Edit Exercise"
         app:showAsAction="never"
         app:iconTint="@color/cardview_light_background">
+    </item>
 
+    <item
+        android:id="@+id/duplicate_exercise"
+        android:icon="@drawable/ic_content_copy_24px"
+        android:title="Duplicate Exercise"
+        app:showAsAction="never"
+        app:iconTint="@color/cardview_light_background">
     </item>
 
     <!-- Retour Romain 05/09/2026 : sélection multiple pour supprimer plusieurs séries

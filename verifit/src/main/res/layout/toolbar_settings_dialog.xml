@@ -73,6 +73,24 @@
         android:textSize="16sp" />
 
     <CheckBox
+        android:id="@+id/cb_toolbar_edit_exercise"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Edit Exercise"
+        android:textColor="@color/core_black"
+        android:textSize="16sp" />
+
+    <CheckBox
+        android:id="@+id/cb_toolbar_duplicate_exercise"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Duplicate Exercise"
+        android:textColor="@color/core_black"
+        android:textSize="16sp" />
+
+    <CheckBox
         android:id="@+id/cb_toolbar_select_sets"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

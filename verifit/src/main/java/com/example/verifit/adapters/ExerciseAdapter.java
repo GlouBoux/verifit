@@ -7,13 +7,9 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.Filter;
 import android.widget.Filterable;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -25,6 +21,7 @@ import com.example.verifit.model.CategoryColours;
 import com.example.verifit.model.Exercise;
 import com.example.verifit.R;
 import com.example.verifit.ui.AddExerciseActivity;
+import com.example.verifit.ui.ExerciseActions;
 import com.example.verifit.ui.MainActivity;
 
 import java.text.SimpleDateFormat;
@@ -259,16 +256,13 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
         }
     };
 
-    public class MyViewHolder extends  RecyclerView.ViewHolder implements View.OnLongClickListener, PopupMenu.OnMenuItemClickListener, AdapterView.OnItemSelectedListener {
+    public class MyViewHolder extends  RecyclerView.ViewHolder implements View.OnLongClickListener, PopupMenu.OnMenuItemClickListener {
         TextView tv_exercise_name;
         TextView tv_exercise_bodypart;
         ImageView iv_favorite;
         ImageView iv_category_colour;
         TextView tv_exercise_details;
         CardView cardview_exercise_1;
-        String exercise_name;
-        String new_exercise_category;
-        int current_exercise_category_position;
 
         public MyViewHolder(@NonNull View itemView)
         {
@@ -332,100 +326,18 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
                 return true;
             }
 
-            // Edit Exercise
+            // Edit / Duplicate Exercise : dialogues partages avec la fiche exercice et les
+            // cartes du jour (retour Romain 14/10/2026), voir ui/ExerciseActions. Les
+            // objets Exercise de cette liste sont ceux de DataStorage (references
+            // partagees) : un renommage les modifie en place, un simple rafraichissement
+            // suffit.
             if(item.getItemId() == R.id.edit)
             {
-
-
                 int position = getAdapterPosition();
-                System.out.println("Edit");
+                if (position == RecyclerView.NO_POSITION) return true;
 
-                // Prepare to show exercise dialog box
-                LayoutInflater inflater = LayoutInflater.from(ct);
-                View view = inflater.inflate(R.layout.edit_exercise_dialog,null);
-                AlertDialog alertDialog = new AlertDialog.Builder(ct).setView(view).create();
-
-                // Find views
-                Button bt_save = view.findViewById(R.id.bt_login_signup);
-                Button bt_cancel = view.findViewById(R.id.bt_cancel);
-                EditText et_exercise_name = view.findViewById(R.id.et_exercise_name);
-                EditText et_exercise_notes = view.findViewById(R.id.et_exercise_notes);
-                Spinner spinner = view.findViewById(R.id.spinner);
-
-                // "Exercise Notes" (retour Romain 28/09/2026) : meme objet Exercise que
-                // celui stocke dans MainActivity.dataStorage.getKnownExercises() (voir
-                // le constructeur de cet adapter, copie superficielle de la liste - les
-                // references d'Exercise sont partagees), donc le muter directement au
-                // Save ci-dessous suffit a persister via saveKnownExerciseData(), meme
-                // apres un renommage (editExercise() renomme ce meme objet en place).
-                final Exercise edited_exercise = Exercises.get(position);
-
-                // Setup Spinner Stuff
-                ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(ct,R.array.Categories, android.R.layout.simple_spinner_item);
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                spinner.setAdapter(adapter);
-                spinner.setOnItemSelectedListener(this);
-
-                // Get Array from xml
-                String[] listValue;
-                listValue = ct.getResources().getStringArray(R.array.Categories);
-
-                // Find Current Category position
-                for(int i = 0; i < listValue.length; i++)
-                {
-                    if(listValue[i].equals(Exercises.get(position).getBodyPart()))
-                    {
-                        current_exercise_category_position = i;
-                        System.out.println(listValue[i]);
-                    }
-                }
-
-                // Set edit text and spinner initial values
-                exercise_name = Exercises.get(position).getName();
-                et_exercise_name.setText(exercise_name);
-                et_exercise_notes.setText(edited_exercise.getNotes());
-                spinner.setSelection(current_exercise_category_position);
-
-                // Dismiss Dialog Box
-                bt_cancel.setOnClickListener(new View.OnClickListener()
-                {
-                    @Override
-                    public void onClick(View view)
-                    {
-                        alertDialog.dismiss();
-                    }
-                });
-
-                // Replace all instances with new exercise
-                bt_save.setOnClickListener(new View.OnClickListener()
-                {
-                    @Override
-                    public void onClick(View view)
-                    {
-                        // Get User defined new name
-                        String new_exercise_name = et_exercise_name.getText().toString();
-
-                        // Call Edit Exercise if user gave reasonable input
-                        if(new_exercise_category != null && !new_exercise_category.isEmpty() && new_exercise_category.length() > 0 && new_exercise_name != null && !new_exercise_name.isEmpty() && new_exercise_name.length() > 0)
-                        {
-                            // "Exercise Notes" (retour Romain 28/09/2026) : mute avant le
-                            // renommage, locallyUpdateExercise() appelle ensuite
-                            // saveKnownExerciseData() qui serialisera cette valeur.
-                            edited_exercise.setNotes(et_exercise_notes.getText().toString());
-
-                            locallyUpdateExercise(new_exercise_name);
-                            alertDialog.dismiss();
-                        }
-
-                        // Tell user to stop fucking around
-                        else
-                        {
-                            Toast.makeText(ct,"Please choose an apropriate name", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
-
-                alertDialog.show();
+                ExerciseActions.showEditDialog(ct, Exercises.get(position).getName(),
+                        (oldName, newName) -> notifyDataSetChanged());
                 return true;
             }
 
@@ -437,117 +349,15 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
             else if(item.getItemId() == R.id.duplicate)
             {
                 int position = getAdapterPosition();
-                String source_exercise_name = Exercises.get(position).getName();
-                String source_exercise_bodypart = Exercises.get(position).getBodyPart();
+                if (position == RecyclerView.NO_POSITION) return true;
 
-                // Reuse the edit dialog layout: same fields (name + category), different title/button and different save behaviour (add instead of rename).
-                LayoutInflater inflater = LayoutInflater.from(ct);
-                View view = inflater.inflate(R.layout.edit_exercise_dialog,null);
-                AlertDialog alertDialog = new AlertDialog.Builder(ct).setView(view).create();
-
-                // Find views
-                TextView tv_dialog_title = view.findViewById(R.id.tv_date);
-                Button bt_save = view.findViewById(R.id.bt_login_signup);
-                Button bt_cancel = view.findViewById(R.id.bt_cancel);
-                EditText et_exercise_name = view.findViewById(R.id.et_exercise_name);
-                EditText et_exercise_notes = view.findViewById(R.id.et_exercise_notes);
-                Spinner spinner = view.findViewById(R.id.spinner);
-
-                tv_dialog_title.setText("Duplicate Exercise");
-                bt_save.setText("Duplicate");
-
-                // "Exercise Notes" (retour Romain 28/09/2026) : pre-rempli avec une copie
-                // des notes de la source (deja fait par DataStorage.duplicateExercise()
-                // plus bas, mais on le montre aussi ici pour que l'utilisateur puisse
-                // l'ajuster - ex. variante allegee - avant de valider).
-                et_exercise_notes.setText(source_exercise_name != null ? MainActivity.dataStorage.getExerciseNotes(source_exercise_name) : "");
-
-                // Setup Spinner Stuff
-                ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(ct,R.array.Categories, android.R.layout.simple_spinner_item);
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                spinner.setAdapter(adapter);
-                spinner.setOnItemSelectedListener(this);
-
-                // Get Array from xml
-                String[] listValue = ct.getResources().getStringArray(R.array.Categories);
-
-                // Find Current Category position
-                for(int i = 0; i < listValue.length; i++)
+                ExerciseActions.showDuplicateDialog(ct, Exercises.get(position).getName(), duplicated ->
                 {
-                    if(listValue[i].equals(source_exercise_bodypart))
-                    {
-                        current_exercise_category_position = i;
-                    }
-                }
-
-                // Pre-fill with a "(copy)" suffix so it can't collide with the original,
-                // cursor placed at the end so the user can just start typing the real
-                // variant name (e.g. "Incline ...").
-                String suggested_name = source_exercise_name + " (copy)";
-                et_exercise_name.setText(suggested_name);
-                et_exercise_name.setSelection(suggested_name.length());
-                spinner.setSelection(current_exercise_category_position);
-                // Also set directly in case the spinner's selection listener doesn't
-                // fire before Duplicate is tapped (mirrors the Edit dialog above).
-                new_exercise_category = source_exercise_bodypart;
-
-                bt_cancel.setOnClickListener(new View.OnClickListener()
-                {
-                    @Override
-                    public void onClick(View view)
-                    {
-                        alertDialog.dismiss();
-                    }
+                    Exercises.add(duplicated);
+                    Exercises_Full.add(duplicated);
+                    notifyDataSetChanged();
+                    Toast.makeText(ct, "Exercise Duplicated", Toast.LENGTH_SHORT).show();
                 });
-
-                bt_save.setOnClickListener(new View.OnClickListener()
-                {
-                    @Override
-                    public void onClick(View view)
-                    {
-                        String new_exercise_name = et_exercise_name.getText().toString().trim();
-
-                        if(new_exercise_name.isEmpty() || new_exercise_category == null || new_exercise_category.isEmpty())
-                        {
-                            Toast.makeText(ct,"Please choose an apropriate name", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-
-                        if(MainActivity.dataStorage.doesExerciseExist(new_exercise_name))
-                        {
-                            Toast.makeText(ct,"Exercise Already Exists", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-
-                        Exercise duplicated = MainActivity.dataStorage.duplicateExercise(source_exercise_name, new_exercise_name);
-
-                        if(duplicated != null)
-                        {
-                            // Honour a category change made in the dialog (duplicateExercise() copies the source's body part by default).
-                            if(!new_exercise_category.equals(duplicated.getBodyPart()))
-                            {
-                                duplicated.setBodyPart(new_exercise_category);
-                            }
-
-                            // "Exercise Notes" (retour Romain 28/09/2026) : honore un
-                            // ajustement des notes fait dans le dialog (duplicateExercise()
-                            // ne fait que copier celles de la source par defaut).
-                            duplicated.setNotes(et_exercise_notes.getText().toString());
-
-                            MainActivity.dataStorage.saveKnownExerciseData(ct);
-
-                            Exercises.add(duplicated);
-                            Exercises_Full.add(duplicated);
-                            notifyDataSetChanged();
-
-                            Toast.makeText(ct,"Exercise Duplicated", Toast.LENGTH_SHORT).show();
-                        }
-
-                        alertDialog.dismiss();
-                    }
-                });
-
-                alertDialog.show();
                 return true;
             }
 
@@ -591,16 +401,6 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
         }
 
 
-        public void locallyUpdateExercise(String new_exercise_name)
-        {
-            MainActivity.dataStorage.editExercise(exercise_name,new_exercise_name,new_exercise_category);
-            MainActivity.dataStorage.saveWorkoutData(ct);
-            MainActivity.dataStorage.saveKnownExerciseData(ct);
-            MainActivity.dataStorage.saveGoalsData(ct); // editExercise() renomme aussi les Goals (14/10/2026)
-            notifyDataSetChanged();
-        }
-
-
         public void locallyDeleteExercise(int position, Context ct)
         {
             // Delete Exercise from MainActivity Data Structures
@@ -612,19 +412,6 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
             // Save Results
             MainActivity.dataStorage.saveKnownExerciseData(ct);
             MainActivity.dataStorage.saveWorkoutData(ct);
-        }
-
-        // Spinner On Item Selected Methods
-        @Override
-        public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l)
-        {
-            new_exercise_category = adapterView.getItemAtPosition(i).toString();
-        }
-
-        @Override
-        public void onNothingSelected(AdapterView<?> adapterView)
-        {
-            new_exercise_category = "";
         }
     }
 }

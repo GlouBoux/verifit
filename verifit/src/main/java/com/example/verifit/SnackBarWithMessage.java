@@ -37,6 +37,13 @@ public class SnackBarWithMessage {
         showSnackbar(message, "Undo", undoAction, Gravity.TOP);
     }
 
+    // Retour Romain 14/10/2026 : "Exercise Duplicated" depuis la fiche exercice, avec
+    // une action "Open" pour basculer directement sur la copie (voir
+    // AddExerciseActivity, R.id.duplicate_exercise).
+    public void showSnackbarWithActionAtTop(String message, String actionLabel, Runnable action) {
+        showSnackbar(message, actionLabel, action, Gravity.TOP);
+    }
+
     private void showSnackbar(String message, String actionLabel, Runnable action, int gravity) {
         // Create the Snackbar
         Snackbar snackbar = Snackbar.make(((Activity) mContext).findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG);

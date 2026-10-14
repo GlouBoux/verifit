@@ -235,6 +235,9 @@ public class AddExerciseActivity extends AppCompatActivity {
         // Volet de navigation entre exercices (retour Romain 18/09/2026) - voir le
         // commentaire sur les champs drawerLayout/... plus haut.
         initNavPanel();
+
+        // Tap sur le nom de l'exercice en haut -> Edit (retour Romain 14/10/2026).
+        setupTitleTapToEdit();
     }
 
     private static final String STATE_DATE_SELECTED = "state_date_selected";
@@ -744,11 +747,58 @@ public class AddExerciseActivity extends AppCompatActivity {
             return;
         }
 
+        reopenOnExercise(exerciseName);
+    }
+
+    // Relance cet ecran sur un autre exercice (meme patron Intent + finish() que le
+    // volet, la pile de retour ne grossit pas). Utilise aussi apres un renommage
+    // depuis cet ecran : tout y est retrouve par le nom (titre, series du jour, volet,
+    // historique...), recharger l'ecran est plus sur que de recaler chaque morceau.
+    private void reopenOnExercise(String exerciseName)
+    {
         Intent intent = new Intent(this, AddExerciseActivity.class);
         intent.putExtra("exercise", exerciseName);
         startActivity(intent);
         overridePendingTransition(0, 0);
         finish();
+    }
+
+    // Retour Romain 14/10/2026 : "quand je suis sur un exo je dois pouvoir travailler a
+    // partir de lui" - un tap sur le nom de l'exercice (barre du haut) ouvre Edit
+    // (nom, categorie, notes). Le clic est pose sur toute la barre : l'icone du volet et
+    // les icones du menu gardent leur propre clic, seule la zone du titre (et l'espace
+    // vide) declenche Edit. Barre retrouvee par son id AppCompat (ActionBar du theme
+    // DarkActionBar, pas de Toolbar dans activity_add_exercise.xml).
+    private void setupTitleTapToEdit()
+    {
+        View actionBarView = getWindow().getDecorView().findViewById(androidx.appcompat.R.id.action_bar);
+        if (actionBarView != null)
+        {
+            actionBarView.setOnClickListener(v -> showEditExerciseDialog());
+        }
+    }
+
+    private void showEditExerciseDialog()
+    {
+        ExerciseActions.showEditDialog(this, exercise_name, (oldName, newName) ->
+        {
+            if (!newName.equals(oldName))
+            {
+                reopenOnExercise(newName);
+            }
+            else
+            {
+                refreshNavPanel();
+                showSnackbarMessage("Exercise Updated");
+            }
+        });
+    }
+
+    private void showDuplicateExerciseDialog()
+    {
+        ExerciseActions.showDuplicateDialog(this, exercise_name, duplicated ->
+                new SnackBarWithMessage(AddExerciseActivity.this).showSnackbarWithActionAtTop(
+                        "Exercise Duplicated", "Open", () -> reopenOnExercise(duplicated.getName())));
     }
 
     // "Auto Start" du minuteur de REPOS (07/09/2026) - voir REST_TIMER_AUTO_START_PREF_KEY
@@ -1405,7 +1455,8 @@ public class AddExerciseActivity extends AppCompatActivity {
     // "Toolbar Settings" (voir showToolbarSettingsDialog()) - le reste des 6 items du
     // menu (add_exercise_activity_menu.xml) reste dans l'overflow par defaut.
     private static final int[] PINNABLE_TOOLBAR_ITEM_IDS = {
-            R.id.history, R.id.graph, R.id.rep_range_history, R.id.timer, R.id.select_sets
+            R.id.history, R.id.graph, R.id.rep_range_history, R.id.timer, R.id.select_sets,
+            R.id.edit_exercise, R.id.duplicate_exercise
     };
 
     private static final String TOOLBAR_PIN_PREF_PREFIX = "toolbar_pinned_";
@@ -1463,6 +1514,8 @@ public class AddExerciseActivity extends AppCompatActivity {
         wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_rep_range_history), R.id.rep_range_history);
         wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_timer), R.id.timer);
         wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_select_sets), R.id.select_sets);
+        wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_edit_exercise), R.id.edit_exercise);
+        wireToolbarPinCheckbox(dialogView.findViewById(R.id.cb_toolbar_duplicate_exercise), R.id.duplicate_exercise);
 
         MaterialButton bt_close = dialogView.findViewById(R.id.bt_toolbar_settings_close);
 
@@ -1541,45 +1594,18 @@ public class AddExerciseActivity extends AppCompatActivity {
             showToolbarSettingsDialog();
         }
 
-        // "Exercise Notes" (retour Romain 28/09/2026, feature deja presente dans
-        // FitNotes - voir claude/fitnotes-features-workout-tracking.md §4/§9) : notes
-        // persistees sur la DEFINITION de l'exercice (Exercise.notes via
-        // DataStorage.getExerciseNotes()/setExerciseNotes()), donc les memes a chaque
-        // seance. L'ancien "Exercise Comments" (commentaire propre au jour courant) a ete
-        // supprime le 29/09/2026 : il n'etait stocke nulle part en propre, ecrasait la
-        // note de chaque serie de l'exercice et s'affichait ensuite comme la note de la
-        // derniere serie (disparaissait des qu'une serie etait ajoutee). Purement local
-        // (aucune serie concernee).
-        else if(item.getItemId() == R.id.exercise_notes)
+        // Edit / Duplicate de l'exercice courant (retour Romain 14/10/2026), memes
+        // dialogues que la liste Exercises (voir ExerciseActions). "Edit Exercise"
+        // remplace l'ancien item "Exercise Notes" (28/09/2026) : les notes (persistees
+        // sur la definition de l'exercice, Exercise.notes) sont dans ce meme dialogue.
+        else if(item.getItemId() == R.id.edit_exercise)
         {
-            LayoutInflater inflater = LayoutInflater.from(AddExerciseActivity.this);
-            View view = inflater.inflate(R.layout.exercise_notes_dialog,null);
-            AlertDialog alertDialog = new AlertDialog.Builder(AddExerciseActivity.this).setView(view).create();
+            showEditExerciseDialog();
+        }
 
-            EditText et_exercise_notes = view.findViewById(R.id.et_exercise_notes);
-            Button bt_save_notes = view.findViewById(R.id.bt_save_notes);
-            Button bt_cancel_notes = view.findViewById(R.id.bt_cancel_notes);
-
-            et_exercise_notes.setText(MainActivity.dataStorage.getExerciseNotes(exercise_name));
-
-            bt_cancel_notes.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    alertDialog.dismiss();
-                }
-            });
-
-            bt_save_notes.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    MainActivity.dataStorage.setExerciseNotes(exercise_name, et_exercise_notes.getText().toString());
-                    MainActivity.dataStorage.saveKnownExerciseData(getApplicationContext());
-                    alertDialog.dismiss();
-                    showSnackbarMessage("Notes Saved");
-                }
-            });
-
-            alertDialog.show();
+        else if(item.getItemId() == R.id.duplicate_exercise)
+        {
+            showDuplicateExerciseDialog();
         }
 
         return super.onOptionsItemSelected(item);

@@ -22,6 +22,7 @@ import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutExercise;
 import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.ui.AddExerciseActivity;
+import com.example.verifit.ui.ExerciseActions;
 import com.example.verifit.ui.MainActivity;
 
 import java.util.ArrayList;
@@ -415,6 +416,20 @@ public class DayExerciseAdapter extends RecyclerView.Adapter<DayExerciseAdapter.
 
                     toggleCollapse(getAdapterPosition());
                 }
+            });
+
+            // Retour Romain 14/10/2026 : appui long sur la carte -> Edit / Duplicate de
+            // l'exercice (voir ExerciseActions), sauf en mode selection.
+            cardview_exercise2.setOnLongClickListener(view ->
+            {
+                int position = getAdapterPosition();
+                if (selection.isActive() || position < 0 || position >= Exercises.size())
+                {
+                    return false;
+                }
+                ExerciseActions.showCardMenu(ct, view, Exercises.get(position).getExercise(),
+                        DayExerciseAdapter.this::notifyDataSetChanged);
+                return true;
             });
 
         }
