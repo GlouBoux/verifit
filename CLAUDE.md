@@ -60,6 +60,18 @@ FitNotes (Romain a choisi de garder l'architecture actuelle, un écran par exerc
 6. **Point de vigilance** : plusieurs dépôts ouverts en parallèle (verifit + Coaching) → toujours vérifier sur quel dépôt on committe avant de coller un message préparé (incident déjà survenu le 05/09/2026, rattrapé par `git commit --amend`).
 7. **Point de vigilance (ajouté 11/09/2026)** : plusieurs sessions Claude peuvent travailler sur ce même dossier à des moments différents — toujours relire `fitnotes-migration-plan.md` (Projet Claude) en premier pour l'état réel avant de se fier à ces 5 fichiers locaux, et mettre à jour les DEUX à chaque changement significatif si possible.
 
+## Dossiers à connecter à une session Claude (15/10/2026)
+
+Le transfert de fichiers vers la machine de Romain ne descend qu'à 7 niveaux sous un
+dossier connecté : depuis `FitNotes_Fork`, ni `verifit\src\main\java\com\example\verifit\ui`
+ni les tests ne sont accessibles. Demander à Romain de connecter ces 3 dossiers
+(« Add folder » dans Claude Desktop) au début de la session :
+
+- `C:\Users\Brutus\Desktop\01_Projects\FitNotes_Fork` (docs, README, ce fichier) ;
+- `C:\Users\Brutus\Desktop\01_Projects\FitNotes_Fork\FitNotes_Fork_Migration\verifit\src`
+  (code, ressources ET tests, tous à 7 niveaux au plus) ;
+- `C:\Users\Brutus\Desktop\01_Projects\Coaching` (générateur, `SYNC_FITNOTES_APP.md`).
+
 ## Limite connue
 
 Pas de SDK Android côté Claude : impossible de builder/compiler pour vérifier un changement. Seul Romain peut tester sur émulateur/téléphone réel.

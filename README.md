@@ -67,7 +67,7 @@ Base : [MakisChristou/verifit](https://github.com/MakisChristou/verifit), une ap
 
 Principaux ajouts :
 
-- **Import de séance** : un fichier JSON généré par le moteur s'ouvre directement depuis Drive, un mail ou un gestionnaire de fichiers (« Ouvrir avec FitEngine »), avec un aperçu avant import. L'import est additif : il ne touche jamais à l'historique déjà logué.
+- **Import de séance** : le plan généré sur le PC arrive par Syncthing dans `Documents/FitEngine_plans` ; l'icône d'import de l'onglet Workout propose le plus récent de chaque type (Force, Volume) puis ouvre un aperçu avant import. Le fichier peut aussi s'ouvrir depuis Drive, un mail ou un gestionnaire de fichiers (« Ouvrir avec FitEngine »). L'import est additif (il ne touche jamais à l'historique déjà logué) et idempotent : un plan déjà importé est reconnu à l'empreinte de son contenu, et un accusé `fitengine_plan_imports.json` repart vers le PC.
 - **Prévu et réalisé côte à côte** : chaque série importée garde son commentaire de plan (lecture seule) séparé de la note personnelle, et les écarts prévu/réalisé sont visibles.
 - **Export pour le moteur** : un export JSON versionné (`schemaVersion`) écrit sous un nom fixe, synchronisé vers le PC, que le moteur lit sans aucune manipulation.
 - **Sauvegarde JSON complète** en plus du CSV hérité.
@@ -117,11 +117,11 @@ Ce projet a été construit en binôme avec Claude. Mon rôle : définir le beso
 ## Qualité
 
 - Moteur : 351 tests unitaires Python répartis en 8 suites, lancés d'un coup par `python generate_workout.py --test`.
-- App : 21 classes de tests JUnit sur la logique isolée d'Android (records par nombre de reps, import et aperçu de séance, sauvegardes, export, temps de repos, rapport de partage...).
+- App : 23 classes de tests JUnit sur la logique isolée d'Android (records par nombre de reps, import et aperçu de séance, sauvegardes, export, temps de repos, rapport de partage...).
 
 ## Limites connues
 
-- Réimporter deux fois le même fichier de séance duplique les séries (pas de clé d'idempotence).
+- Un réimport forcé d'un plan (« Réimporter quand même ») ajoute ses séries une seconde fois : les séries n'ont pas d'identifiant d'import.
 - L'historique de l'app est stocké dans les `SharedPreferences` ; une persistance fichier ou base de données sera nécessaire si l'historique grossit beaucoup.
 - Versions Android et dépendances anciennes héritées du dépôt d'origine (minSdk 16, targetSdk 31).
 - Le moteur dépend d'un classeur Excel personnel et d'une table de correspondance tenue à la main ; pas de `requirements.txt` à ce jour (pandas, numpy, openpyxl).

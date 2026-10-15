@@ -63,6 +63,17 @@
             android:text="Ouvrir l'app"
             android:visibility="gone" />
 
+        <!-- Import idempotent (15/10/2026) : visible seulement quand ce plan a deja ete
+             importe, a la place de "Importer" (bouton secondaire, plat). -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/bt_import_force"
+            style="@style/Widget.Verifit.Button.Flat"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Réimporter quand même"
+            android:textAllCaps="false"
+            android:visibility="gone" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/bt_import_confirm"
             android:layout_width="wrap_content"

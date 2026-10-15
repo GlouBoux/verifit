@@ -11,6 +11,8 @@ import androidx.core.content.ContextCompat;
 
 import com.example.verifit.AppNames;
 import com.example.verifit.DataStorage;
+import com.example.verifit.ImportedPlans;
+import com.example.verifit.ImportedPlansStore;
 import com.example.verifit.R;
 import com.example.verifit.SessionImporter;
 import com.example.verifit.SessionPreview;
@@ -38,15 +40,27 @@ import java.util.Locale;
  * L'import passe par SessionImporter.importJsonWithDuplicateCheck() : copie automatique
  * avant l'import, et confirmation explicite si la seance a deja ete importee ce jour-la.
  * Toute la logique d'apercu est dans SessionPreview (testee en JUnit).
+ *
+ * Import idempotent (15/10/2026) : si ce plan (meme contenu, voir ImportedPlans) a deja ete
+ * importe, l'apercu le dit tout de suite, "Importer" disparait et seul un bouton secondaire
+ * "Reimporter quand meme" reste (import force, sans seconde alerte). Ouvert aussi par l'icone
+ * nuage de l'onglet Workout : plan du dossier Documents/FitEngine_plans (lu seulement) ou
+ * fichier choisi par "Autre fichier...".
  */
 public class ImportSessionActivity extends AppCompatActivity
 {
+    // Date de repli (AAAA-MM-JJ) pour un fichier sans "date", passee par l'onglet Workout
+    // (jour affiche). Absente (fichier ouvert depuis une autre appli) : aujourd'hui.
+    public static final String EXTRA_FALLBACK_DATE = "fallback_date";
+
     private TextView statusView;
     private TextView previewView;
     private MaterialButton confirmButton;
+    private MaterialButton forceButton;
     private MaterialButton openAppButton;
 
     private String json;
+    private String sourceName = "";
     private SessionPreview preview;
 
     @Override
@@ -58,10 +72,12 @@ public class ImportSessionActivity extends AppCompatActivity
         statusView = findViewById(R.id.tv_import_status);
         previewView = findViewById(R.id.tv_import_preview);
         confirmButton = findViewById(R.id.bt_import_confirm);
+        forceButton = findViewById(R.id.bt_import_force);
         openAppButton = findViewById(R.id.bt_import_open_app);
 
         findViewById(R.id.bt_import_close).setOnClickListener(v -> finish());
         confirmButton.setOnClickListener(v -> importSession());
+        forceButton.setOnClickListener(v -> forceImportSession());
         openAppButton.setText("Ouvrir " + AppNames.APP_NAME);
         openAppButton.setOnClickListener(v -> openApp());
 
@@ -91,8 +107,12 @@ public class ImportSessionActivity extends AppCompatActivity
             return;
         }
 
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
-        preview = SessionPreview.of(session, today, knownExerciseNames());
+        String fallbackDate = getIntent().getStringExtra(EXTRA_FALLBACK_DATE);
+        if (fallbackDate == null || fallbackDate.isEmpty())
+        {
+            fallbackDate = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        }
+        preview = SessionPreview.of(session, fallbackDate, knownExerciseNames());
 
         String problem = preview.problem();
         if (problem != null)
@@ -101,9 +121,39 @@ public class ImportSessionActivity extends AppCompatActivity
             return;
         }
 
+        String header = header(session);
+        ImportedPlans.Entry previous = ImportedPlansStore.load(this).find(ImportedPlans.hash(json));
+        if (previous != null)
+        {
+            statusView.setTextColor(ContextCompat.getColor(this, R.color.red));
+            statusView.setText("Plan déjà importé");
+            previewView.setText(ImportedPlans.describePreviousImport(previous)
+                    + "\nLe réimporter ajoutera ses séries une seconde fois.\n\n" + header + preview.toText());
+            confirmButton.setVisibility(View.GONE);
+            forceButton.setVisibility(View.VISIBLE);
+            return;
+        }
+
         statusView.setText("Aperçu de la séance");
-        previewView.setText(preview.toText());
+        previewView.setText(header + preview.toText());
         confirmButton.setVisibility(View.VISIBLE);
+    }
+
+    // Libelle du plan (champ "comment", ex. "Cycle A - Force") et nom du fichier, au-dessus
+    // de l'apercu.
+    private String header(ImportedSession session)
+    {
+        StringBuilder text = new StringBuilder();
+        String label = session == null ? "" : session.getComment().trim();
+        if (!label.isEmpty())
+        {
+            text.append("Plan : ").append(label).append('\n');
+        }
+        if (!sourceName.isEmpty())
+        {
+            text.append("Fichier : ").append(sourceName).append('\n');
+        }
+        return text.toString();
     }
 
     // Bouton "Importer". Tout est synchrone : si la seance a deja ete importee ce jour-la,
@@ -112,7 +162,15 @@ public class ImportSessionActivity extends AppCompatActivity
     private void importSession()
     {
         SessionImporter.importJsonWithDuplicateCheck(
-                this, json, MainActivity.dataStorage, preview.getDate(), this::onImportDone);
+                this, json, MainActivity.dataStorage, preview.getDate(), sourceName, this::onImportDone);
+    }
+
+    // Bouton "Reimporter quand meme" : l'avertissement est deja affiche dans l'apercu,
+    // pas de seconde alerte.
+    private void forceImportSession()
+    {
+        SessionImporter.importJsonForced(
+                this, json, MainActivity.dataStorage, preview.getDate(), sourceName, this::onImportDone);
     }
 
     private void onImportDone(SessionImporter.Result result)
@@ -134,11 +192,16 @@ public class ImportSessionActivity extends AppCompatActivity
         {
             message.append("\n").append(summary.setsSkipped).append(" série(s) incomplète(s) ignorée(s)");
         }
+        if (result.ackWarning != null)
+        {
+            message.append("\n\n").append(result.ackWarning);
+        }
 
         statusView.setTextColor(ContextCompat.getColor(this, R.color.completed_green));
         statusView.setText("Séance importée");
         previewView.setText(message.toString());
         confirmButton.setVisibility(View.GONE);
+        forceButton.setVisibility(View.GONE);
         openAppButton.setVisibility(View.VISIBLE);
     }
 
@@ -156,6 +219,7 @@ public class ImportSessionActivity extends AppCompatActivity
         statusView.setText(message);
         previewView.setText(details);
         confirmButton.setVisibility(View.GONE);
+        forceButton.setVisibility(View.GONE);
     }
 
     // ACTION_VIEW : le fichier est dans data. ACTION_SEND : le fichier est dans
@@ -186,6 +250,7 @@ public class ImportSessionActivity extends AppCompatActivity
         {
             throw new IOException("aucun fichier reçu");
         }
+        sourceName = TextFiles.displayName(uri, this);
         return TextFiles.readAll(uri, this);
     }
 

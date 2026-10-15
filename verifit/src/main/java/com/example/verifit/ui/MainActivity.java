@@ -2,12 +2,14 @@ package com.example.verifit.ui;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
@@ -21,8 +23,14 @@ import android.widget.Toast;
 
 import com.example.verifit.AppNames;
 import com.example.verifit.DataStorage;
+import com.example.verifit.ImportedPlans;
+import com.example.verifit.ImportedPlansStore;
+import com.example.verifit.PendingPlans;
+import com.example.verifit.PlanFolder;
 import com.example.verifit.R;
 import com.example.verifit.SessionImporter;
+import com.example.verifit.TextFiles;
+import com.example.verifit.model.ImportedSession;
 import com.example.verifit.adapters.ViewPagerExerciseAdapter;
 import com.example.verifit.adapters.ViewPagerWorkoutDayAdapter;
 import com.example.verifit.model.WorkoutDay;
@@ -43,11 +51,14 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     public static String dateSelected; // Used for other activities to get the selected date, by default it's set to today
     public static ViewPager2 viewPager2; // View Pager that is used in main activity
     public static final int READ_REQUEST_CODE = 42;
-    // Request code for the "Import Session" file picker (see fileSearchImportSession()),
+    // Request code for the "Autre fichier..." file picker (see fileSearchImportSession()),
     // meme mecanique que DayActivity.IMPORT_SESSION_REQUEST_CODE mais sa propre valeur -
     // les deux ecrans sont des Activity separees, pas de conflit possible, mais autant
     // eviter la confusion en cas de lecture croisee du code.
     public static final int IMPORT_SESSION_REQUEST_CODE = 78;
+    // Choix (une seule fois) du dossier des plans Documents/FitEngine_plans, bouton
+    // "Importer la seance en attente" (15/10/2026, voir PlanFolder).
+    public static final int PICK_PLAN_FOLDER_REQUEST_CODE = 79;
     public static String EXPORT_FILENAME = AppNames.FILE_PREFIX + "_backup";
 
     public FloatingActionButton fab;
@@ -331,59 +342,210 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
                 {
                     onImportSessionResult(uri);
                 }
+                else if (requestCode == PICK_PLAN_FOLDER_REQUEST_CODE)
+                {
+                    onPlanFolderPicked(uri);
+                }
             }
         }
     }
 
-    // Traite le fichier JSON choisi par fileSearchImportSession() - meme logique que
-    // DayActivity.onActivityResult() pour IMPORT_SESSION_REQUEST_CODE, mais utilise
-    // dateSelected (le jour actuellement affiche dans le carrousel) au lieu de
-    // date_clicked, et rafraichit via initViewPager() (qui preserve la position
-    // courante, voir son commentaire) plutot que initActivity().
+    // Fichier choisi par "Autre fichier..." (fileSearchImportSession()) : depuis le
+    // 15/10/2026 (retour Romain, fusion de l'icone nuage), il passe lui aussi par l'apercu
+    // (ImportSessionActivity) au lieu d'etre importe directement : meme ecran, memes
+    // controles de doublon, un seul chemin d'import sur l'onglet Workout. Le jour affiche
+    // (dateSelected) sert de date de repli pour un fichier sans "date", comme avant.
     private void onImportSessionResult(Uri uri)
     {
         if (uri == null)
         {
             return;
         }
-
-        // Point 1.5 de la revue du 28/09/2026 : confirmation si la seance a deja ete
-        // importee ce jour-la (voir SessionImporter.importWithDuplicateCheck()).
-        SessionImporter.importWithDuplicateCheck(this, uri, dataStorage, dateSelected, this::showImportSessionResult);
+        openImportPreview(uri);
     }
 
-    private void showImportSessionResult(SessionImporter.Result result)
+
+    // --- Icone nuage de l'onglet Workout : "Importer une seance" (session du 15/10/2026) ---
+    // Fusion decidee par Romain : un seul point d'entree.
+    // Lit le dossier Documents/FitEngine_plans (rempli par Syncthing depuis le PC, LECTURE
+    // SEULE : rien n'y est jamais ecrit, deplace ni supprime), propose le plan le plus
+    // recent de chaque type (Force, Volume) avec son libelle et sa date, puis ouvre
+    // l'apercu habituel (ImportSessionActivity). Jamais d'import automatique : c'est
+    // l'apercu qui importe, apres appui sur "Importer". Le choix des plans est dans
+    // PendingPlans (teste en JUnit), l'acces au dossier dans PlanFolder.
+    private void importPendingPlan()
     {
-        if (result.success)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
         {
-            DataStorage.ImportSummary summary = result.summary;
-            String message = summary.setsImported + " set(s) imported into " + summary.date;
-            if (summary.exercisesCreated > 0)
-            {
-                message += " (" + summary.exercisesCreated + " new exercise(s) created)";
-            }
-            if (summary.setsSkipped > 0)
-            {
-                message += " - " + summary.setsSkipped + " incomplete set(s) skipped";
-            }
-            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-
-            // Unlike DayActivity (a single fixed day), the carousel's current page is
-            // tracked by position, not by date - dateSelected is only kept in sync via
-            // the onPageScrolled callback in initViewPager(). The JSON file is allowed
-            // to carry its own "date" (session-import-format.md), so if it differs from
-            // the day currently shown, the toast above says which date actually
-            // received the import; jumping the carousel there automatically is left for
-            // later if this turns out to matter in practice. initViewPager() here only
-            // refreshes the data - it already preserves whatever page is showing.
-            initViewPager();
+            // Pas de dossier des plans avant Android 5 : choix d'un fichier.
+            fileSearchImportSession();
+            return;
         }
-        else
+        Uri tree = PlanFolder.grantedTree(this);
+        if (tree == null)
         {
-            Toast.makeText(this, "Import failed: " + result.errorMessage, Toast.LENGTH_LONG).show();
+            askPlanFolder(null);
+            return;
+        }
+        showPendingPlans(tree);
+    }
+
+    // Explique puis ouvre le selecteur de dossier. problem : raison d'un nouveau choix
+    // (dossier devenu inaccessible), ou null au premier usage.
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+    private void askPlanFolder(String problem)
+    {
+        String message = (problem == null ? "" : problem + "\n\n")
+                + "Choisis le dossier " + PlanFolder.EXPECTED_PATH + " (celui que Syncthing remplit depuis le PC), "
+                + "puis « Utiliser ce dossier ». Ce choix est fait une seule fois.\n\n"
+                + AppNames.APP_NAME + " ne fera que lire ce dossier : aucun fichier n'y sera modifié, déplacé ni supprimé.";
+        new AlertDialog.Builder(this)
+                .setTitle("Dossier des plans")
+                .setMessage(message)
+                .setPositiveButton("Choisir le dossier", (dialog, which) -> {
+                    try
+                    {
+                        startActivityForResult(PlanFolder.pickIntent(), PICK_PLAN_FOLDER_REQUEST_CODE);
+                    }
+                    catch (android.content.ActivityNotFoundException e)
+                    {
+                        Toast.makeText(this, "Sélecteur de dossier introuvable sur ce téléphone", Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setNegativeButton("Annuler", null)
+                .setNeutralButton("Autre fichier…", (dialog, which) -> fileSearchImportSession())
+                .show();
+    }
+
+    private void onPlanFolderPicked(Uri tree)
+    {
+        if (tree == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
+        {
+            return;
+        }
+        try
+        {
+            PlanFolder.remember(this, tree);
+        }
+        catch (RuntimeException e)
+        {
+            Toast.makeText(this, "Autorisation de lecture refusée pour ce dossier : " + e.getMessage(), Toast.LENGTH_LONG).show();
+            return;
+        }
+        showPendingPlans(tree);
+    }
+
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+    private void showPendingPlans(final Uri tree)
+    {
+        final String folder = PlanFolder.describe(tree);
+        List<PendingPlans.FileEntry<Uri>> files;
+        try
+        {
+            files = PlanFolder.list(this, tree);
+        }
+        catch (Exception e)
+        {
+            // Autorisation retiree, dossier supprime ou renomme : on le redemande.
+            PlanFolder.forget(this);
+            askPlanFolder("Le dossier " + folder + " n'est plus lisible (" + e.getMessage() + ").");
+            return;
+        }
+
+        PendingPlans.Selection<Uri> selection = PendingPlans.select(files);
+        if (selection.isEmpty())
+        {
+            String message = "Aucun plan (Seance_*.json) dans " + folder + "."
+                    + (selection.ignoredFiles > 0 ? "\n" + selection.ignoredFiles + " autre(s) fichier(s) ignoré(s) (nom non reconnu)." : "")
+                    + "\n\nGénère la séance sur le PC, puis laisse Syncthing la livrer.";
+            new AlertDialog.Builder(this)
+                    .setTitle("Aucune séance en attente")
+                    .setMessage(message)
+                    .setPositiveButton("OK", null)
+                    .setNegativeButton("Autre fichier…", (dialog, which) -> fileSearchImportSession())
+                    .setNeutralButton("Changer de dossier", (dialog, which) -> askPlanFolder(null))
+                    .show();
+            return;
+        }
+
+        ImportedPlans registry = ImportedPlansStore.load(this);
+        final List<PendingPlans.Plan<Uri>> plans = selection.latestPerType;
+        String[] labels = new String[plans.size()];
+        for (int i = 0; i < plans.size(); i++)
+        {
+            labels[i] = describePendingPlan(plans.get(i), registry);
+        }
+
+        // Retour Romain 15/10/2026 (premier essai) : avec une simple liste (setItems), la
+        // ligne du plan ne se voyait pas comme cliquable et seuls "Changer de dossier" et
+        // "Annuler" ressemblaient a des boutons. Choix explicite : bouton radio (le plus
+        // recent coche d'office) + bouton "Ouvrir l'apercu". Pas de bouton "Annuler" (3
+        // boutons au plus) : Retour ou un appui hors du dialogue le ferme.
+        final int[] selected = {0};
+        new AlertDialog.Builder(this)
+                .setTitle("Séance en attente (" + folder + ")")
+                .setSingleChoiceItems(labels, 0, (dialog, which) -> selected[0] = which)
+                .setPositiveButton("Ouvrir l'aperçu", (dialog, which) -> openImportPreview(plans.get(selected[0]).handle))
+                .setNegativeButton("Autre fichier…", (dialog, which) -> fileSearchImportSession())
+                .setNeutralButton("Changer de dossier", (dialog, which) -> askPlanFolder(null))
+                .show();
+
+        if (selection.ignoredFiles > 0)
+        {
+            Toast.makeText(this, selection.ignoredFiles + " fichier(s) au nom non reconnu ignoré(s)", Toast.LENGTH_SHORT).show();
         }
     }
 
+    // Trois lignes : libelle du plan (champ "comment", ex. "Cycle A - Force"), date de la
+    // seance et heure de generation, puis "deja importe" le cas echeant. Fichier lu ici
+    // seulement pour l'affichage (quelques Ko) ; l'apercu le relit de son cote.
+    private String describePendingPlan(PendingPlans.Plan<Uri> plan, ImportedPlans registry)
+    {
+        String label = plan.type + " " + plan.cycle;
+        String sessionDate = "";
+        String alreadyImported = "";
+        try
+        {
+            String json = TextFiles.readAll(plan.handle, this);
+            ImportedSession session = SessionImporter.parseSession(json);
+            if (session != null && !session.getComment().trim().isEmpty())
+            {
+                label = session.getComment().trim();
+            }
+            if (session != null)
+            {
+                sessionDate = session.getDate();
+            }
+            ImportedPlans.Entry previous = registry.find(ImportedPlans.hash(json));
+            if (previous != null)
+            {
+                alreadyImported = "\nDéjà importé le " + ImportedPlans.formatImportedAt(previous.importedAt);
+            }
+        }
+        catch (Exception e)
+        {
+            alreadyImported = "\nIllisible : " + e.getMessage();
+        }
+        return label
+                + "\nSéance du " + (sessionDate.isEmpty() ? "(date absente)" : sessionDate)
+                + " · générée le " + plan.generatedAtLabel()
+                + alreadyImported;
+    }
+
+    // Apercu habituel ("Ouvrir avec FitEngine") sur un plan du dossier des plans (l'app
+    // garde l'autorisation de lecture de ce dossier, voir PlanFolder) ou sur un fichier
+    // choisi par "Autre fichier..." (autorisation donnee par le selecteur). L'import ne se
+    // fait qu'apres appui sur "Importer" dans cet ecran. dateSelected : date de repli
+    // pour un fichier sans "date" (le jour affiche, comme l'ancien import direct).
+    private void openImportPreview(Uri document)
+    {
+        Intent intent = new Intent(this, ImportSessionActivity.class);
+        intent.setAction(Intent.ACTION_VIEW);
+        intent.setDataAndType(document, "application/json");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.putExtra(ImportSessionActivity.EXTRA_FALLBACK_DATE, dateSelected);
+        startActivity(intent);
+    }
 
     // Navigates to given activity based on the selected menu item
     @Override
@@ -445,7 +607,9 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         }
         else if(item.getItemId() == R.id.import_session)
         {
-            fileSearchImportSession();
+            // Icone nuage : seance en attente d'abord, "Autre fichier..." ensuite (fusion
+            // du 15/10/2026, voir importPendingPlan()).
+            importPendingPlan();
         }
         else if(item.getItemId() == R.id.select_exercises)
         {

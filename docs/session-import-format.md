@@ -5,8 +5,20 @@ into whichever day is currently open, without touching any previously logged his
 (it only ever *adds* sets — see `DataStorage.mergeImportedSession()`).
 
 This is the integration point for an external workout-generator script: have it write a
-file in this format, and either open it with Verifit ("Open with...") or import it from
+file in this format, and either open it with FitEngine ("Open with...") or import it from
 inside the app.
+
+Three ways in, all ending in the same import code (`SessionImporter.importFromJson()`):
+
+- **Importer une séance** (cloud icon of the Workout tab, since 2026-10-15): reads the plans
+  folder `Documents/FitEngine_plans` (see below), offers the latest plan of each type (radio
+  buttons, newest pre-selected) and opens the preview screen on "Ouvrir l'aperçu".
+  "Autre fichier…" opens the system file picker; the chosen file also goes through the
+  preview (the day shown is the fallback date). Never imports on its own.
+- **Ouvrir avec FitEngine** (`ImportSessionActivity`, VIEW/SEND from Files, Drive, mail...):
+  preview first, import on "Importer".
+- **Import Session** (`DayActivity` toolbar only): file picker, imports straight away into
+  the day opened (no preview).
 
 ## Shape
 
@@ -64,8 +76,79 @@ toast.
   import/export path (`DataStorage.readFile`/`writeFile`, wired to Settings → "Import
   CSV") — that one is a full backup **restore** and clears all local data first. Session
   import only appends, so it's safe to run repeatedly / semi-automatically.
-- **Re-importing the same file is not idempotent.** Running the same import twice will
-  add the same sets twice (there's no de-duplication — the underlying `WorkoutSet` model
-  has no external/import ID to dedupe on). If your script re-runs automatically, make
-  sure it's the one deciding whether a session was already sent, or extend the format
-  with an idempotency key later.
+- **Re-importing the same plan is detected (since 2026-10-15).** The app remembers every
+  imported plan by the SHA-256 of its *content* (not its file name), see "Plan identity"
+  below. A second import of the same content is refused by default: the preview says
+  "Plan déjà importé" and only offers "Réimporter quand même"; `DayActivity`'s "Import
+  Session" shows a confirmation dialog. A second, older check is still there
+  (`DataStorage.countImportedSets()`, 2026-09-28): the target day already holds imported
+  sets for these exercises, which also catches a *different* plan for the same day.
+  Confirming a forced re-import still adds the sets a second time (the `WorkoutSet` model
+  has no import ID).
+
+## Plan identity (idempotency key)
+
+`ImportedPlans.hash()`: SHA-256 (lowercase hex) of the file text after removing a UTF-8
+BOM, turning `\r\n` and `\r` into `\n`, and removing trailing newlines. Nothing else is
+normalised (a changed space is a different plan). Same value in Python:
+
+```python
+t = open(p, encoding="utf-8-sig").read().replace("\r\n", "\n").replace("\r", "\n").rstrip("\n")
+hashlib.sha256(t.encode("utf-8")).hexdigest()
+```
+
+Consequence: a plan regenerated with identical content under a new timestamped name is
+recognised; a plan whose `date` or any weight changed is a new plan.
+
+The registry lives in the app's own preferences (`imported_plans`, separate from workout
+data: "Clear Data" and a full-backup restore do not reset it), newest first, 500 entries
+max.
+
+## Pending plans folder (`Documents/FitEngine_plans`)
+
+Filled by Syncthing from `Coaching\fitengine_plans` (PC "send only", phone "receive
+only"). The app **only reads** it and never moves, renames or deletes a file there.
+
+- Access: chosen once in the Android folder picker (`ACTION_OPEN_DOCUMENT_TREE`), persisted
+  with the **read** flag only (`PlanFolder`). MediaStore cannot be used: since Android 11
+  an app only sees, through MediaStore, the non-media files it created itself, and these
+  are written by Syncthing.
+- Listing: first level only. Folders (`.stfolder`), hidden or temporary files (`.`, `~`)
+  are skipped; other `.json` must be named
+  `Seance_<Type>_<Cycle>_<YYYY-MM-DD_HH-MM-SS>.json` (`generate_workout.py`), anything else
+  is counted as ignored.
+- Choice: latest plan **per type** (Force, Volume...) by the timestamp in the name, not by
+  file date (Syncthing may deliver files in any order). Each one is shown with its
+  `comment` (e.g. `Cycle A - Force`), its `date`, its generation time and "Déjà importé le
+  ..." if its hash is known. Logic in `PendingPlans` (JUnit tested).
+
+## Acknowledgement file (`Documents/FitEngine/fitengine_plan_imports.json`)
+
+Rewritten (fixed name, same mechanism as `fitengine_coaching_latest.json`) after every
+successful import, from any of the three entry points. Syncthing brings it to
+`Coaching\fitengine_sync`. Android 10+ only, like the other exports. Nothing on the PC
+reads it yet.
+
+```json
+{
+  "kind": "fitengine-plan-imports",
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-15T19:45:00",
+  "imports": [
+    {
+      "sha256": "720d2742...",
+      "fileName": "Seance_Force_CycleA_2026-10-15_19-39-29.json",
+      "sessionDate": "2026-10-16",
+      "comment": "Cycle A - Force",
+      "importedAt": "2026-10-15T19:45:00",
+      "setsImported": 20,
+      "forced": false
+    }
+  ]
+}
+```
+
+Newest first. A forced re-import adds a new entry with `forced: true`. `fileName` is empty
+when the JSON was shared as text. Times are the phone's local time. There is no `days`
+key on purpose: `sync_verifit_to_excel.py` (`looks_like_verifit_export`) can never mistake
+this file for the workout export.

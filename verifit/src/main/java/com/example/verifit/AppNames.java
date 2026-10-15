@@ -26,6 +26,10 @@ public final class AppNames
     public static final String EXPORT_FOLDER = "FitEngine";
     public static final String AUTO_SUBFOLDER = "auto";
 
+    // Dossier des plans de seance sous Documents/ (15/10/2026) : rempli par Syncthing depuis
+    // Coaching\fitengine_plans, l'app ne fait que le LIRE (voir PlanFolder).
+    public static final String PLANS_FOLDER = "FitEngine_plans";
+
     // Prefixe des fichiers exportes : fitengine_backup_..., fitengine_coaching_latest.json...
     public static final String FILE_PREFIX = "fitengine";
 

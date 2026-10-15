@@ -13,10 +13,13 @@
          (voir day_activity_menu.xml) - jamais porte sur l'onglet Workout (accueil),
          alors que c'est l'ecran ouvert par defaut au lancement de l'app. Meme
          mecanique que sur DayActivity (SessionImporter), ciblant le jour actuellement
-         affiche dans le carrousel (dateSelected) plutot qu'un jour fixe. -->
+         affiche dans le carrousel (dateSelected) plutot qu'un jour fixe.
+         15/10/2026 (fusion decidee par Romain) : ouvre d'abord la seance en attente du
+         dossier Documents/FitEngine_plans, "Autre fichier..." pour un fichier quelconque ;
+         tout passe par l'apercu (voir MainActivity.importPendingPlan()). -->
     <item
         android:id="@+id/import_session"
-        android:title="Import Session"
+        android:title="Importer une séance"
         android:icon="@drawable/ic_cloud_upload_24px"
         app:showAsAction="always"
         app:iconTint="@color/cardview_light_background">
@@ -86,4 +89,4 @@
 
 
 
-</menu>
+</menu>
