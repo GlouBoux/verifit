@@ -451,6 +451,43 @@ public class WorkoutDay {
         return false;
     }
 
+    // Correctif du 15/10/2026 (retour Romain) : une seance importee la veille demarrait
+    // son chrono a l'heure de l'IMPORT (jeudi soir pour la seance du vendredi), Auto Start
+    // actif. L'import ne demarre (ou ne reprend) donc plus le chrono que si le jour importe
+    // est AUJOURD'HUI (today = "AAAA-MM-JJ", jour local). Sinon rien ne change : le chrono
+    // demarrera a la premiere serie validee de ce jour (startSessionOnFirstLog()).
+    public boolean startOrResumeSessionIfToday(boolean autoStartEnabled, long nowMillis, String today)
+    {
+        if (today == null || !today.equals(Date))
+        {
+            return false;
+        }
+        return startOrResumeSession(autoStartEnabled, nowMillis);
+    }
+
+    // Premiere serie validee d'un jour IMPORTE (Update d'une serie, ou case "serie faite"
+    // cochee) : demarre le chrono s'il n'a jamais tourne, Auto Start actif, et seulement
+    // si ce jour est aujourd'hui (corriger une ancienne seance ne doit pas lui creer un
+    // chrono). Ne REPREND jamais un chrono arrete : corriger une seance terminee la laisse
+    // terminee (regle du re-export automatique, lot D9). Avant ce correctif, seuls l'ajout
+    // d'une serie et l'import demarraient le chrono. Renvoie true si le chrono a demarre.
+    public boolean startSessionOnFirstLog(boolean autoStartEnabled, long nowMillis, String today)
+    {
+        if (SessionStartTimestamp != null || !autoStartEnabled || today == null || !today.equals(Date))
+        {
+            return false;
+        }
+        SessionStartTimestamp = nowMillis;
+        return true;
+    }
+
+    // Cle de jour "AAAA-MM-JJ" (format des dates de l'app) pour un instant donne, fuseau
+    // du telephone.
+    public static String dateKey(long millis)
+    {
+        return new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date(millis));
+    }
+
     // Bouton Start / Stop / Resume du dialogue "Workout Time" : demarre (jamais
     // demarre), arrete (en cours) ou reprend (arrete). Renvoie true UNIQUEMENT quand
     // l'appel vient d'ARRETER une seance en cours (fin de seance : declencheur de

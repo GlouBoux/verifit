@@ -436,6 +436,17 @@ public class AddExerciseActivity extends AppCompatActivity {
         // Manually update data because of bad design choices
         MainActivity.dataStorage.getWorkoutDays().get(finalI).UpdateData();
 
+        // Chrono de seance (correctif du 15/10/2026) : le premier Update d'une seance
+        // importee du jour demarre le chrono (jamais une reprise apres Stop, voir
+        // WorkoutDay.startSessionOnFirstLog()). Sauvegarde tout de suite s'il vient de
+        // demarrer, comme startOrResumeSessionTimer() (ne pas le perdre si l'app est tuee).
+        long now = System.currentTimeMillis();
+        if (MainActivity.dataStorage.getWorkoutDays().get(finalI).startSessionOnFirstLog(
+                SessionTimerTicker.isAutoStartEnabled(this), now, WorkoutDay.dateKey(now)))
+        {
+            MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
+        }
+
         // Let the user know I guess
         runOnUiThread(() -> {
             SnackBarWithMessage snackBarWithMessage = new SnackBarWithMessage(AddExerciseActivity.this);

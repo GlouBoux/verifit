@@ -16,8 +16,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.verifit.R;
 import com.example.verifit.SetCommentSheet;
+import com.example.verifit.SessionTimerTicker;
 import com.example.verifit.SetDialogs;
 import com.example.verifit.model.SetRest;
+import com.example.verifit.model.WorkoutDay;
 import com.example.verifit.model.WorkoutSet;
 import com.example.verifit.ui.AddExerciseActivity;
 import com.example.verifit.ui.MainActivity;
@@ -249,6 +251,17 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
                 if (isCompleted)
                 {
                     tapped.stampValidationIfMissing(System.currentTimeMillis());
+
+                    // Chrono de seance (correctif du 15/10/2026) : la premiere serie
+                    // cochee d'une seance importee du jour demarre le chrono (jamais une
+                    // reprise apres Stop, voir WorkoutDay.startSessionOnFirstLog()).
+                    int dayPosition = MainActivity.dataStorage.getDayPosition(tapped.getDate());
+                    if (dayPosition >= 0)
+                    {
+                        long now = System.currentTimeMillis();
+                        MainActivity.dataStorage.getWorkoutDays().get(dayPosition).startSessionOnFirstLog(
+                                SessionTimerTicker.isAutoStartEnabled(ct), now, WorkoutDay.dateKey(now));
+                    }
                 }
 
                 MainActivity.dataStorage.saveWorkoutData(ct);

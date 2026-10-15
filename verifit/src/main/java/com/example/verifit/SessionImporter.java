@@ -33,6 +33,12 @@ public class SessionImporter {
         public boolean alreadyImported;
         public int existingImportedSets;
         public String targetDate;
+        // Import idempotent (15/10/2026) : ce PLAN (meme contenu, voir ImportedPlans) a deja
+        // ete importe. Renseigne avec alreadyImported = true ; null sinon.
+        public ImportedPlans.Entry previousPlanImport;
+        // Accuse fitengine_plan_imports.json non ecrit (l'import, lui, a reussi) : message
+        // a montrer a l'utilisateur, ou null.
+        public String ackWarning;
         public boolean success;
         public String errorMessage = "";
         public DataStorage.ImportSummary summary;
@@ -64,7 +70,22 @@ public class SessionImporter {
     // qui a lu le fichier recu d'une autre appli, ou le JSON partage comme texte).
     public static void importJsonWithDuplicateCheck(final Activity activity, final String json, final DataStorage dataStorage,
                                                     final String fallbackDate, final OnImportDone onDone) {
-        runWithDuplicateCheck(activity, allowDuplicate -> safeImportJson(json, activity, dataStorage, fallbackDate, allowDuplicate), onDone);
+        importJsonWithDuplicateCheck(activity, json, dataStorage, fallbackDate, "", onDone);
+    }
+
+    // sourceName : nom du fichier lu (garde dans le registre des plans importes et dans
+    // l'accuse pour le PC), vide si inconnu.
+    public static void importJsonWithDuplicateCheck(final Activity activity, final String json, final DataStorage dataStorage,
+                                                    final String fallbackDate, final String sourceName, final OnImportDone onDone) {
+        runWithDuplicateCheck(activity, allowDuplicate -> safeImportJson(json, activity, dataStorage, fallbackDate, sourceName, allowDuplicate), onDone);
+    }
+
+    // Reimport explicitement demande ("Reimporter quand meme" de l'apercu, qui a deja
+    // montre l'avertissement) : aucune des deux verifications de doublon, pas de seconde
+    // alerte. L'import est marque "forced" dans le registre et l'accuse.
+    public static void importJsonForced(final Context context, final String json, final DataStorage dataStorage,
+                                        final String fallbackDate, final String sourceName, final OnImportDone onDone) {
+        onDone.onImportDone(safeImportJson(json, context, dataStorage, fallbackDate, sourceName, true));
     }
 
     private interface ImportAttempt {
@@ -78,11 +99,21 @@ public class SessionImporter {
             return;
         }
 
+        // Deux raisons possibles : le meme plan (empreinte du contenu) a deja ete importe,
+        // ou le jour contient deja des series importees pour ces exercices (point 1.5).
+        String message;
+        if (first.previousPlanImport != null) {
+            message = ImportedPlans.describePreviousImport(first.previousPlanImport)
+                    + "\n\nLe réimporter ajoutera ses séries une seconde fois.";
+        } else {
+            message = "Le " + first.targetDate + " contient déjà " + first.existingImportedSets
+                    + " série(s) importée(s) pour les exercices de ce fichier.\n\n"
+                    + "Importer quand même ajoutera ces séries une seconde fois.";
+        }
+
         new AlertDialog.Builder(activity)
-                .setTitle("Séance déjà importée ?")
-                .setMessage("Le " + first.targetDate + " contient déjà " + first.existingImportedSets
-                        + " série(s) importée(s) pour les exercices de ce fichier.\n\n"
-                        + "Importer quand même ajoutera ces séries une seconde fois.")
+                .setTitle(first.previousPlanImport != null ? "Plan déjà importé" : "Séance déjà importée ?")
+                .setMessage(message)
                 .setPositiveButton("Importer quand même", (dialog, which) ->
                         onDone.onImportDone(attempt.run(true)))
                 .setNegativeButton("Annuler", null)
@@ -100,9 +131,9 @@ public class SessionImporter {
         }
     }
 
-    private static Result safeImportJson(String json, Context context, DataStorage dataStorage, String fallbackDate, boolean allowDuplicate) {
+    private static Result safeImportJson(String json, Context context, DataStorage dataStorage, String fallbackDate, String sourceName, boolean allowDuplicate) {
         try {
-            return importFromJson(json, context, dataStorage, fallbackDate, allowDuplicate);
+            return importFromJson(json, context, dataStorage, fallbackDate, sourceName, allowDuplicate);
         } catch (Exception e) {
             Result result = new Result();
             result.success = false;
@@ -121,13 +152,21 @@ public class SessionImporter {
             result.errorMessage = "Could not read file: " + e.getMessage();
             return result;
         }
-        return importFromJson(json, context, dataStorage, fallbackDate, allowDuplicate);
+        return importFromJson(json, context, dataStorage, fallbackDate, TextFiles.displayName(uri, context), allowDuplicate);
     }
 
     // Import a partir du texte JSON (lot D, D8) : tout ce que faisait importFromUri()
     // apres la lecture du fichier. Une date invalide (ni "AAAA-MM-JJ", ni une vraie
     // date) est refusee : elle servirait de cle de jour dans les donnees.
     public static Result importFromJson(String json, Context context, DataStorage dataStorage, String fallbackDate, boolean allowDuplicate) {
+        return importFromJson(json, context, dataStorage, fallbackDate, "", allowDuplicate);
+    }
+
+    // Import idempotent (15/10/2026) : sourceName = nom du fichier (vide si inconnu),
+    // garde dans le registre des plans importes. allowDuplicate = true saute les DEUX
+    // verifications (meme plan deja importe, jour deja rempli).
+    public static Result importFromJson(String json, Context context, DataStorage dataStorage, String fallbackDate,
+                                        String sourceName, boolean allowDuplicate) {
         Result result = new Result();
 
         ImportedSession session;
@@ -151,6 +190,23 @@ public class SessionImporter {
             result.success = false;
             result.errorMessage = dateProblem;
             return result;
+        }
+
+        // Import idempotent (15/10/2026) : ce plan (meme contenu, quel que soit le nom du
+        // fichier) a-t-il deja ete importe ? Verifie AVANT le controle par jour ci-dessous :
+        // il reconnait aussi un plan importe sur un autre jour, ou dont les series ont ete
+        // supprimees depuis.
+        String planHash = ImportedPlans.hash(json);
+        if (!allowDuplicate) {
+            ImportedPlans.Entry previous = ImportedPlansStore.load(context).find(planHash);
+            if (previous != null) {
+                result.success = false;
+                result.alreadyImported = true;
+                result.previousPlanImport = previous;
+                result.targetDate = targetDate;
+                result.errorMessage = "Plan already imported on " + previous.importedAt;
+                return result;
+            }
         }
 
         // Point 1.5 : seance deja importee ce jour-la ? Detection AVANT toute
@@ -199,6 +255,12 @@ public class SessionImporter {
         dataStorage.saveKnownExerciseData(context);
         dataStorage.saveWorkoutData(context);
 
+        // Registre des plans importes + accuse pour le PC (Documents/FitEngine), apres la
+        // sauvegarde : seul un import reellement enregistre est memorise.
+        result.ackWarning = ImportedPlansStore.recordImport(context, new ImportedPlans.Entry(
+                planHash, sourceName, summary.date, session.getComment().trim(),
+                ImportedPlansStore.now(), summary.setsImported, allowDuplicate));
+
         result.success = true;
         result.summary = summary;
         return result;
@@ -237,12 +299,17 @@ public class SessionImporter {
     // mergeImportedSession() ne passe jamais par cette Activity. La sauvegarde reste
     // faite par l'appelant juste apres (dataStorage.saveWorkoutData()), pas besoin de
     // la refaire ici.
+    //
+    // Correctif du 15/10/2026 : seulement si le jour importe est aujourd'hui. Une seance
+    // importee la veille ne demarre plus son chrono a l'heure de l'import ; il demarrera
+    // a sa premiere serie validee (WorkoutDay.startSessionOnFirstLog()).
     private static void startOrResumeSessionTimerAfterImport(Context context, DataStorage dataStorage, String date) {
         int dayPosition = dataStorage.getDayPosition(date);
         if (dayPosition < 0) {
             return;
         }
+        long now = System.currentTimeMillis();
         dataStorage.getWorkoutDays().get(dayPosition)
-                .startOrResumeSession(SessionTimerTicker.isAutoStartEnabled(context), System.currentTimeMillis());
+                .startOrResumeSessionIfToday(SessionTimerTicker.isAutoStartEnabled(context), now, WorkoutDay.dateKey(now));
     }
 }
