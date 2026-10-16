@@ -38,14 +38,17 @@ public class WorkoutSet {
     private Double plannedReps;
     private Double plannedWeight;
 
-    // Horodatage (epoch millis) du moment ou cette serie a ete VALIDEE dans l'app
-    // (retour Romain 06/09/2026). Renseigne UNIQUEMENT lors d'une saisie manuelle d'une
-    // NOUVELLE serie (voir AddExerciseActivity.clickSave()) - jamais lors d'une
-    // modification d'une serie existante (l'horodatage reste celui de la creation
-    // initiale), jamais lors d'un import CSV d'historique ni d'un import de seance
-    // generee (aucune heure reelle disponible dans ces cas). Reste null pour toute
-    // serie deja sauvegardee avant l'ajout de ce champ - Gson retombe sur cette valeur
-    // par defaut.
+    // Horodatage (epoch millis) du moment ou cette serie a ete COCHEE ("serie faite")
+    // dans l'app. Sert uniquement au repos reel (voir SetRest).
+    //
+    // Retour Romain 16/10/2026 : pose UNIQUEMENT par la case "serie faite" (voir
+    // markCompleted()), efface quand on la decoche. Avant, Save d'une nouvelle serie et
+    // Update en posaient un aussi : deux series ajoutees a la main (non cochees, seance
+    // pas commencee) affichaient "repos 0:16". Jamais pose par un import CSV d'historique
+    // ni par un import de seance generee. Reste null pour toute serie sauvegardee avant
+    // l'ajout de ce champ - Gson retombe sur cette valeur par defaut. Des series
+    // sauvegardees entre le 06/09 et le 16/10/2026 peuvent avoir un horodatage sans etre
+    // cochees : SetRest les ignore, et les cocher remplace cet horodatage.
     //
     // N'est PLUS utilise pour la ligne "Time" de l'export de seance (retour Romain
     // 06/09/2026, correctif) : cette ligne se base desormais sur le chrono de session
@@ -164,18 +167,14 @@ public class WorkoutSet {
     }
 
 
-    // Pose l'horodatage de validation SEULEMENT s'il n'y en a pas deja un (retour UAT
-    // Romain 05/10/2026 : les series importees n'en avaient jamais, donc aucun repos
-    // affiche). Regle "le premier geste gagne" (Save, Update ou case "serie faite") :
-    // jamais d'ecrasement d'un horodatage existant. Retourne vrai s'il a ete pose.
-    public boolean stampValidationIfMissing(long nowMillis)
+    // Case "serie faite" (retour Romain 16/10/2026) : cocher pose l'horodatage au moment
+    // du geste (en remplacant un eventuel horodatage plus ancien, ex. celui d'un Save
+    // d'avant ce correctif) ; decocher l'efface, la serie n'etant plus faite. Remplace
+    // l'ancienne regle "le premier geste gagne (Save, Update ou case)" du 05/10/2026.
+    public void markCompleted(boolean completed, long nowMillis)
     {
-        if (this.timestamp != null)
-        {
-            return false;
-        }
-        this.timestamp = nowMillis;
-        return true;
+        this.isCompleted = completed;
+        this.timestamp = completed ? Long.valueOf(nowMillis) : null;
     }
 
 

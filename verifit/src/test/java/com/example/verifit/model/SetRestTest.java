@@ -12,9 +12,23 @@ import java.util.List;
 
 public class SetRestTest
 {
+    // Serie cochee a l'instant donne (null = jamais cochee). Depuis le 16/10/2026, seule
+    // une serie cochee compte pour le repos (voir SetRest).
     private static WorkoutSet set(Long timestamp)
     {
         WorkoutSet s = new WorkoutSet("2026-10-01", "Squat", "Legs", 5.0, 100.0);
+        if (timestamp != null)
+        {
+            s.markCompleted(true, timestamp);
+        }
+        return s;
+    }
+
+    // Serie horodatee mais NON cochee : cas des series ajoutees via Save avant le
+    // correctif du 16/10/2026 (Save posait un horodatage).
+    private static WorkoutSet savedNotChecked(String exercise, long timestamp)
+    {
+        WorkoutSet s = new WorkoutSet("2026-10-16", exercise, "Legs", 3.0, 52.0);
         s.setTimestamp(timestamp);
         return s;
     }
@@ -65,7 +79,10 @@ public class SetRestTest
     private static WorkoutSet setOf(String exercise, Long timestamp)
     {
         WorkoutSet s = new WorkoutSet("2026-10-01", exercise, "Cat", 5.0, 100.0);
-        s.setTimestamp(timestamp);
+        if (timestamp != null)
+        {
+            s.markCompleted(true, timestamp);
+        }
         return s;
     }
 
@@ -220,30 +237,40 @@ public class SetRestTest
     }
 
     @Test
-    public void validation_serieImporteeSansHorodatageEnRecoitUn()
+    public void validation_cocherHorodateLaSerie()
     {
         WorkoutSet s = imported();
         assertEquals(false, s.hasTimestamp());
+        assertEquals(false, s.isCompleted());
 
-        assertEquals(true, s.stampValidationIfMissing(T0));
-        assertEquals(true, s.hasTimestamp());
+        s.markCompleted(true, T0);
+        assertEquals(true, s.isCompleted());
         assertEquals(Long.valueOf(T0), s.getTimestamp());
     }
 
     @Test
-    public void validation_premierGesteGagneJamaisDEcrasement()
+    public void validation_cocherRemplaceUnAncienHorodatageDeSave()
+    {
+        // Serie ajoutee via Save avant le correctif du 16/10/2026 (horodatee a la
+        // creation, jamais cochee) : la cocher plus tard prend l'heure de la coche.
+        WorkoutSet saved = savedNotChecked("Leg Extension", T0);
+        saved.markCompleted(true, T0 + 900_000L);
+        assertEquals(Long.valueOf(T0 + 900_000L), saved.getTimestamp());
+    }
+
+    @Test
+    public void validation_decocherEffaceLHorodatage()
     {
         WorkoutSet s = imported();
-        s.stampValidationIfMissing(T0);
+        s.markCompleted(true, T0);
+        s.markCompleted(false, T0 + 60_000L);
 
-        // Un second geste (Update, nouvelle coche) plus tard ne change rien.
-        assertEquals(false, s.stampValidationIfMissing(T0 + 600_000L));
-        assertEquals(Long.valueOf(T0), s.getTimestamp());
+        assertEquals(false, s.isCompleted());
+        assertEquals(false, s.hasTimestamp());
 
-        // Meme chose pour une serie saisie via Save (horodatage deja pose a la creation).
-        WorkoutSet saved = set(T0 + 5_000L);
-        assertEquals(false, saved.stampValidationIfMissing(T0 + 900_000L));
-        assertEquals(Long.valueOf(T0 + 5_000L), saved.getTimestamp());
+        // Recocher plus tard : c'est la nouvelle heure qui compte.
+        s.markCompleted(true, T0 + 300_000L);
+        assertEquals(Long.valueOf(T0 + 300_000L), s.getTimestamp());
     }
 
     @Test
@@ -258,9 +285,9 @@ public class SetRestTest
         // Avant toute validation : aucun repos, aucun libelle.
         assertEquals("", SetRest.labelAt(sets, 1, sets));
 
-        s1.stampValidationIfMissing(T0);
-        s2.stampValidationIfMissing(T0 + 90_000L);
-        s3.stampValidationIfMissing(T0 + 240_000L);
+        s1.markCompleted(true, T0);
+        s2.markCompleted(true, T0 + 90_000L);
+        s3.markCompleted(true, T0 + 240_000L);
 
         assertEquals("", SetRest.labelAt(sets, 0, sets));
         assertEquals("repos 1:30", SetRest.labelAt(sets, 1, sets));
@@ -275,12 +302,41 @@ public class SetRestTest
         WorkoutSet s1 = imported();
         WorkoutSet s2 = imported();
         WorkoutSet s3 = imported();
-        s1.stampValidationIfMissing(T0);
-        s3.stampValidationIfMissing(T0 + 240_000L);
+        s1.markCompleted(true, T0);
+        s3.markCompleted(true, T0 + 240_000L);
         List<WorkoutSet> sets = Arrays.asList(s1, s2, s3);
 
         assertEquals("", SetRest.labelAt(sets, 1, sets));
         assertEquals("repos 4:00", SetRest.labelAt(sets, 2, sets));
+    }
+
+    // Retour Romain 16/10/2026 (capture Leg Extension) : deux series ajoutees via Save
+    // a 16 s d'ecart, sans cocher, seance pas commencee : affichait "repos 0:16".
+    @Test
+    public void casReel_seriesAjouteesSansCocherNOntPasDeRepos()
+    {
+        WorkoutSet s1 = savedNotChecked("Leg Extension", T0);
+        WorkoutSet s2 = savedNotChecked("Leg Extension", T0 + 16_000L);
+        List<WorkoutSet> sets = Arrays.asList(s1, s2);
+
+        assertEquals("", SetRest.labelAt(sets, 1, sets));
+        assertNull(SetRest.restSeconds(s1, s2));
+        assertEquals(Arrays.asList((Long) null, null), SetRest.restSecondsForDay(sets));
+    }
+
+    @Test
+    public void serieHorodateeNonCocheeNeSertPasDePrecedent()
+    {
+        // A1 cochee, B1 horodatee par un ancien Save mais non cochee, A2 cochee : le
+        // repos de A2 se compte depuis A1, pas depuis B1.
+        WorkoutSet a1 = setOf("A", T0);
+        WorkoutSet b1 = savedNotChecked("B", T0 + 100_000L);
+        WorkoutSet a2 = setOf("A", T0 + 150_000L);
+        List<WorkoutSet> day = Arrays.asList(a1, b1, a2);
+
+        assertSame(a1, SetRest.previousValidatedInDay(day, a2));
+        assertEquals(Long.valueOf(150), SetRest.restSecondsForDay(day).get(2));
+        assertNull(SetRest.previousValidatedInDay(day, b1));
     }
 
     @Test

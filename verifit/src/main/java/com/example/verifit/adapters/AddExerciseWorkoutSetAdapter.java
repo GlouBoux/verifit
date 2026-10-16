@@ -241,20 +241,19 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
 
                 boolean isCompleted = holder.completedCheckbox.isChecked();
                 WorkoutSet tapped = Workout_Sets.get(adapterPosition);
-                tapped.setCompleted(isCompleted);
 
-                // Repos reel (retour UAT Romain 05/10/2026) : les series importees n'ont
-                // jamais d'horodatage (seul clickSave() en posait un), donc aucun repos
-                // ne s'affichait. La premiere validation (Save, Update ou case cochee)
-                // pose l'horodatage ; on n'ecrase jamais un horodatage deja present, et
-                // decocher n'efface rien.
+                // Repos reel (retour Romain 16/10/2026) : seule la case "serie faite"
+                // horodate la serie (cocher = maintenant, decocher = efface), Save et
+                // Update n'en posent plus. Voir WorkoutSet.markCompleted() et SetRest.
+                tapped.markCompleted(isCompleted, System.currentTimeMillis());
+
                 if (isCompleted)
                 {
-                    tapped.stampValidationIfMissing(System.currentTimeMillis());
-
-                    // Chrono de seance (correctif du 15/10/2026) : la premiere serie
-                    // cochee d'une seance importee du jour demarre le chrono (jamais une
-                    // reprise apres Stop, voir WorkoutDay.startSessionOnFirstLog()).
+                    // Chrono de seance : la premiere serie cochee du jour le demarre
+                    // (Auto Start actif, jamais une reprise apres Stop, voir
+                    // WorkoutDay.startSessionOnFirstLog()). Depuis le 16/10/2026 (retour
+                    // Romain), c'est le SEUL geste de saisie qui le demarre : Save et
+                    // Update ne le font plus.
                     int dayPosition = MainActivity.dataStorage.getDayPosition(tapped.getDate());
                     if (dayPosition >= 0)
                     {

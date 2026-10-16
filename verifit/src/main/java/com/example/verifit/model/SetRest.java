@@ -32,10 +32,17 @@ import java.util.Set;
  *   machine, meme quand les exercices sont alternes) ;
  * - affichage "repos 2:15", champ optionnel "restSeconds" dans l'export Coaching.
  *
+ * Seules les series COCHEES comptent (retour Romain 16/10/2026 : deux series ajoutees a
+ * la main, sans cocher la case, avant meme de commencer la seance, affichaient
+ * "repos 0:16"). Une serie non cochee n'a jamais de repos et ne sert jamais de
+ * "derniere serie" aux autres, meme si elle porte un horodatage (series sauvegardees
+ * avant ce correctif, quand Save et Update en posaient un). L'horodatage est desormais
+ * pose uniquement par la case "serie faite" (WorkoutSet.markCompleted()).
+ *
  * Limites assumees : l'horodatage est celui de la VALIDATION de la serie, donc l'ecart
  * inclut la duree d'execution de la serie (de l'ordre de 30 a 60 s). Un repos est
- * inconnu (null) si la serie n'a pas d'horodatage (import, CSV, anciennes donnees, serie
- * pas encore cochee), s'il n'existe aucune serie validee avant elle ce jour-la, ou si
+ * inconnu (null) si la serie n'est pas cochee ou n'a pas d'horodatage (import, CSV,
+ * anciennes donnees), s'il n'existe aucune serie cochee avant elle ce jour-la, ou si
  * l'ecart depasse MAX_REST_SECONDS (pause longue : ce n'est plus un repos).
  *
  * Classe pure (aucune dependance Android) : testee par SetRestTest.
@@ -48,11 +55,17 @@ public final class SetRest
 
     private SetRest() {}
 
+    // Vrai si la serie compte pour le repos : cochee ET horodatee (retour Romain
+    // 16/10/2026).
+    static boolean isValidated(WorkoutSet set)
+    {
+        return set != null && set.isCompleted() && set.hasTimestamp();
+    }
+
     // Repos (en secondes) de "current" par rapport a "previous", ou null si inconnu.
     public static Long restSeconds(WorkoutSet previous, WorkoutSet current)
     {
-        if (previous == null || current == null
-                || !previous.hasTimestamp() || !current.hasTimestamp())
+        if (!isValidated(previous) || !isValidated(current))
         {
             return null;
         }
@@ -65,11 +78,11 @@ public final class SetRest
         return seconds;
     }
 
-    // Derniere serie validee du jour avant "current" (horodatage le plus recent
+    // Derniere serie cochee du jour avant "current" (horodatage le plus recent
     // strictement anterieur au sien), tous exercices confondus, ou null.
     public static WorkoutSet previousValidatedInDay(List<WorkoutSet> daySets, WorkoutSet current)
     {
-        if (daySets == null || current == null || !current.hasTimestamp())
+        if (daySets == null || !isValidated(current))
         {
             return null;
         }
@@ -78,7 +91,7 @@ public final class SetRest
         WorkoutSet best = null;
         for (WorkoutSet candidate : daySets)
         {
-            if (candidate == null || !candidate.hasTimestamp())
+            if (!isValidated(candidate))
             {
                 continue;
             }

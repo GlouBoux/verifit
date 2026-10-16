@@ -40,7 +40,6 @@ import android.widget.Toast;
 import com.example.verifit.KeyboardHider;
 import com.example.verifit.RestTimerBarTicker;
 import com.example.verifit.RestTimerReceiver;
-import com.example.verifit.SessionTimerTicker;
 import com.example.verifit.SnackBarWithMessage;
 import com.example.verifit.adapters.AddExerciseWorkoutSetAdapter;
 import com.example.verifit.adapters.ExerciseHistoryExerciseAdapter;
@@ -205,8 +204,8 @@ public class AddExerciseActivity extends AppCompatActivity {
         alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
         // Chrono de la seance entiere (retour Romain 06/09/2026) - demarrage automatique
-        // a la premiere serie loggee (voir startOrResumeSessionTimer()), affichage gere
-        // ici. L'etat reel (WorkoutDay) n'est connu qu'apres
+        // a la premiere serie cochee du jour (retour Romain 16/10/2026, voir
+        // AddExerciseWorkoutSetAdapter), affichage gere ici. L'etat reel (WorkoutDay) n'est connu qu'apres
         // initActivity()/MainActivity.dateSelected - le rafraichissement initial se fait
         // donc dans onResume() (appele juste apres onCreate()), pas ici.
         // Un tap sur la barre ouvre le dialogue "Workout Time" (SessionTimerController).
@@ -314,10 +313,9 @@ public class AddExerciseActivity extends AppCompatActivity {
                 // Create New Set Object
                 WorkoutSet workoutSet = new WorkoutSet(MainActivity.dateSelected,exercise_name, MainActivity.dataStorage.getExerciseCategory(exercise_name),reps,weight);
 
-                // Horodatage du moment de la validation (retour Romain 06/09/2026,
-                // pour la ligne "Time" de l'export de seance) - uniquement pour une
-                // NOUVELLE serie, jamais lors d'une modification (cf. WorkoutSet.java).
-                workoutSet.setTimestamp(System.currentTimeMillis());
+                // Pas d'horodatage ici (retour Romain 16/10/2026) : une serie ajoutee
+                // n'est pas une serie faite, seule la case "serie faite" l'horodate
+                // (voir WorkoutSet.markCompleted() et SetRest).
 
                 // Ignore wrong input
                 if(reps == 0 || weight == 0 || reps < 0 || weight < 0)
@@ -428,24 +426,14 @@ public class AddExerciseActivity extends AppCompatActivity {
         updatedSet.setReps(reps);
         updatedSet.setWeight(weight);
 
-        // Repos reel (retour UAT Romain 05/10/2026) : une serie importee n'a pas
-        // d'horodatage ; le premier Update (ou la case "serie faite") en pose un. Jamais
-        // d'ecrasement d'un horodatage existant. Annuler l'Update n'y touche pas.
-        updatedSet.stampValidationIfMissing(System.currentTimeMillis());
+        // Pas d'horodatage ici (retour Romain 16/10/2026) : seule la case "serie faite"
+        // horodate une serie (voir WorkoutSet.markCompleted() et SetRest).
 
         // Manually update data because of bad design choices
         MainActivity.dataStorage.getWorkoutDays().get(finalI).UpdateData();
 
-        // Chrono de seance (correctif du 15/10/2026) : le premier Update d'une seance
-        // importee du jour demarre le chrono (jamais une reprise apres Stop, voir
-        // WorkoutDay.startSessionOnFirstLog()). Sauvegarde tout de suite s'il vient de
-        // demarrer, comme startOrResumeSessionTimer() (ne pas le perdre si l'app est tuee).
-        long now = System.currentTimeMillis();
-        if (MainActivity.dataStorage.getWorkoutDays().get(finalI).startSessionOnFirstLog(
-                SessionTimerTicker.isAutoStartEnabled(this), now, WorkoutDay.dateKey(now)))
-        {
-            MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
-        }
+        // Chrono de seance : un Update ne le demarre plus (retour Romain 16/10/2026,
+        // seule la case "serie faite" le demarre, voir AddExerciseWorkoutSetAdapter).
 
         // Let the user know I guess
         runOnUiThread(() -> {
@@ -487,7 +475,6 @@ public class AddExerciseActivity extends AppCompatActivity {
     {
         WorkoutDay workoutDay = MainActivity.dataStorage.getWorkoutDays().get(position);
         workoutDay.addSet(workoutSet);
-        startOrResumeSessionTimer(workoutDay);
         updateViewAndShowMessage();
     }
 
@@ -495,28 +482,15 @@ public class AddExerciseActivity extends AppCompatActivity {
     {
         WorkoutDay workoutDay = new WorkoutDay();
         workoutDay.addSet(workoutSet);
-        startOrResumeSessionTimer(workoutDay);
         MainActivity.dataStorage.getWorkoutDays().add(workoutDay);
         updateViewAndShowMessage();
     }
 
-    // Retour Romain 06/09/2026 (chrono de session) : demarre le chrono a la toute
-    // premiere serie du jour. Si une nouvelle serie est loggee apres un Stop manuel, la
-    // seance est consideree reprise (le Stop precedent est efface) plutot que de laisser
-    // un chrono "arrete" pendant qu'un entrainement continue visiblement - voir le
-    // commentaire sur WorkoutDay.SessionStartTimestamp pour le detail du choix. Sauvegarde
-    // immediatement (comme les autres actions explicites de cet ecran, ex.
-    // deleteSetLogic()), pour ne jamais perdre ce chrono si l'app est tuee juste apres.
-    private void startOrResumeSessionTimer(WorkoutDay workoutDay)
-    {
-        // Regle dans WorkoutDay.startOrResumeSession() (partagee avec Import Session) :
-        // "Auto Start" ne joue que pour le tout premier demarrage, la reprise apres un
-        // Stop manuel est toujours automatique (comme "Auto Start" de FitNotes).
-        if (workoutDay.startOrResumeSession(SessionTimerTicker.isAutoStartEnabled(this), System.currentTimeMillis()))
-        {
-            MainActivity.dataStorage.saveWorkoutData(getApplicationContext());
-        }
-    }
+    // Chrono de seance : ajouter une serie (Save) ne le demarre plus et ne le reprend
+    // plus apres un Stop (retour Romain 16/10/2026 : deux series ajoutees avant meme de
+    // commencer la seance). Seule la case "serie faite" le demarre, voir
+    // AddExerciseWorkoutSetAdapter et WorkoutDay.startSessionOnFirstLog(). Remplace la
+    // regle du 06/09/2026 (demarrage a la 1re serie loggee, reprise apres Stop).
 
 
     public void updateViewAndShowMessage()

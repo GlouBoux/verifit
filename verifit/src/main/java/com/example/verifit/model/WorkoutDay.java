@@ -426,8 +426,9 @@ public class WorkoutDay {
         return SessionStartTimestamp != null && SessionEndTimestamp == null;
     }
 
-    // Demarrage automatique du chrono de seance quand une serie arrive (saisie dans
-    // l'ecran d'exercice, ou Import Session) : demarre s'il n'a jamais tourne (si le
+    // Demarrage automatique du chrono de seance a l'Import Session (via
+    // startOrResumeSessionIfToday() ; la saisie dans l'ecran d'exercice ne l'appelle plus
+    // depuis le 16/10/2026, voir startSessionOnFirstLog()) : demarre s'il n'a jamais tourne (si le
     // reglage "Auto Start" est actif), reprend s'il avait ete arrete (toujours, quel que
     // soit le reglage : une seance qui continue visiblement ne doit pas rester
     // "arretee"). Renvoie true si quelque chose a change (a sauvegarder). Lot C.3
@@ -465,12 +466,14 @@ public class WorkoutDay {
         return startOrResumeSession(autoStartEnabled, nowMillis);
     }
 
-    // Premiere serie validee d'un jour IMPORTE (Update d'une serie, ou case "serie faite"
-    // cochee) : demarre le chrono s'il n'a jamais tourne, Auto Start actif, et seulement
-    // si ce jour est aujourd'hui (corriger une ancienne seance ne doit pas lui creer un
-    // chrono). Ne REPREND jamais un chrono arrete : corriger une seance terminee la laisse
-    // terminee (regle du re-export automatique, lot D9). Avant ce correctif, seuls l'ajout
-    // d'une serie et l'import demarraient le chrono. Renvoie true si le chrono a demarre.
+    // Premiere serie cochee ("serie faite") du jour : demarre le chrono s'il n'a jamais
+    // tourne, Auto Start actif, et seulement si ce jour est aujourd'hui (corriger une
+    // ancienne seance ne doit pas lui creer un chrono). Ne REPREND jamais un chrono
+    // arrete : corriger une seance terminee la laisse terminee (regle du re-export
+    // automatique, lot D9). Depuis le 16/10/2026 (retour Romain), c'est le seul geste de
+    // saisie qui demarre le chrono : Save (ajout d'une serie) et Update ne le font plus,
+    // ajouter des series avant de commencer ne demarre donc rien. Renvoie true si le
+    // chrono a demarre.
     public boolean startSessionOnFirstLog(boolean autoStartEnabled, long nowMillis, String today)
     {
         if (SessionStartTimestamp != null || !autoStartEnabled || today == null || !today.equals(Date))

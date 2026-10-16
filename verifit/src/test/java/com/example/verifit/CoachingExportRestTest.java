@@ -20,11 +20,31 @@ public class CoachingExportRestTest
 {
     private static final long T0 = 1_000_000_000_000L;
 
+    // Serie cochee a l'instant donne (null = jamais cochee) : depuis le 16/10/2026, seule
+    // une serie cochee a un repos (voir SetRest).
     private static WorkoutSet set(String exercise, Long timestamp)
     {
         WorkoutSet s = new WorkoutSet("2026-10-01", exercise, "Legs", 5.0, 100.0);
-        s.setTimestamp(timestamp);
+        if (timestamp != null)
+        {
+            s.markCompleted(true, timestamp);
+        }
         return s;
+    }
+
+    @Test
+    public void serieHorodateeNonCocheeSansRepos()
+    {
+        // Retour Romain 16/10/2026 : series ajoutees via Save (horodatees par l'ancien
+        // code) mais jamais cochees, a 16 s d'ecart : aucun restSeconds exporte.
+        WorkoutSet s1 = new WorkoutSet("2026-10-01", "Leg Extension", "Legs", 3.0, 52.0);
+        WorkoutSet s2 = new WorkoutSet("2026-10-01", "Leg Extension", "Legs", 2.0, 63.0);
+        s1.setTimestamp(T0);
+        s2.setTimestamp(T0 + 16_000L);
+        JsonArray sets = setsOf(exportOf(s1, s2));
+
+        assertFalse(sets.get(0).getAsJsonObject().has("restSeconds"));
+        assertFalse(sets.get(1).getAsJsonObject().has("restSeconds"));
     }
 
     private static JsonObject exportOf(WorkoutSet... sets)
