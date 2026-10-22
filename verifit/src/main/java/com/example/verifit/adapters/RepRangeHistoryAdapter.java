@@ -12,9 +12,11 @@ import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.verifit.AssistDisplay;
 import com.example.verifit.R;
 import com.example.verifit.RepRangeHistoryRow;
 import com.example.verifit.RepRangePREvent;
+import com.example.verifit.SetDialogs;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
@@ -30,10 +32,14 @@ public class RepRangeHistoryAdapter extends RecyclerView.Adapter<RepRangeHistory
     Context ct;
     ArrayList<RepRangeHistoryRow> rows;
 
-    public RepRangeHistoryAdapter(Context ct, ArrayList<RepRangeHistoryRow> rows)
+    // Affichage assistance / lest de l'exercice (null si non assiste), voir AssistDisplay.
+    private final AssistDisplay.Config assistConfig;
+
+    public RepRangeHistoryAdapter(Context ct, ArrayList<RepRangeHistoryRow> rows, AssistDisplay.Config assistConfig)
     {
         this.ct = ct;
         this.rows = rows;
+        this.assistConfig = assistConfig;
     }
 
     @NonNull
@@ -67,7 +73,8 @@ public class RepRangeHistoryAdapter extends RecyclerView.Adapter<RepRangeHistory
     private void bindEventRow(TextView repsView, TextView weightView, TextView dateView, int displayReps, RepRangePREvent event)
     {
         repsView.setText(displayReps + " RM");
-        weightView.setText(formatWeight(event.getWeight()) + " kgs");
+        weightView.setText(SetDialogs.prWeightText(formatWeight(event.getWeight()) + " kgs",
+                AssistDisplay.shortLabel(assistConfig, event.getWeight())));
         dateView.setText(event.getDate());
 
         int color = event.isDeduced()

@@ -37,6 +37,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.verifit.AssistDisplay;
 import com.example.verifit.KeyboardHider;
 import com.example.verifit.RestTimerBarTicker;
 import com.example.verifit.RestTimerReceiver;
@@ -128,6 +129,11 @@ public class AddExerciseActivity extends AppCompatActivity {
     // RestTimerBarTicker pour le detail).
     private View restTimerBarContainer;
     private TextView tvRestTimerBar;
+
+    // Reglage reel de la charge tapee pour un exercice assiste ("assistance 20 kg
+    // (10 kg/cote)"), retour Romain 20/10/2026, voir AssistDisplay et
+    // updateWeightAssistHint(). Affichage seul : la charge saisie ne change pas.
+    private TextView tvWeightAssist;
     private RestTimerBarTicker restTimerBarTicker;
 
     // Cle SharedPreferences du reglage "Auto Start" du minuteur de REPOS (07/09/2026) -
@@ -192,6 +198,7 @@ public class AddExerciseActivity extends AppCompatActivity {
         // find views
         et_reps = findViewById(R.id.et_reps);
         et_weight = findViewById(R.id.et_seconds);
+        tvWeightAssist = findViewById(R.id.tv_weight_assist);
         plus_reps = findViewById(R.id.plus_reps);
         minus_reps = findViewById(R.id.minus_reps);
         plus_weight = findViewById(R.id.plus_weight);
@@ -774,6 +781,13 @@ public class AddExerciseActivity extends AppCompatActivity {
             else
             {
                 refreshNavPanel();
+                // Le reglage "exercice assiste" a pu changer : reafficher les series et
+                // le texte sous Weight sans relancer l'ecran.
+                if (workoutSetAdapter2 != null)
+                {
+                    workoutSetAdapter2.notifyDataSetChanged();
+                }
+                updateWeightAssistHint();
                 showSnackbarMessage("Exercise Updated");
             }
         });
@@ -1135,6 +1149,7 @@ public class AddExerciseActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s)
             {
                 updateSaveClearButtonsVisibility();
+                updateWeightAssistHint();
             }
         };
 
@@ -1142,6 +1157,38 @@ public class AddExerciseActivity extends AppCompatActivity {
         et_reps.addTextChangedListener(watcher);
 
         updateSaveClearButtonsVisibility();
+        updateWeightAssistHint();
+    }
+
+    // Texte "assistance 20 kg (10 kg/cote)" / "lest +2.5 kg" / "poids de corps seul"
+    // pour la charge en cours de saisie, si l'exercice est marque assiste (Edit
+    // Exercise). Masque sinon, ou si le champ est vide ou illisible. Rappele par le
+    // TextWatcher ci-dessus a chaque changement du champ (frappe, +/-, edition d'une
+    // serie...). Ne modifie jamais le champ ni la serie.
+    private void updateWeightAssistHint()
+    {
+        if (tvWeightAssist == null)
+        {
+            return;
+        }
+        Double weight = null;
+        try
+        {
+            String text = et_weight.getText().toString().trim();
+            if (!text.isEmpty())
+            {
+                weight = Double.parseDouble(text);
+            }
+        }
+        catch (NumberFormatException e)
+        {
+            weight = null;
+        }
+        AssistDisplay.Config config = AssistDisplay.forExercise(
+                MainActivity.dataStorage.getKnownExercises(), exercise_name);
+        String label = AssistDisplay.longLabel(config, weight);
+        tvWeightAssist.setText(label);
+        tvWeightAssist.setVisibility(label.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     // Grace au TextWatcher ci-dessus, tout setText() programmatique sur et_weight/

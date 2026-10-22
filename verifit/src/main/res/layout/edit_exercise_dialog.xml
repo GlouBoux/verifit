@@ -74,6 +74,53 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tv_notes_label" />
 
+    <!-- Affichage assistance / lest (retour Romain 20/10/2026, voir AssistDisplay) :
+         n'agit que sur l'affichage. La charge saisie et enregistree reste la charge
+         effective (poids de corps de reference moins l'assistance, plus le lest). -->
+    <CheckBox
+        android:id="@+id/cb_assisted"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Exercice assisté (afficher assistance / lest)"
+        app:layout_constraintStart_toStartOf="@+id/et_exercise_notes"
+        app:layout_constraintTop_toBottomOf="@+id/et_exercise_notes" />
+
+    <LinearLayout
+        android:id="@+id/ll_assist_options"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="@+id/et_exercise_notes"
+        app:layout_constraintTop_toBottomOf="@+id/cb_assisted">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="32dp"
+            android:layout_marginLeft="32dp"
+            android:text="Réf. (kg)" />
+
+        <EditText
+            android:id="@+id/et_assist_ref"
+            android:layout_width="70dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginLeft="8dp"
+            android:gravity="center_horizontal"
+            android:inputType="numberDecimal" />
+
+        <CheckBox
+            android:id="@+id/cb_assist_per_side"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginLeft="12dp"
+            android:text="par côté" />
+    </LinearLayout>
+
     <!-- Retour Romain 14/10/2026 (harmonisation des boutons) : regle unique de l'app,
          action principale a DROITE, action secondaire/annulation a sa gauche (convention
          Android, deja suivie par les AlertDialog systeme). Ici : Save (ou Duplicate) a droite, Cancel a gauche.
@@ -95,7 +142,7 @@
         android:text="Save"
         android:textAllCaps="false"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/et_exercise_notes" />
+        app:layout_constraintTop_toBottomOf="@+id/ll_assist_options" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_cancel"
@@ -112,7 +159,7 @@
         android:layout_marginTop="20dp"
         android:text="Cancel"
         android:textAllCaps="false"
-        app:layout_constraintTop_toBottomOf="@+id/et_exercise_notes" />
+        app:layout_constraintTop_toBottomOf="@+id/ll_assist_options" />
 
     <View
         android:id="@+id/blue_line"

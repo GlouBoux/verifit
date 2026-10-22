@@ -12,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.verifit.AssistDisplay;
 import com.example.verifit.DataStorage;
 import com.example.verifit.R;
 import com.example.verifit.SetCommentSheet;
@@ -72,6 +73,9 @@ public class ExerciseHistoryExerciseAdapter extends RecyclerView.Adapter<Recycle
     private final HashSet<String> prSetKeys;
     private final int currentYear;
 
+    // Affichage assistance / lest (null si l'exercice n'est pas assiste), voir AssistDisplay.
+    private final AssistDisplay.Config assistConfig;
+
     private static final class HeaderRow {
         final int exerciseIndex;
 
@@ -100,6 +104,7 @@ public class ExerciseHistoryExerciseAdapter extends RecyclerView.Adapter<Recycle
         this.prSetKeys = (name != null)
                 ? MainActivity.dataStorage.getRepRangePRKeys(name)
                 : new HashSet<String>();
+        this.assistConfig = AssistDisplay.forExercise(MainActivity.dataStorage.getKnownExercises(), name);
 
         appendNextPage();
     }
@@ -331,6 +336,11 @@ public class ExerciseHistoryExerciseAdapter extends RecyclerView.Adapter<Recycle
 
         holder.discrepancyBadge.setVisibility(set.hasDiscrepancy() ? View.VISIBLE : View.GONE);
         holder.prBadge.setVisibility(DataStorage.isRepRangePR(prSetKeys, set) ? View.VISIBLE : View.GONE);
+
+        // Reglage reel d'un exercice assiste (retour Romain 20/10/2026), sous la ligne.
+        String assist = AssistDisplay.shortLabel(assistConfig, set.getWeight());
+        holder.assist.setText(assist);
+        holder.assist.setVisibility(assist.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     // "LUNDI, SEPTEMBRE 14" (la mise en majuscules est faite par le layout). L'annee n'est
@@ -421,6 +431,7 @@ public class ExerciseHistoryExerciseAdapter extends RecyclerView.Adapter<Recycle
         final TextView setNumber;
         final TextView weight;
         final TextView reps;
+        final TextView assist;
 
         SetHolder(@NonNull View itemView)
         {
@@ -432,6 +443,7 @@ public class ExerciseHistoryExerciseAdapter extends RecyclerView.Adapter<Recycle
             setNumber = itemView.findViewById(R.id.hist_set_number);
             weight = itemView.findViewById(R.id.hist_weight);
             reps = itemView.findViewById(R.id.hist_reps);
+            assist = itemView.findViewById(R.id.hist_assist);
         }
     }
 }

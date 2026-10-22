@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.verifit.AssistDisplay;
 import com.example.verifit.R;
 import com.example.verifit.RepRangeHistoryRow;
 import com.example.verifit.RepRangePREvent;
@@ -66,7 +67,8 @@ public class RepRangeRecordsActivity extends AppCompatActivity
             RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
             recyclerView.setLayoutManager(layoutManager);
             recyclerView.setItemAnimator(new DefaultItemAnimator());
-            recyclerView.setAdapter(new RepRangeHistoryAdapter(this, rows));
+            recyclerView.setAdapter(new RepRangeHistoryAdapter(this, rows,
+                    AssistDisplay.forExercise(MainActivity.dataStorage.getKnownExercises(), exerciseName)));
         }
     }
 

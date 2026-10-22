@@ -2,6 +2,9 @@ package com.example.verifit;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.RelativeSizeSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -102,9 +105,10 @@ public final class SetDialogs
         title.setText(row.getReps() + " RM");
 
         ArrayList<RepRangePREvent> allEvents = row.getAllEvents();
+        AssistDisplay.Config assistConfig = AssistDisplay.forExercise(dataStorage.getKnownExercises(), workoutSet.getExerciseName());
 
         View currentRow = inflater.inflate(R.layout.rep_range_history_entry_row, currentContainer, false);
-        bindPersonalRecordRow(context, currentRow, row.getReps(), row.getCurrentEvent());
+        bindPersonalRecordRow(context, currentRow, row.getReps(), row.getCurrentEvent(), assistConfig);
         currentContainer.addView(currentRow);
 
         if (allEvents.size() <= 1)
@@ -118,7 +122,7 @@ public final class SetDialogs
             {
                 RepRangePREvent previousEvent = allEvents.get(i);
                 View previousRow = inflater.inflate(R.layout.rep_range_history_entry_row, previousContainer, false);
-                bindPersonalRecordRow(context, previousRow, previousEvent.getSourceReps(), previousEvent);
+                bindPersonalRecordRow(context, previousRow, previousEvent.getSourceReps(), previousEvent, assistConfig);
                 previousContainer.addView(previousRow);
             }
         }
@@ -129,14 +133,16 @@ public final class SetDialogs
 
     // Meme rendu qu'une ligne de RepRangeHistoryAdapter (grisee si l'evenement est
     // deduit par transitivite plutot que reel).
-    private static void bindPersonalRecordRow(Context context, View rowView, int displayReps, RepRangePREvent event)
+    private static void bindPersonalRecordRow(Context context, View rowView, int displayReps, RepRangePREvent event,
+                                              AssistDisplay.Config assistConfig)
     {
         TextView repsView = rowView.findViewById(R.id.tv_entry_reps);
         TextView weightView = rowView.findViewById(R.id.tv_entry_weight);
         TextView dateView = rowView.findViewById(R.id.tv_entry_date);
 
         repsView.setText(displayReps + " RM");
-        weightView.setText(String.format("%.1f", event.getWeight()) + " kgs");
+        weightView.setText(prWeightText(String.format("%.1f", event.getWeight()) + " kgs",
+                AssistDisplay.shortLabel(assistConfig, event.getWeight())));
         dateView.setText(event.getDate());
 
         int color = event.isDeduced()
@@ -146,5 +152,21 @@ public final class SetDialogs
         repsView.setTextColor(color);
         weightView.setTextColor(color);
         dateView.setTextColor(color);
+    }
+
+    // Poids d'une ligne de PR, suivi du reglage reel d'un exercice assiste sur une 2e
+    // ligne plus petite (retour Romain 20/10/2026, voir AssistDisplay). Partage avec
+    // RepRangeHistoryAdapter (tableau complet des PR).
+    public static CharSequence prWeightText(String weightText, String assistLabel)
+    {
+        if (assistLabel == null || assistLabel.isEmpty())
+        {
+            return weightText;
+        }
+        SpannableStringBuilder text = new SpannableStringBuilder(weightText);
+        int start = text.length();
+        text.append("\n").append(assistLabel);
+        text.setSpan(new RelativeSizeSpan(0.7f), start, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return text;
     }
 }

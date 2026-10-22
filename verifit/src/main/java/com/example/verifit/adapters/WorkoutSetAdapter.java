@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.verifit.AssistDisplay;
 import com.example.verifit.R;
 import com.example.verifit.SetCommentSheet;
 import com.example.verifit.SetDialogs;
@@ -53,6 +54,10 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
     // cycle sauvegarde/chargement avait eu lieu.
     private final HashSet<String> prSetKeys;
 
+    // Affichage assistance / lest de l'exercice (null si non assiste), voir
+    // AssistDisplay. Lu une fois : l'adapter est recree a chaque affichage.
+    private final AssistDisplay.Config assistConfig;
+
     // Toutes les series du jour affiche (tous exercices) : le repos d'une serie se
     // mesure depuis la derniere serie cochee du jour, quel que soit l'exercice (retour
     // Romain 14/10/2026, voir SetRest).
@@ -66,6 +71,9 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
         this.prSetKeys = (!Workout_Sets.isEmpty() && Workout_Sets.get(0).getExerciseName() != null)
                 ? MainActivity.dataStorage.getRepRangePRKeys(Workout_Sets.get(0).getExerciseName())
                 : new HashSet<String>();
+        this.assistConfig = (!Workout_Sets.isEmpty())
+                ? AssistDisplay.forExercise(MainActivity.dataStorage.getKnownExercises(), Workout_Sets.get(0).getExerciseName())
+                : null;
     }
 
     @NonNull
@@ -98,7 +106,12 @@ public class WorkoutSetAdapter extends RecyclerView.Adapter<WorkoutSetAdapter.My
         // derniere serie cochee du jour, tous exercices confondus (retour Romain
         // 14/10/2026) ; vide pour la 1re serie de l'exercice et quand il est inconnu
         // (voir SetRest).
-        holder.tv_set_rest.setText(SetRest.labelAt(Workout_Sets, position, daySets));
+        // Precede du reglage reel pour un exercice assiste ("assist. 10/cote · repos
+        // 2:15", retour Romain 20/10/2026) : calcule depuis le poids enregistre, donc
+        // valable aussi pour tout l'historique, sans rien modifier.
+        holder.tv_set_rest.setText(AssistDisplay.joinWithRest(
+                AssistDisplay.shortLabel(assistConfig, Workout_Sets.get(position).getWeight()),
+                SetRest.labelAt(Workout_Sets, position, daySets)));
 
         // Small indicator so a set with a comment is visible at a glance, without
         // having to open it - useful for reviewing imported data too. Deux etats

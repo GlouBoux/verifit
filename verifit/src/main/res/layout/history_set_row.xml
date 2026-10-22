@@ -145,6 +145,22 @@
 
     </LinearLayout>
 
+    <!-- Reglage reel d'un exercice assiste (retour Romain 20/10/2026, voir AssistDisplay),
+         aligne sous la colonne poids (4 badges de 24dp + marge 12dp). GONE pour tout
+         exercice non assiste : la ligne reste alors strictement identique. -->
+    <TextView
+        android:id="@+id/hist_assist"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="108dp"
+        android:layout_marginLeft="108dp"
+        android:layout_marginTop="-6dp"
+        android:layout_marginBottom="6dp"
+        android:maxLines="1"
+        android:textColor="@color/core_grey_40"
+        android:textSize="11sp"
+        android:visibility="gone" />
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"

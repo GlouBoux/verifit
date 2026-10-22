@@ -7,6 +7,7 @@ import android.view.Menu;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -14,6 +15,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.widget.PopupMenu;
 
+import com.example.verifit.AssistDisplay;
 import com.example.verifit.ExerciseNameRules;
 import com.example.verifit.R;
 import com.example.verifit.model.Exercise;
@@ -69,6 +71,7 @@ public final class ExerciseActions
         et_exercise_name.setText(exercise.getName());
         et_exercise_name.setSelection(exercise.getName().length());
         et_exercise_notes.setText(exercise.getNotes());
+        AssistFields assistFields = new AssistFields(view, exercise);
 
         bt_cancel.setOnClickListener(v -> alertDialog.dismiss());
 
@@ -80,6 +83,10 @@ public final class ExerciseActions
             {
                 return;
             }
+            if (!assistFields.isValid(ct))
+            {
+                return;
+            }
 
             String newName = check.name;
             String newCategory = selectedCategory(spinner, exercise.getBodyPart());
@@ -88,6 +95,7 @@ public final class ExerciseActions
             // DataStorage.getKnownExercises()) : a muter AVANT editExercise(), qui
             // renomme ce meme objet en place, puis persister le tout.
             exercise.setNotes(et_exercise_notes.getText().toString());
+            assistFields.applyTo(exercise);
             MainActivity.dataStorage.editExercise(exerciseName, newName, newCategory);
             MainActivity.dataStorage.saveWorkoutData(ct);
             MainActivity.dataStorage.saveKnownExerciseData(ct);
@@ -138,6 +146,7 @@ public final class ExerciseActions
 
         setupCategorySpinner(ct, spinner, source.getBodyPart());
         et_exercise_notes.setText(source.getNotes());
+        AssistFields assistFields = new AssistFields(view, source); // une variante d'un exercice assiste l'est aussi, en general
 
         // Suffixe "(copy)" pour ne pas entrer en collision avec l'original, curseur en
         // fin de champ pour taper directement la vraie variante.
@@ -155,6 +164,10 @@ public final class ExerciseActions
             {
                 return;
             }
+            if (!assistFields.isValid(ct))
+            {
+                return;
+            }
 
             Exercise duplicated = MainActivity.dataStorage.duplicateExercise(source.getName(), check.name);
             if (duplicated == null)
@@ -165,6 +178,7 @@ public final class ExerciseActions
 
             duplicated.setBodyPart(selectedCategory(spinner, source.getBodyPart()));
             duplicated.setNotes(et_exercise_notes.getText().toString());
+            assistFields.applyTo(duplicated);
             MainActivity.dataStorage.saveKnownExerciseData(ct);
 
             alertDialog.dismiss();
@@ -208,6 +222,60 @@ public final class ExerciseActions
             return false;
         });
         popupMenu.show();
+    }
+
+    // Bloc "Exercice assiste" du dialogue (retour Romain 20/10/2026, voir AssistDisplay) :
+    // case a cocher, poids de corps de reference (70 kg par defaut) et "par cote".
+    // N'agit que sur l'affichage : aucune serie n'est modifiee.
+    private static final class AssistFields
+    {
+        private final CheckBox assisted;
+        private final View options;
+        private final EditText refKg;
+        private final CheckBox perSide;
+
+        AssistFields(View dialogView, Exercise initial)
+        {
+            assisted = dialogView.findViewById(R.id.cb_assisted);
+            options = dialogView.findViewById(R.id.ll_assist_options);
+            refKg = dialogView.findViewById(R.id.et_assist_ref);
+            perSide = dialogView.findViewById(R.id.cb_assist_per_side);
+
+            boolean enabled = initial.getAssistRefKg() != null;
+            assisted.setChecked(enabled);
+            refKg.setText(AssistDisplay.formatKg(enabled ? initial.getAssistRefKg() : AssistDisplay.DEFAULT_REF_KG));
+            // Par defaut "par cote" : c'est le cas de tous les exercices assistes de
+            // Romain (correspondance_fitnotes_excel.csv, colonne Assist_Par_Cote).
+            perSide.setChecked(!enabled || initial.isAssistPerSide());
+            options.setVisibility(enabled ? View.VISIBLE : View.GONE);
+
+            assisted.setOnCheckedChangeListener((button, checked) ->
+                    options.setVisibility(checked ? View.VISIBLE : View.GONE));
+        }
+
+        boolean isValid(Context ct)
+        {
+            if (assisted.isChecked() && AssistDisplay.parseRefKg(refKg.getText().toString()) == null)
+            {
+                Toast.makeText(ct, "Poids de corps de r\u00e9f\u00e9rence invalide", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+            return true;
+        }
+
+        void applyTo(Exercise exercise)
+        {
+            if (assisted.isChecked())
+            {
+                exercise.setAssistRefKg(AssistDisplay.parseRefKg(refKg.getText().toString()));
+                exercise.setAssistPerSide(perSide.isChecked());
+            }
+            else
+            {
+                exercise.setAssistRefKg(null);
+                exercise.setAssistPerSide(false);
+            }
+        }
     }
 
     // Toast d'erreur si le nom est refuse. Renvoie true si le nom est valide.

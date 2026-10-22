@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.verifit.AssistDisplay;
 import com.example.verifit.R;
 import com.example.verifit.SetCommentSheet;
 import com.example.verifit.SessionTimerTicker;
@@ -214,7 +215,15 @@ public class AddExerciseWorkoutSetAdapter extends RecyclerView.Adapter<AddExerci
         // derniere serie cochee du jour, tous exercices confondus (retour Romain
         // 14/10/2026) ; vide pour la 1re serie de l'exercice et quand il est inconnu
         // (voir SetRest).
-        holder.tv_set_rest.setText(SetRest.labelAt(Workout_Sets, position, selectedDaySets()));
+        // Precede du reglage reel pour un exercice assiste (retour Romain 20/10/2026,
+        // voir AssistDisplay). Lu a chaque bind (cet adapter vit tout l'ecran et le
+        // reglage peut changer via Edit Exercise) ; la liste des exercices est courte.
+        WorkoutSet boundSet = Workout_Sets.get(position);
+        AssistDisplay.Config assistConfig = AssistDisplay.forExercise(
+                MainActivity.dataStorage.getKnownExercises(), boundSet.getExerciseName());
+        holder.tv_set_rest.setText(AssistDisplay.joinWithRest(
+                AssistDisplay.shortLabel(assistConfig, boundSet.getWeight()),
+                SetRest.labelAt(Workout_Sets, position, selectedDaySets())));
 
         holder.checkbox.setVisibility(selectionMode ? View.VISIBLE : View.GONE);
         holder.checkbox.setChecked(selectedPositions.contains(position));

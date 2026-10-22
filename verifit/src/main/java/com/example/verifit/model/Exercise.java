@@ -19,6 +19,17 @@ public class Exercise {
     // migration douce dans DataStorage.loadKnownExercisesData() qui le remet a "".
     private String notes;
 
+    // Affichage assistance / lest (retour Romain 20/10/2026, voir AssistDisplay) :
+    // poids de corps de reference en kg si l'exercice est assiste, null sinon. N'agit
+    // QUE sur l'affichage : la charge enregistree reste la charge effective, jamais
+    // convertie (PR, export Coaching et backup CSV inchanges). Null pour tout exercice
+    // deserialise depuis une sauvegarde plus ancienne, donc rien ne change tant que
+    // l'exercice n'est pas coche dans le dialogue Edit.
+    private Double assistRefKg;
+
+    // Assistance aussi affichee par cote (meme charge de chaque cote de la machine).
+    private boolean assistPerSide;
+
     public Boolean getFavorite() {
         return favorite;
     }
@@ -33,6 +44,22 @@ public class Exercise {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public Double getAssistRefKg() {
+        return assistRefKg;
+    }
+
+    public void setAssistRefKg(Double assistRefKg) {
+        this.assistRefKg = assistRefKg;
+    }
+
+    public boolean isAssistPerSide() {
+        return assistPerSide;
+    }
+
+    public void setAssistPerSide(boolean assistPerSide) {
+        this.assistPerSide = assistPerSide;
     }
 
 

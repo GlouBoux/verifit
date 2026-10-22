@@ -150,5 +150,5 @@ reads it yet.
 
 Newest first. A forced re-import adds a new entry with `forced: true`. `fileName` is empty
 when the JSON was shared as text. Times are the phone's local time. There is no `days`
-key on purpose: `sync_verifit_to_excel.py` (`looks_like_verifit_export`) can never mistake
+key on purpose: `sync_fitengine_to_excel.py` (`looks_like_fitengine_export`) can never mistake
 this file for the workout export.

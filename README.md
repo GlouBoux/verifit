@@ -25,7 +25,7 @@ flowchart LR
     E --> MD[Feuille de route<br/>Markdown]
     E --> J[Séance JSON<br/>format Import Session]
     J -->|Ouvrir avec FitEngine| A[App FitEngine<br/>exécution en salle]
-    A -->|export JSON automatique<br/>synchro Syncthing| S[sync_verifit_to_excel.py]
+    A -->|export JSON automatique<br/>synchro Syncthing| S[sync_fitengine_to_excel.py]
     S -->|candidat puis promotion| X
     S --> T[pr_tracking.py<br/>prévu vs réalisé]
     T --> H[(historique_series.jsonl<br/>journal append-only)]
@@ -135,7 +135,7 @@ Moteur (dépôt `Coaching`) :
 
 ```
 python generate_workout.py            génère la séance (Markdown + JSON pour l'app)
-python sync_verifit_to_excel.py       met à jour les records depuis l'export de l'app
+python sync_fitengine_to_excel.py     met à jour les records depuis l'export de l'app
 python analyse_cycle.py               analyse de fin de cycle
 python generate_workout.py --test     lance toutes les suites de tests
 ```
