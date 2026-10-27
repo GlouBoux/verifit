@@ -78,6 +78,20 @@ public class DataStorage {
     private boolean workoutDataLoaded = false;
     private boolean knownExercisesLoaded = false;
 
+    // Lot S1 de la revue securite du 27/10/2026 (point C3, voir StorageCheck) : etat du
+    // dernier chargement. Tant qu'une partie est illisible (ou les seances disparues),
+    // rien n'est enregistre et l'ecran de recuperation (ui/RecoveryDialog) s'affiche.
+    private StorageCheck.Status workoutsStatus = StorageCheck.Status.OK;
+    private int expectedSetCount = StorageCheck.UNKNOWN_COUNT;
+    private boolean knownExercisesUnreadable = false;
+    private boolean goalsUnreadable = false;
+    // Parties dont une copie brute a deja ete ecrite dans Documents (une fois par process).
+    private final HashSet<String> unreadableCopies = new HashSet<String>();
+    // Compteur de series de la derniere sauvegarde, dans un fichier de preferences SEPARE
+    // de "shared preferences" : il survit si ce dernier devient illisible.
+    private static final String GUARD_PREFS = "storage_guard";
+    private static final String GUARD_SET_COUNT = "workouts_set_count";
+
     // Lot D, etape D9 (05/10/2026) : re-export automatique du fichier Coaching quand une
     // seance DEJA ARRETEE est corrigee (reps, poids, note, case "faite", ajout ou
     // suppression de serie). Voir CoachingReexportTracker pour la regle et
@@ -780,8 +794,22 @@ public class DataStorage {
         android.content.SharedPreferences.Editor editor = sharedPreferences.edit();
         Gson gson = new Gson();
         String json = gson.toJson(workoutDays);
+
+        // Lot S1 : compteur de series relu au prochain chargement (voir loadWorkoutData()).
+        // L'ordre des deux ecritures evite une fausse alerte en cas d'arret brutal entre
+        // les deux (StorageCheck.writeCountBeforeData()).
+        int setCount = StorageCheck.countSets(workoutDays);
+        boolean countFirst = StorageCheck.writeCountBeforeData(setCount);
+        if (countFirst)
+        {
+            writeSavedSetCount(ct, setCount);
+        }
         editor.putString("workouts",json);
         editor.apply();
+        if (!countFirst)
+        {
+            writeSavedSetCount(ct, setCount);
+        }
 
         // D9 : si une seance arretee vient d'etre corrigee, refaire l'export Coaching.
         scheduleCoachingReexport(ct.getApplicationContext());
@@ -850,14 +878,57 @@ public class DataStorage {
         {
             android.content.SharedPreferences sharedPreferences = context.getSharedPreferences("shared preferences",MODE_PRIVATE);
             Gson gson = new Gson();
-            String json = sharedPreferences.getString("workouts",null);
             Type type = new TypeToken<ArrayList<WorkoutDay>>(){}.getType();
-            workoutDays = gson.fromJson(json,type);
+
+            // Lot S1 (revue securite du 27/10/2026, point C3) : un JSON illisible plantait
+            // l'app a chaque ouverture, et un fichier de preferences illisible (lu VIDE
+            // par Android) laissait la premiere serie loguee ecraser tout l'historique.
+            // Desormais : lecture protegee, puis comparaison avec le compteur de la
+            // derniere sauvegarde. En cas de probleme, workoutDataLoaded reste false
+            // (aucune sauvegarde possible) et l'ecran de recuperation s'affiche.
+            String json = null;
+            ArrayList<WorkoutDay> loaded = null;
+            boolean readable = true;
+            try
+            {
+                json = sharedPreferences.getString("workouts",null);
+                loaded = gson.fromJson(json,type);
+            }
+            catch (RuntimeException e)
+            {
+                readable = false;
+                Log.e("DataStorage", "Seances enregistrees illisibles", e);
+            }
 
             // If there are no previously saved entries make a new object
-            if(workoutDays == null)
+            if(loaded == null)
             {
-                workoutDays = new ArrayList<WorkoutDay>();
+                loaded = new ArrayList<WorkoutDay>();
+            }
+            loaded.removeAll(Collections.singleton((WorkoutDay) null));
+
+            int expected = readSavedSetCount(context);
+            StorageCheck.Status status = StorageCheck.workouts(readable, StorageCheck.countSets(loaded), expected);
+            if (status != StorageCheck.Status.OK)
+            {
+                workoutsStatus = status;
+                expectedSetCount = expected;
+                workoutDays = new ArrayList<WorkoutDay>(); // rien d'affiche ni d'exporte
+                if (status == StorageCheck.Status.UNREADABLE)
+                {
+                    saveUnreadableCopyOnce(context, "seances", json);
+                }
+                Log.e("DataStorage", "Chargement bloque (" + status + "), " + expected + " series attendues");
+                return;
+            }
+            workoutsStatus = StorageCheck.Status.OK;
+            workoutDays = loaded;
+            int loadedCount = StorageCheck.countSets(workoutDays);
+            if (loadedCount != expected)
+            {
+                // Premier chargement depuis le lot S1, ou compteur en retard apres un
+                // arret brutal : recale sur ce qui vient d'etre lu.
+                writeSavedSetCount(context, loadedCount);
             }
 
             // Revue d'architecture du 28/09/2026 (point 1.1) : WorkoutDay.Exercises n'est
@@ -899,6 +970,123 @@ public class DataStorage {
         return workoutDataLoaded;
     }
 
+    // ---------------------------------------------------------------- lot S1 : recuperation
+    // Revue securite du 27/10/2026, point C3 (voir StorageCheck et ui/RecoveryDialog).
+
+    // Vrai si une partie des donnees enregistrees n'a pas pu etre chargee : rien n'est
+    // alors enregistre ni exporte, et l'ecran de recuperation s'affiche.
+    public boolean hasLoadProblem()
+    {
+        return workoutsStatus != StorageCheck.Status.OK || knownExercisesUnreadable || goalsUnreadable;
+    }
+
+    // Texte de l'ecran de recuperation.
+    public String describeLoadProblem()
+    {
+        StringBuilder text = new StringBuilder();
+        if (workoutsStatus == StorageCheck.Status.UNREADABLE)
+        {
+            text.append("- Les séances enregistrées sont illisibles.\n");
+        }
+        else if (workoutsStatus == StorageCheck.Status.MISSING)
+        {
+            text.append("- Les séances enregistrées ont disparu : ").append(expectedSetCount)
+                    .append(" séries à la dernière sauvegarde, aucune aujourd'hui.\n");
+        }
+        if (knownExercisesUnreadable)
+        {
+            text.append("- La liste des exercices est illisible.\n");
+        }
+        if (goalsUnreadable)
+        {
+            text.append("- Les objectifs sont illisibles.\n");
+        }
+        text.append("\nPour ne rien écraser, ").append(AppNames.APP_NAME)
+                .append(" n'enregistre plus rien tant que ce n'est pas réglé.");
+        if (!unreadableCopies.isEmpty())
+        {
+            text.append(" Une copie brute des données illisibles est dans Documents/")
+                    .append(AppNames.EXPORT_FOLDER).append("/").append(BackupManager.UNREADABLE_SUBFOLDER).append(".");
+        }
+        text.append("\n\nRestaure la copie la plus récente du dossier Documents/")
+                .append(AppNames.EXPORT_FOLDER).append("/").append(AppNames.AUTO_SUBFOLDER)
+                .append(", ou ton dernier backup complet.");
+        return text.toString();
+    }
+
+    // Bouton "Repartir de zero" de l'ecran de recuperation : les parties illisibles sont
+    // remplacees par des donnees vides, cette fois enregistrees. Les parties lisibles ne
+    // sont pas touchees.
+    public void resetUnreadableData(Context context)
+    {
+        if (workoutsStatus != StorageCheck.Status.OK)
+        {
+            workoutDays = new ArrayList<WorkoutDay>();
+            workoutsStatus = StorageCheck.Status.OK;
+            workoutDataLoaded = true;
+            coachingReexportTracker.remember(workoutDays);
+            saveWorkoutData(context);
+        }
+        if (knownExercisesUnreadable)
+        {
+            knownExercises = new ArrayList<Exercise>();
+            initKnownExercises();
+            csvToKnownExercises(); // exercices des series encore presentes
+            normalizeKnownExercises();
+            knownExercisesUnreadable = false;
+            knownExercisesLoaded = true;
+            saveKnownExerciseData(context);
+        }
+        if (goalsUnreadable)
+        {
+            goals = new ArrayList<Goal>();
+            goalsUnreadable = false;
+            saveGoalsData(context);
+        }
+    }
+
+    // Copie brute d'une partie illisible dans Documents (avant qu'une restauration ne la
+    // remplace), une seule fois par partie et par process.
+    private void saveUnreadableCopyOnce(Context context, String part, String raw)
+    {
+        if (raw == null || raw.trim().isEmpty() || unreadableCopies.contains(part))
+        {
+            return;
+        }
+        if (BackupManager.saveUnreadableCopy(context, part, raw))
+        {
+            unreadableCopies.add(part);
+        }
+    }
+
+    // Exports manuels (CSV, JSON) : refuses tant que les donnees ne sont pas chargees.
+    private boolean refuseExportIfLoadProblem(Context context)
+    {
+        if (!hasLoadProblem())
+        {
+            return false;
+        }
+        Toast.makeText(context, "Export impossible : les données de l'app sont illisibles. Restaure d'abord un backup.", Toast.LENGTH_LONG).show();
+        return true;
+    }
+
+    private static int readSavedSetCount(Context context)
+    {
+        try
+        {
+            return context.getSharedPreferences(GUARD_PREFS, MODE_PRIVATE).getInt(GUARD_SET_COUNT, StorageCheck.UNKNOWN_COUNT);
+        }
+        catch (RuntimeException e)
+        {
+            return StorageCheck.UNKNOWN_COUNT;
+        }
+    }
+
+    private static void writeSavedSetCount(Context context, int count)
+    {
+        context.getSharedPreferences(GUARD_PREFS, MODE_PRIVATE).edit().putInt(GUARD_SET_COUNT, count).apply();
+    }
+
     // Restauration d'un backup complet (point 1.4 de la revue du 28/09/2026) : REMPLACE
     // seances, exercices connus et objectifs par ceux du backup, deja valide par
     // BackupManager.parse(). La copie automatique de l'etat precedent est faite par
@@ -917,6 +1105,10 @@ public class DataStorage {
 
         workoutDataLoaded = true;
         knownExercisesLoaded = true;
+        // Lot S1 : une restauration regle tout probleme de chargement.
+        workoutsStatus = StorageCheck.Status.OK;
+        knownExercisesUnreadable = false;
+        goalsUnreadable = false;
         coachingReexportTracker.remember(workoutDays); // D9 : une restauration ne declenche pas de re-export
         saveWorkoutData(context);
         saveKnownExerciseData(context);
@@ -948,18 +1140,46 @@ public class DataStorage {
         {
             SharedPreferences sharedPreferences = context.getSharedPreferences("shared preferences",MODE_PRIVATE);
             Gson gson = new Gson();
-            String json = sharedPreferences.getString("known_exercises",null);
             Type type = new TypeToken<ArrayList<Exercise>>(){}.getType();
-            knownExercises = gson.fromJson(json,type);
 
-            // If there are no previously saved entries make a new object
-            if(knownExercises == null || knownExercises.isEmpty())
+            // Lot S1 : meme protection que loadWorkoutData(). Illisible : liste vide en
+            // memoire, knownExercisesLoaded reste false (aucune sauvegarde possible) et
+            // l'ecran de recuperation s'affiche.
+            String json = null;
+            ArrayList<Exercise> loaded = null;
+            boolean readable = true;
+            try
             {
-                knownExercises = new ArrayList<Exercise>();
-                initKnownExercises();
+                json = sharedPreferences.getString("known_exercises",null);
+                loaded = gson.fromJson(json,type);
+            }
+            catch (RuntimeException e)
+            {
+                readable = false;
+                Log.e("DataStorage", "Exercices enregistres illisibles", e);
             }
 
-            knownExercisesLoaded = true;
+            if (!readable)
+            {
+                knownExercisesUnreadable = true;
+                knownExercises = new ArrayList<Exercise>();
+                saveUnreadableCopyOnce(context, "exercices", json);
+            }
+            else
+            {
+                knownExercisesUnreadable = false;
+                knownExercises = loaded;
+
+                // If there are no previously saved entries make a new object
+                if(knownExercises == null || knownExercises.isEmpty())
+                {
+                    knownExercises = new ArrayList<Exercise>();
+                    initKnownExercises();
+                }
+                knownExercises.removeAll(Collections.singleton((Exercise) null));
+
+                knownExercisesLoaded = true;
+            }
         }
 
         normalizeKnownExercises();
@@ -1021,6 +1241,12 @@ public class DataStorage {
 
     public void saveGoalsData(Context ct)
     {
+        if (goalsUnreadable)
+        {
+            // Lot S1 : jamais d'ecriture par-dessus des objectifs illisibles.
+            Log.e("DataStorage", "saveGoalsData ignore : objectifs illisibles");
+            return;
+        }
         android.content.SharedPreferences sharedPreferences = ct.getSharedPreferences("shared preferences",MODE_PRIVATE);
         android.content.SharedPreferences.Editor editor = sharedPreferences.edit();
         Gson gson = new Gson();
@@ -1035,14 +1261,29 @@ public class DataStorage {
         {
             SharedPreferences sharedPreferences = context.getSharedPreferences("shared preferences",MODE_PRIVATE);
             Gson gson = new Gson();
-            String json = sharedPreferences.getString("goals",null);
             Type type = new TypeToken<ArrayList<Goal>>(){}.getType();
-            goals = gson.fromJson(json,type);
+
+            // Lot S1 : meme protection que loadWorkoutData().
+            String json = null;
+            try
+            {
+                json = sharedPreferences.getString("goals",null);
+                goals = gson.fromJson(json,type);
+                goalsUnreadable = false;
+            }
+            catch (RuntimeException e)
+            {
+                Log.e("DataStorage", "Objectifs enregistres illisibles", e);
+                goals = null;
+                goalsUnreadable = true;
+                saveUnreadableCopyOnce(context, "objectifs", json);
+            }
 
             if(goals == null)
             {
                 goals = new ArrayList<Goal>();
             }
+            goals.removeAll(Collections.singleton((Goal) null));
         }
     }
 
@@ -1119,6 +1360,8 @@ public class DataStorage {
         csvToKnownExercises(); // Find all Exercises in CSV and add them to known exercises
         workoutDataLoaded = true; // donnees definies explicitement par l'import (voir ensureLoaded())
         knownExercisesLoaded = true;
+        workoutsStatus = StorageCheck.Status.OK; // lot S1 : l'import remplace les seances et les exercices
+        knownExercisesUnreadable = false;
         saveKnownExerciseData(context);
         saveWorkoutData(context);
         return true;
@@ -1188,6 +1431,10 @@ public class DataStorage {
     // Export backup function using Storage Access Framework
     public void writeFile(Context context)
     {
+        if (refuseExportIfLoadProblem(context))
+        {
+            return;
+        }
         String fileName = EXPORT_FILENAME;
 
         try
@@ -1238,6 +1485,10 @@ public class DataStorage {
     // sur repRangePRKey()) : chaque serie n'est donc jamais lue qu'une seule fois.
     public void writeJsonExport(Context context)
     {
+        if (refuseExportIfLoadProblem(context))
+        {
+            return;
+        }
         String fileName = EXPORT_FILENAME + ".json";
 
         try
@@ -1288,6 +1539,12 @@ public class DataStorage {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
         {
             return null;
+        }
+        if (hasLoadProblem())
+        {
+            // Lot S1 : un export a partir de donnees non chargees enverrait au PC un
+            // historique vide ou partiel.
+            throw new IOException("données de l'app illisibles, export bloqué");
         }
 
         String exportedAt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date());
@@ -1361,6 +1618,7 @@ public class DataStorage {
         // Effacement VOLONTAIRE : l'etat vide est l'etat voulu, il doit pouvoir etre
         // sauvegarde (voir ensureLoaded()).
         this.workoutDataLoaded = true;
+        this.workoutsStatus = StorageCheck.Status.OK; // lot S1 : effacement voulu, plus rien a proteger
         this.saveWorkoutData(context);
     }
 

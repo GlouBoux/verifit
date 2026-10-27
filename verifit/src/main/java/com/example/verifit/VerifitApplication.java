@@ -8,6 +8,7 @@ import android.os.Bundle;
 import androidx.preference.PreferenceManager;
 
 import com.example.verifit.ui.MainActivity;
+import com.example.verifit.ui.RecoveryDialog;
 
 /**
  * Vague IHM-Dark (16/09/2026, retour Romain : "le bouton Light/Dark/Système dans les
@@ -42,7 +43,12 @@ public class VerifitApplication extends Application {
                 BackupManager.dailySnapshotIfNeeded(activity, MainActivity.dataStorage);
             }
             @Override public void onActivityStarted(Activity activity) {}
-            @Override public void onActivityResumed(Activity activity) {}
+            // Lot S1 (revue securite du 27/10/2026) : donnees enregistrees illisibles ou
+            // disparues -> ecran de recuperation, sur tout ecran sauf les Reglages.
+            @Override
+            public void onActivityResumed(Activity activity) {
+                RecoveryDialog.showIfNeeded(activity, MainActivity.dataStorage);
+            }
             // Lot D, etape D9 (05/10/2026) : quand l'utilisateur quitte un ecran (autre
             // ecran de l'app, ou retour a l'accueil Android), un re-export Coaching en
             // attente apres une correction de seance est execute tout de suite, sans
@@ -54,7 +60,10 @@ public class VerifitApplication extends Application {
             }
             @Override public void onActivityStopped(Activity activity) {}
             @Override public void onActivitySaveInstanceState(Activity activity, Bundle outState) {}
-            @Override public void onActivityDestroyed(Activity activity) {}
+            @Override
+            public void onActivityDestroyed(Activity activity) {
+                RecoveryDialog.dismissFor(activity);
+            }
         });
     }
 

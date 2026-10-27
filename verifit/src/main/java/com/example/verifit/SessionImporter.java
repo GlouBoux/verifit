@@ -169,6 +169,14 @@ public class SessionImporter {
                                         String sourceName, boolean allowDuplicate) {
         Result result = new Result();
 
+        // Lot S1 (revue securite du 27/10/2026) : donnees de l'app non chargees, l'import
+        // ne pourrait pas etre enregistre.
+        if (dataStorage.hasLoadProblem()) {
+            result.success = false;
+            result.errorMessage = "les données de l'app sont illisibles : ouvre " + AppNames.APP_NAME + " pour restaurer un backup";
+            return result;
+        }
+
         ImportedSession session;
         try {
             session = parseSession(json);

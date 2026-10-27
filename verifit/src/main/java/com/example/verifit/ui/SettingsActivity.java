@@ -33,6 +33,10 @@ import java.util.Locale;
 
 public class SettingsActivity extends AppCompatActivity {
 
+    // Lot S1 (revue securite du 27/10/2026) : ouvert par l'ecran de recuperation
+    // (RecoveryDialog) pour lancer directement le choix du backup a restaurer.
+    public static final String EXTRA_OPEN_RESTORE = "open_restore";
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -81,6 +85,25 @@ public class SettingsActivity extends AppCompatActivity {
                         return true;
                     }
                 });
+            }
+        }
+
+        // Vrai quand l'ecran a ete ouvert par l'ecran de recuperation (lot S1) : apres la
+        // restauration, on revient directement a l'ecran precedent.
+        private boolean openedForRecovery = false;
+
+        @Override
+        public void onViewCreated(View view, Bundle savedInstanceState)
+        {
+            super.onViewCreated(view, savedInstanceState);
+            Intent intent = getActivity() == null ? null : getActivity().getIntent();
+            if (intent != null && intent.getBooleanExtra(EXTRA_OPEN_RESTORE, false))
+            {
+                openedForRecovery = true;
+                if (savedInstanceState == null)
+                {
+                    openFullBackupPicker();
+                }
             }
         }
 
@@ -150,16 +173,7 @@ public class SettingsActivity extends AppCompatActivity {
             }
             else if (key.equals("importfullbackup"))
             {
-                // "*/*" : un .json n'est pas toujours annonce comme application/json par
-                // le selecteur ; le contenu est de toute facon valide avant restauration.
-                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("*/*");
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
-                {
-                    intent.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, BackupManager.documentsFolderUri());
-                }
-                startActivityForResult(intent, FULL_BACKUP_REQUEST_CODE);
+                openFullBackupPicker();
             }
             else if (key.equals("deletedata"))
             {
@@ -195,6 +209,21 @@ public class SettingsActivity extends AppCompatActivity {
 
         private static final int FULL_BACKUP_REQUEST_CODE = 91;
 
+        // Selecteur du backup complet a restaurer (Reglages, ou ecran de recuperation).
+        private void openFullBackupPicker()
+        {
+            // "*/*" : un .json n'est pas toujours annonce comme application/json par
+            // le selecteur ; le contenu est de toute facon valide avant restauration.
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("*/*");
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
+            {
+                intent.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, BackupManager.documentsFolderUri());
+            }
+            startActivityForResult(intent, FULL_BACKUP_REQUEST_CODE);
+        }
+
         // Fichier choisi pour "Restaurer un backup complet" : lecture + validation SANS
         // rien modifier, puis confirmation explicite (date et contenu du backup) avant de
         // remplacer les donnees.
@@ -221,6 +250,10 @@ public class SettingsActivity extends AppCompatActivity {
                     .setPositiveButton("Restaurer", (dialog, which) -> {
                         BackupManager.restore(getContext(), MainActivity.dataStorage, backup);
                         Toast.makeText(getContext(), "Backup restauré", Toast.LENGTH_LONG).show();
+                        if (openedForRecovery && getActivity() != null)
+                        {
+                            getActivity().finish();
+                        }
                     })
                     .setNegativeButton("Annuler", null)
                     .show();

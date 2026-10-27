@@ -57,6 +57,12 @@ public class BackupManager
     public static final int SCHEMA_VERSION = 1;
 
     private static final String AUTO_PREFIX = AppNames.FILE_PREFIX + "_auto_";
+
+    // Lot S1 (revue securite du 27/10/2026) : copies brutes des donnees internes
+    // illisibles, dans un sous-dossier a part (Documents/FitEngine/illisible) : hors de la
+    // rotation des copies automatiques, et hors du premier niveau de Documents/FitEngine
+    // ou la sync Coaching cherche son export.
+    public static final String UNREADABLE_SUBFOLDER = "illisible";
     private static final int KEEP_AUTO_SNAPSHOTS = 15;
 
     private static final String PREFS_NAME = "shared preferences";
@@ -187,6 +193,12 @@ public class BackupManager
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
         {
             Toast.makeText(context, "Backup complet : Android 10 minimum", Toast.LENGTH_LONG).show();
+            return false;
+        }
+        if (dataStorage.hasLoadProblem())
+        {
+            // Lot S1 : un backup de donnees non chargees serait vide ou partiel.
+            Toast.makeText(context, "Backup impossible : les données de l'app sont illisibles. Restaure d'abord un backup.", Toast.LENGTH_LONG).show();
             return false;
         }
 
@@ -320,6 +332,40 @@ public class BackupManager
         {
             cursor.close();
         }
+    }
+
+    // ---------------------------------------------------------------- copie des donnees illisibles
+
+    // Lot S1 (revue securite du 27/10/2026, point C3) : copie brute d'une partie des
+    // donnees internes qui n'a pas pu etre lue (part = "seances", "exercices" ou
+    // "objectifs"), avant qu'une restauration ne la remplace. Permet un diagnostic ou une
+    // reparation a la main depuis le PC. Jamais supprimee automatiquement.
+    public static boolean saveUnreadableCopy(Context context, String part, final String raw)
+    {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
+        {
+            return false;
+        }
+        final Context appContext = context.getApplicationContext();
+        final String relativePath = backupDir() + "/" + UNREADABLE_SUBFOLDER;
+        final String fileName = AppNames.FILE_PREFIX + "_illisible_" + part + "_"
+                + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date()) + ".json";
+        new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    writeDocument(appContext, relativePath, fileName, raw);
+                }
+                catch (IOException | RuntimeException e)
+                {
+                    Log.e(TAG, "Copie des donnees illisibles impossible (" + fileName + ")", e);
+                }
+            }
+        }, AppNames.FILE_PREFIX + "-unreadable-copy").start();
+        return true;
     }
 
     // ---------------------------------------------------------------- ecriture MediaStore
