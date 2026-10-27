@@ -6,9 +6,11 @@ import android.net.Uri;
 import android.provider.OpenableColumns;
 
 import java.io.BufferedReader;
+import java.io.FilterReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -22,14 +24,26 @@ public final class TextFiles
 {
     private TextFiles() {}
 
+    // Taille maximale lue, en caracteres (lot S2, revue securite du 27/10/2026) : sans
+    // limite, un fichier enorme recu d'une autre appli ("Ouvrir avec FitEngine") etait
+    // charge entierement en memoire et faisait planter l'app. Un plan de seance fait
+    // quelques Ko ; un backup complet environ 1 Mo en octobre 2026.
+    public static final long MAX_SESSION_CHARS = 1000000L;
+    public static final long MAX_FILE_CHARS = 50000000L;
+
     public static String readAll(Uri uri, Context context) throws IOException
+    {
+        return readAll(uri, context, MAX_FILE_CHARS);
+    }
+
+    public static String readAll(Uri uri, Context context, long maxChars) throws IOException
     {
         InputStream inputStream = context.getContentResolver().openInputStream(uri);
         if (inputStream == null)
         {
             throw new IOException("Unable to open selected file");
         }
-        return readAll(inputStream);
+        return readAll(inputStream, maxChars);
     }
 
     // Nom du fichier tel que l'affiche l'appli qui le fournit (Fichiers, Drive, dossier
@@ -68,11 +82,19 @@ public final class TextFiles
     // Lit tout le flux, ligne par ligne (chaque ligne suivie de '\n'), puis le ferme.
     static String readAll(InputStream inputStream) throws IOException
     {
+        return readAll(inputStream, MAX_FILE_CHARS);
+    }
+
+    // Meme lecture, mais leve IOException des que plus de maxChars caracteres ont ete
+    // lus : la limite est verifiee pendant la lecture (LimitedReader), pas apres, sinon
+    // une seule ligne geante serait deja entierement en memoire.
+    static String readAll(InputStream inputStream, long maxChars) throws IOException
+    {
         StringBuilder builder = new StringBuilder();
         BufferedReader reader = null;
         try
         {
-            reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+            reader = new BufferedReader(new LimitedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), maxChars));
             String line;
             while ((line = reader.readLine()) != null)
             {
@@ -91,5 +113,49 @@ public final class TextFiles
             }
         }
         return builder.toString();
+    }
+
+    // Lecteur qui compte les caracteres lus et s'arrete au-dela de la limite.
+    private static final class LimitedReader extends FilterReader
+    {
+        private final long maxChars;
+        private long count;
+
+        LimitedReader(Reader in, long maxChars)
+        {
+            super(in);
+            this.maxChars = maxChars;
+        }
+
+        @Override
+        public int read() throws IOException
+        {
+            int c = super.read();
+            if (c >= 0)
+            {
+                add(1);
+            }
+            return c;
+        }
+
+        @Override
+        public int read(char[] buffer, int offset, int length) throws IOException
+        {
+            int n = super.read(buffer, offset, length);
+            if (n > 0)
+            {
+                add(n);
+            }
+            return n;
+        }
+
+        private void add(long n) throws IOException
+        {
+            count += n;
+            if (count > maxChars)
+            {
+                throw new IOException("fichier trop gros (limite : " + maxChars + " caracteres)");
+            }
+        }
     }
 }

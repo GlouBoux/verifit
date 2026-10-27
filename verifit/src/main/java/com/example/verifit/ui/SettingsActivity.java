@@ -241,7 +241,7 @@ public class SettingsActivity extends AppCompatActivity {
             }
 
             String exportedAt = backup.getExportedAt() == null ? "date inconnue" : backup.getExportedAt().replace('T', ' ');
-            new AlertDialog.Builder(getContext())
+            AlertDialog restoreDialog = new AlertDialog.Builder(getContext())
                     .setTitle("Restaurer ce backup ?")
                     .setMessage("Backup du " + exportedAt + " : " + backup.getWorkoutDays().size() + " jours, "
                             + backup.countSets() + " séries, " + backup.getKnownExercises().size() + " exercices, "
@@ -257,6 +257,13 @@ public class SettingsActivity extends AppCompatActivity {
                     })
                     .setNegativeButton("Annuler", null)
                     .show();
+            // Lot S2 (revue securite du 27/10/2026) : appui ignore si une autre fenetre
+            // recouvre le bouton (pas de restauration declenchee a ton insu).
+            Button restoreButton = restoreDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (restoreButton != null)
+            {
+                restoreButton.setFilterTouchesWhenObscured(true);
+            }
         }
 
         // When File explorer stops this function runs
@@ -289,6 +296,7 @@ public class SettingsActivity extends AppCompatActivity {
 
             Button bt_yes = view.findViewById(R.id.bt_yes3);
             Button bt_no = view.findViewById(R.id.bt_no3);
+            bt_yes.setFilterTouchesWhenObscured(true); // lot S2, voir la restauration ci-dessus
 
 
             bt_yes.setOnClickListener(new View.OnClickListener() {

@@ -94,6 +94,11 @@ public final class RecoveryDialog
                 .create();
         dialog.setOwnerActivity(activity);
         dialog.show();
+        // Lot S2 : appui ignore si une autre fenetre recouvre le bouton.
+        if (dialog.getButton(AlertDialog.BUTTON_POSITIVE) != null)
+        {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setFilterTouchesWhenObscured(true);
+        }
         current = new WeakReference<AlertDialog>(dialog);
     }
 }

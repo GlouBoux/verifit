@@ -145,7 +145,7 @@ public class SessionImporter {
     public static Result importFromUri(Uri uri, Context context, DataStorage dataStorage, String fallbackDate, boolean allowDuplicate) {
         String json;
         try {
-            json = TextFiles.readAll(uri, context);
+            json = TextFiles.readAll(uri, context, TextFiles.MAX_SESSION_CHARS);
         } catch (IOException e) {
             Result result = new Result();
             result.success = false;
@@ -200,6 +200,16 @@ public class SessionImporter {
             return result;
         }
 
+        // Lot S2 (revue securite du 27/10/2026) : une valeur NaN ou infinie entrait dans
+        // les donnees et faisait echouer toutes les sauvegardes suivantes. Meme refus qu'a
+        // l'apercu (SessionPreview).
+        String valuesProblem = SessionPreview.valuesProblem(session);
+        if (valuesProblem != null) {
+            result.success = false;
+            result.errorMessage = valuesProblem;
+            return result;
+        }
+
         // Import idempotent (15/10/2026) : ce plan (meme contenu, quel que soit le nom du
         // fichier) a-t-il deja ete importe ? Verifie AVANT le controle par jour ci-dessous :
         // il reconnait aussi un plan importe sur un autre jour, ou dont les series ont ete
@@ -222,7 +232,9 @@ public class SessionImporter {
         if (!allowDuplicate) {
             HashSet<String> exerciseNames = new HashSet<String>();
             for (ImportedExercise exercise : session.getExercises()) {
-                exerciseNames.add(exercise.getName());
+                if (exercise != null) {
+                    exerciseNames.add(exercise.getName());
+                }
             }
             int existing = dataStorage.countImportedSets(targetDate, exerciseNames);
             if (existing > 0) {

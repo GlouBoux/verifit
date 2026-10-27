@@ -1,5 +1,6 @@
 package com.example.verifit.ui;
 
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -73,6 +74,11 @@ public class ImportSessionActivity extends AppCompatActivity
         previewView = findViewById(R.id.tv_import_preview);
         confirmButton = findViewById(R.id.bt_import_confirm);
         forceButton = findViewById(R.id.bt_import_force);
+        // Lot S2 (revue securite du 27/10/2026) : cet ecran peut etre ouvert par n'importe
+        // quelle appli. Un appui n'est pas pris en compte si une autre fenetre recouvre le
+        // bouton (une appli malveillante ne peut pas faire appuyer sur "Importer" a ton insu).
+        confirmButton.setFilterTouchesWhenObscured(true);
+        forceButton.setFilterTouchesWhenObscured(true);
         openAppButton = findViewById(R.id.bt_import_open_app);
 
         findViewById(R.id.bt_import_close).setOnClickListener(v -> finish());
@@ -235,6 +241,10 @@ public class ImportSessionActivity extends AppCompatActivity
             if (uri == null)
             {
                 CharSequence text = intent.getCharSequenceExtra(Intent.EXTRA_TEXT);
+                if (text != null && text.length() > TextFiles.MAX_SESSION_CHARS)
+                {
+                    throw new IOException("texte trop long pour une séance");
+                }
                 if (text != null && text.length() > 0)
                 {
                     return text.toString();
@@ -250,8 +260,15 @@ public class ImportSessionActivity extends AppCompatActivity
         {
             throw new IOException("aucun fichier reçu");
         }
+        // Lot S2 : seulement un fichier partage par une autre appli (content://). Un chemin
+        // "file://" permettrait de designer n'importe quel fichier, y compris les donnees
+        // privees de FitEngine ; aucune appli recente n'en envoie.
+        if (!ContentResolver.SCHEME_CONTENT.equals(uri.getScheme()))
+        {
+            throw new IOException("type de lien refusé (" + uri.getScheme() + "), seul un fichier partagé par une autre appli est accepté");
+        }
         sourceName = TextFiles.displayName(uri, this);
-        return TextFiles.readAll(uri, this);
+        return TextFiles.readAll(uri, this, TextFiles.MAX_SESSION_CHARS);
     }
 
     private static HashSet<String> knownExerciseNames()

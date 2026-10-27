@@ -20,6 +20,10 @@ import java.util.Set;
  * Classe sans aucune dependance Android, donc testable en JUnit local. Reprend EXACTEMENT
  * les regles de DataStorage.mergeImportedSession() pour ce qui sera ou non importe : un
  * exercice sans nom est ignore, une serie sans poids ou sans reps est ignoree.
+ *
+ * Lot S2 (revue securite du 27/10/2026) : une valeur non numerique (NaN, infini) ou hors
+ * limites (SetValueRules) bloque l'import entier, avec la serie en cause : un plan qui en
+ * contient vient d'un calcul faux cote PC, l'importer en partie le cacherait.
  */
 public final class SessionPreview
 {
@@ -49,10 +53,12 @@ public final class SessionPreview
     private final int validSetCount;
     private final int skippedSetCount;
     private final int unnamedExerciseCount;
+    private final String valueProblem;
 
     private SessionPreview(String date, boolean dateFromFile, boolean dateValid, List<ExerciseLine> exercises,
-                           int validSetCount, int skippedSetCount, int unnamedExerciseCount)
+                           int validSetCount, int skippedSetCount, int unnamedExerciseCount, String valueProblem)
     {
+        this.valueProblem = valueProblem;
         this.date = date;
         this.dateFromFile = dateFromFile;
         this.dateValid = dateValid;
@@ -81,7 +87,8 @@ public final class SessionPreview
         {
             for (ImportedExercise exercise : session.getExercises())
             {
-                String name = exercise.getName();
+                // Lot S2 : un element null (JSON "[null]") compte comme un exercice sans nom.
+                String name = exercise == null ? "" : exercise.getName();
                 if (name.isEmpty())
                 {
                     unnamed++;
@@ -93,7 +100,7 @@ public final class SessionPreview
                 int exerciseSkipped = 0;
                 for (ImportedSet set : exercise.getSets())
                 {
-                    if (set.getWeight() == null || set.getReps() == null)
+                    if (set == null || set.getWeight() == null || set.getReps() == null)
                     {
                         exerciseSkipped++;
                         continue;
@@ -113,7 +120,43 @@ public final class SessionPreview
             }
         }
 
-        return new SessionPreview(date, fromFile, isValidIsoDate(date), lines, valid, skipped, unnamed);
+        return new SessionPreview(date, fromFile, isValidIsoDate(date), lines, valid, skipped, unnamed,
+                valuesProblem(session));
+    }
+
+    // Premiere serie dont le poids ou les reps sont inacceptables (SetValueRules), ou null.
+    // Partage avec SessionImporter (meme refus a l'apercu et a l'import). Les series
+    // incompletes (valeur absente) et les exercices sans nom restent simplement ignores.
+    static String valuesProblem(ImportedSession session)
+    {
+        if (session == null)
+        {
+            return null;
+        }
+        for (ImportedExercise exercise : session.getExercises())
+        {
+            String name = exercise == null ? "" : exercise.getName();
+            if (name.isEmpty())
+            {
+                continue;
+            }
+            int position = 0;
+            for (ImportedSet set : exercise.getSets())
+            {
+                position++;
+                if (set == null)
+                {
+                    continue;
+                }
+                String problem = SetValueRules.importProblem(set.getWeight(), set.getReps());
+                if (problem != null)
+                {
+                    return "Valeur invalide pour « " + name + " », série " + position + " : " + problem
+                            + ". Le plan est à corriger sur le PC.";
+                }
+            }
+        }
+        return null;
     }
 
     // "100.0 x 5" : meme ecriture du poids que le reste de l'app (Double tel quel), reps
@@ -182,6 +225,10 @@ public final class SessionPreview
         if (dateProblem != null)
         {
             return dateProblem;
+        }
+        if (valueProblem != null)
+        {
+            return valueProblem;
         }
         if (exercises.isEmpty())
         {

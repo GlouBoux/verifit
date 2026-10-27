@@ -181,7 +181,30 @@ public class BackupManager
                 {
                     throw new IllegalArgumentException("série incomplète le " + day.getDate());
                 }
+                // Lot S2 (revue securite du 27/10/2026) : une valeur NaN ou infinie serait
+                // restauree puis ferait echouer toutes les sauvegardes suivantes.
+                String valueProblem = SetValueRules.restoreProblem(set.getWeight(), set.getReps());
+                if (valueProblem == null)
+                {
+                    valueProblem = SetValueRules.restoreProblem(set.getPlannedWeight(), set.getPlannedReps());
+                }
+                if (valueProblem != null)
+                {
+                    throw new IllegalArgumentException("série du " + day.getDate() + " (" + set.getExerciseName() + ") : " + valueProblem);
+                }
             }
+        }
+
+        // Lot S2 : filet pour tous les autres nombres du fichier (objectifs, volumes...).
+        // Gson lit NaN et l'infini mais refuse de les ecrire : si ce backup ne peut pas
+        // etre reecrit, le restaurer bloquerait toutes les sauvegardes.
+        try
+        {
+            new Gson().toJson(backup);
+        }
+        catch (IllegalArgumentException e)
+        {
+            throw new IllegalArgumentException("backup inutilisable : il contient une valeur non numérique (NaN ou infini)");
         }
         return backup;
     }

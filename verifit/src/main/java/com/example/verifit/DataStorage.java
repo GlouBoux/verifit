@@ -410,6 +410,13 @@ public class DataStorage {
             {
                 throw new IllegalArgumentException("ligne " + lineNumber + " : poids ou reps non numérique (\"" + WeightText + "\", \"" + RepsText + "\")");
             }
+            // Lot S2 (revue securite du 27/10/2026) : parseDouble accepte "NaN" et
+            // "Infinity", qui feraient ensuite echouer toutes les sauvegardes.
+            String valueProblem = SetValueRules.restoreProblem(weightValue, repsValue);
+            if (valueProblem != null)
+            {
+                throw new IllegalArgumentException("ligne " + lineNumber + " : " + valueProblem);
+            }
 
             WorkoutSet workoutSet = new WorkoutSet(Date,Exercise,Category,repsValue,weightValue,Comment);
             workoutSet.setCompleted(isCompleted);
@@ -2209,6 +2216,10 @@ public class DataStorage {
 
         for(ImportedExercise importedExercise : session.getExercises())
         {
+            if(importedExercise == null)
+            {
+                continue; // lot S2 : element null du JSON, comme un exercice sans nom
+            }
             String exerciseName = importedExercise.getName();
 
             // Skip malformed entries rather than failing the whole import
@@ -2234,7 +2245,7 @@ public class DataStorage {
 
             for(ImportedSet importedSet : importedExercise.getSets())
             {
-                if(importedSet.getWeight() == null || importedSet.getReps() == null)
+                if(importedSet == null || importedSet.getWeight() == null || importedSet.getReps() == null)
                 {
                     summary.setsSkipped++;
                     continue;

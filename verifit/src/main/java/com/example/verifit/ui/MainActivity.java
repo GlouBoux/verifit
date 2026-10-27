@@ -506,7 +506,7 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         String alreadyImported = "";
         try
         {
-            String json = TextFiles.readAll(plan.handle, this);
+            String json = TextFiles.readAll(plan.handle, this, TextFiles.MAX_SESSION_CHARS);
             ImportedSession session = SessionImporter.parseSession(json);
             if (session != null && !session.getComment().trim().isEmpty())
             {
