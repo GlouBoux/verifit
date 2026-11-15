@@ -15,6 +15,10 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
 
+        // Variante de test "dev" (lot M0.2, 14/11/2026) : suffixe du dossier Documents. Vide pour
+        // debug et release (l'app de tous les jours), "_dev" pour le type de build dev (voir plus bas).
+        buildConfigField "String", "DATA_FOLDER_SUFFIX", '""'
+
         // Retour Romain 28/09/2026 : "un numero de build [...] pour verifier qu'on
         // parle bien de la meme version" (voir SettingsActivity, preference "version").
         // Horodatage genere automatiquement a CHAQUE build (aucun geste manuel, donc
@@ -35,6 +39,18 @@ android {
     }
 
     buildTypes {
+        // Lot M0.2 (14/11/2026) : "FitEngine Dev", installable A COTE de l'app de tous les jours
+        // (qui est le build debug, signe avec la cle debug : on n'y touche pas). Meme code, meme
+        // cle, mais une autre identite : applicationId com.whatever.verifit.dev, autre nom affiche
+        // (src/dev/res/values/strings.xml), autres donnees internes, et dossier Documents/FitEngine_dev
+        // (AppNames, via BuildConfig.DATA_FOLDER_SUFFIX) pour ne jamais ecrire dans le dossier
+        // synchronise par Syncthing. Se choisit dans Build Variants (dev) ou : gradlew :verifit:assembleDev
+        dev {
+            initWith debug
+            signingConfig signingConfigs.debug
+            applicationIdSuffix ".dev"
+            buildConfigField "String", "DATA_FOLDER_SUFFIX", '"_dev"'
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

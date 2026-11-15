@@ -1,0 +1,4 @@
+<resources>
+    <!-- Lot M0.2 : nom affiche de la variante de test, installee a cote de FitEngine. -->
+    <string name="app_name">FitEngine Test</string>
+</resources>

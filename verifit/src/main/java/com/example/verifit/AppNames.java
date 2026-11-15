@@ -23,7 +23,10 @@ public final class AppNames
 
     // Dossier d'export sous Documents/ (backups, exports CSV/JSON) ; les copies
     // automatiques vont dans le sous-dossier AUTO_SUBFOLDER.
-    public static final String EXPORT_FOLDER = "FitEngine";
+    // Lot M0.2 (14/11/2026) : la variante de test "FitEngine Dev" ecrit dans Documents/FitEngine_dev
+    // (BuildConfig.DATA_FOLDER_SUFFIX vaut "_dev" pour elle, "" pour l'app de tous les jours),
+    // jamais dans le dossier synchronise de la vraie app.
+    public static final String EXPORT_FOLDER = "FitEngine" + BuildConfig.DATA_FOLDER_SUFFIX;
     public static final String AUTO_SUBFOLDER = "auto";
 
     // Dossier des plans de seance sous Documents/ (15/10/2026) : rempli par Syncthing depuis
