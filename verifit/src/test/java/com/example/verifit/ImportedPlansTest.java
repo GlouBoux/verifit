@@ -207,7 +207,8 @@ public class ImportedPlansTest
         // adapter SYNC_FITNOTES_APP.md et la configuration Syncthing.
         assertEquals("fitengine_plan_imports.json", ImportedPlansStore.ACK_FILE_NAME);
         assertEquals("FitEngine_plans", AppNames.PLANS_FOLDER);
-        assertEquals("FitEngine", AppNames.EXPORT_FOLDER);
+        // Le dossier depend de la variante (lot M0.2) : "" pour debug et release, "_dev" pour dev.
+        assertEquals("FitEngine" + BuildConfig.DATA_FOLDER_SUFFIX, AppNames.EXPORT_FOLDER);
     }
 
     // ---------------------------------------------------------------- affichage

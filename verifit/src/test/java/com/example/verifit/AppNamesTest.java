@@ -16,10 +16,21 @@ public class AppNamesTest
     @Test
     public void exportedNamesUseTheNewName()
     {
-        assertEquals("FitEngine", AppNames.EXPORT_FOLDER);
+        // Le dossier depend de la variante (lot M0.2) : "" pour debug et release, "_dev" pour dev.
+        assertEquals("FitEngine" + BuildConfig.DATA_FOLDER_SUFFIX, AppNames.EXPORT_FOLDER);
         assertEquals("fitengine_coaching_latest.json", AppNames.LATEST_COACHING_EXPORT_NAME);
         assertEquals("fitengine_backup_complet_", AppNames.FULL_BACKUP_FILE_PREFIX);
         assertEquals("fitengine-full-backup", AppNames.BACKUP_FORMAT);
+    }
+
+    // Lot M0.2 : l'app de tous les jours (debug, release) ecrit dans Documents/FitEngine, seule la
+    // variante dev (FitEngine Test) a son propre dossier. Une faute ici enverrait l'app normale
+    // ailleurs que dans le dossier synchronise par Syncthing.
+    @Test
+    public void dataFolderSuffixMatchesTheBuildType()
+    {
+        String expected = "dev".equals(BuildConfig.BUILD_TYPE) ? "_dev" : "";
+        assertEquals(BuildConfig.BUILD_TYPE, expected, BuildConfig.DATA_FOLDER_SUFFIX);
     }
 
     @Test
