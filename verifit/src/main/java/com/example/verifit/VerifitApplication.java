@@ -25,6 +25,11 @@ public class VerifitApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        // Lot M0.3 (14/11/2026) : journal de plantage, installe en premier pour couvrir aussi
+        // le reste de ce demarrage ; les journaux laisses par un plantage precedent sont
+        // copies vers Documents/FitEngine/crash en arriere-plan (voir CrashLog).
+        CrashLog.install(this);
+        CrashLog.flushPendingAsync(this);
         ThemeHelper.applyStoredTheme(this);
         removeLegacyPreferences();
 

@@ -71,7 +71,8 @@ public class BackupManager
     // Dossiers calcules a l'appel plutot qu'en constantes (lot C, etape C.1, 29/09/2026) :
     // l'initialisation de la classe ne lit ainsi rien d'Android, et toJson()/parse()
     // restent utilisables dans les tests JUnit locaux (android.jar bouchon).
-    private static String backupDir()
+    // Package-prive depuis le lot M0.3 : CrashLog range ses journaux dans un sous-dossier.
+    static String backupDir()
     {
         return Environment.DIRECTORY_DOCUMENTS + "/" + AppNames.EXPORT_FOLDER;
     }
@@ -328,10 +329,19 @@ public class BackupManager
     // (regle MediaStore) : celles d'une installation precedente restent en place.
     private static void pruneAutoSnapshots(Context context)
     {
+        pruneOldFiles(context, autoDir(), AUTO_PREFIX, KEEP_AUTO_SNAPSHOTS);
+    }
+
+    // Garde les `keep` fichiers les plus recents du dossier relatif (ex. "Documents/FitEngine/auto")
+    // dont le nom commence par `prefix`, supprime les autres. Meme regle que ci-dessus : le nom
+    // commence par la date, donc l'ordre alphabetique inverse est l'ordre chronologique inverse.
+    // Extrait de pruneAutoSnapshots au lot M0.3 pour servir aussi au journal de plantage.
+    static void pruneOldFiles(Context context, String relativeDir, String prefix, int keep)
+    {
         Uri collection = MediaStore.Files.getContentUri("external");
         String[] projection = { MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME };
         String selection = MediaStore.MediaColumns.RELATIVE_PATH + "=? AND " + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?";
-        String[] args = { autoDir() + "/", AUTO_PREFIX + "%" };
+        String[] args = { relativeDir + "/", prefix + "%" };
 
         Cursor cursor = context.getContentResolver().query(collection, projection, selection, args, MediaStore.MediaColumns.DISPLAY_NAME + " DESC");
         if (cursor == null)
@@ -345,7 +355,7 @@ public class BackupManager
             while (cursor.moveToNext())
             {
                 index++;
-                if (index > KEEP_AUTO_SNAPSHOTS)
+                if (index > keep)
                 {
                     context.getContentResolver().delete(ContentUris.withAppendedId(collection, cursor.getLong(idColumn)), null, null);
                 }
@@ -395,9 +405,15 @@ public class BackupManager
 
     private static void writeDocument(Context context, String relativePath, String fileName, String content) throws IOException
     {
+        writeDocument(context, relativePath, fileName, content, "application/json");
+    }
+
+    // Package-prive depuis le lot M0.3 (journal de plantage : text/plain).
+    static void writeDocument(Context context, String relativePath, String fileName, String content, String mimeType) throws IOException
+    {
         ContentValues values = new ContentValues();
         values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
-        values.put(MediaStore.MediaColumns.MIME_TYPE, "application/json");
+        values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType);
         values.put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath);
 
         Uri fileUri = context.getContentResolver().insert(MediaStore.Files.getContentUri("external"), values);
