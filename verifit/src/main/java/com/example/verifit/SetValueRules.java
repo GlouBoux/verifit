@@ -16,8 +16,8 @@ package com.example.verifit;
  * (poids negatifs FitNotes pour un exercice assiste par exemple), seul le non-fini y est
  * refuse.
  *
- * Logique pure, sans Android : testee en JUnit (SetValueRulesTest). Pas de
- * Double.isFinite() : API Android 24, l'app vise encore minSdk 16.
+ * Logique pure, sans Android : testee en JUnit (SetValueRulesTest). Double.isFinite()
+ * (API Android 24) est utilisable depuis que minSdk vaut 24 (lot M0.4).
  */
 public final class SetValueRules
 {
@@ -30,7 +30,7 @@ public final class SetValueRules
 
     public static boolean isFinite(Double value)
     {
-        return value != null && !value.isNaN() && !value.isInfinite();
+        return value != null && Double.isFinite(value);
     }
 
     // Probleme d'une serie importee (seance), ou null si elle est acceptable. Une valeur

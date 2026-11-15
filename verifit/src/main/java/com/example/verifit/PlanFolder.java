@@ -9,7 +9,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.DocumentsContract;
 
-import androidx.annotation.RequiresApi;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,10 +28,9 @@ import java.util.List;
  * jamais l'ecriture) : aucune permission speciale, et l'app ne peut pas modifier,
  * deplacer ni supprimer un fichier de ce dossier, meme par erreur.
  *
- * Android 5 (API 21) minimum pour les dossiers choisis. Non testable en JUnit local
+ * Aucune condition de version (minSdk 24 depuis le lot M0.4). Non testable en JUnit local
  * (ContentResolver) : le choix des plans est dans PendingPlans.
  */
-@RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 public final class PlanFolder
 {
     public static final String EXPECTED_PATH = "Documents/" + AppNames.PLANS_FOLDER;

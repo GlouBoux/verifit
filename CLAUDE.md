@@ -36,7 +36,7 @@ FitNotes (Romain a choisi de garder l'architecture actuelle, un écran par exerc
 
 ## Stack
 
-- Java, Android natif, GPL-3.0, minSdk 16 / target 31, Gradle 7.4.2 (AGP), module principal `verifit`.
+- Java, Android natif, GPL-3.0, minSdk 24 / target 31 (minSdk relevé de 16 à 24 au lot M0.4, 15/11/2026, pour Chaquopy), Gradle 7.4.2 (AGP), module principal `verifit`.
 - Bibliothèques : MPAndroidChart (graphiques), Sardine (WebDAV), Gson (JSON).
 - Backend en ligne optionnel `verifit_rs` (API Rust, sync multi-appareils) — feature abandonnée officiellement par Romain, retrait en cours (voir todo.md). **Statut non suivi par cette session (11/09/2026)** — dernière info connue : voir `architecture.md`, à vérifier avec Romain si le retrait a avancé depuis le 05/09.
 

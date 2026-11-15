@@ -2,7 +2,6 @@ package com.example.verifit.ui;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
 import androidx.recyclerview.widget.RecyclerView;
@@ -375,12 +374,6 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     // PendingPlans (teste en JUnit), l'acces au dossier dans PlanFolder.
     private void importPendingPlan()
     {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
-        {
-            // Pas de dossier des plans avant Android 5 : choix d'un fichier.
-            fileSearchImportSession();
-            return;
-        }
         Uri tree = PlanFolder.grantedTree(this);
         if (tree == null)
         {
@@ -392,7 +385,6 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
     // Explique puis ouvre le selecteur de dossier. problem : raison d'un nouveau choix
     // (dossier devenu inaccessible), ou null au premier usage.
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     private void askPlanFolder(String problem)
     {
         String message = (problem == null ? "" : problem + "\n\n")
@@ -419,7 +411,7 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
     private void onPlanFolderPicked(Uri tree)
     {
-        if (tree == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
+        if (tree == null)
         {
             return;
         }
@@ -435,7 +427,6 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         showPendingPlans(tree);
     }
 
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     private void showPendingPlans(final Uri tree)
     {
         final String folder = PlanFolder.describe(tree);

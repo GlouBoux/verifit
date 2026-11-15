@@ -8,12 +8,11 @@ android {
     }
     defaultConfig {
         applicationId "com.whatever.verifit"
-        minSdkVersion 16
+        minSdkVersion 24
         targetSdkVersion 31
         versionCode 14
         versionName "1.0.14"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        multiDexEnabled true
 
         // Variante de test "dev" (lot M0.2, 14/11/2026) : suffixe du dossier Documents. Vide pour
         // debug et release (l'app de tous les jours), "_dev" pour le type de build dev (voir plus bas).

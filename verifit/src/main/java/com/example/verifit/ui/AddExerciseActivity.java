@@ -1976,11 +1976,7 @@ public class AddExerciseActivity extends AppCompatActivity {
 
         try
         {
-            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-            {
-                flags |= PendingIntent.FLAG_IMMUTABLE;
-            }
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
             PendingIntent showIntent = PendingIntent.getActivity(
                     this, REST_TIMER_REQUEST_CODE, TabNavigation.resumeAppIntent(this), flags);
 
@@ -2015,11 +2011,7 @@ public class AddExerciseActivity extends AppCompatActivity {
 
     private PendingIntent getTimerAlarmPendingIntent()
     {
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-        {
-            flags |= PendingIntent.FLAG_IMMUTABLE;
-        }
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         return PendingIntent.getBroadcast(
                 this, REST_TIMER_REQUEST_CODE, new Intent(this, RestTimerReceiver.class), flags);
     }

@@ -158,11 +158,7 @@ public class RestTimerReceiver extends BroadcastReceiver
 
     private void postNotification(Context context)
     {
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-        {
-            flags |= PendingIntent.FLAG_IMMUTABLE;
-        }
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         PendingIntent contentIntent = PendingIntent.getActivity(
                 context, NOTIFICATION_ID, TabNavigation.resumeAppIntent(context), flags);
 
@@ -239,11 +235,7 @@ public class RestTimerReceiver extends BroadcastReceiver
     {
         createOngoingNotificationChannel(context);
 
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-        {
-            flags |= PendingIntent.FLAG_IMMUTABLE;
-        }
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
         PendingIntent contentIntent = PendingIntent.getActivity(
                 context, NOTIFICATION_ID, TabNavigation.resumeAppIntent(context), flags);
 
@@ -264,26 +256,23 @@ public class RestTimerReceiver extends BroadcastReceiver
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setContentIntent(contentIntent);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+        // Crash UAT du 29/09/2026 (34 plantages en seance, trace adb) :
+        // NotificationCompat.Builder.setChronometerCountDown() de la version
+        // d'androidx.core embarquee ecrit dans un Bundle d'extras jamais cree
+        // (NullPointerException sur Bundle.putBoolean) tant qu'aucun extra n'a ete
+        // ajoute. addExtras() cree ce Bundle avant l'appel.
+        // Try/catch en plus : si ca echouait encore, notification sans decompte
+        // plutot qu'un plantage.
+        try
         {
-            // Crash UAT du 29/09/2026 (34 plantages en seance, trace adb) :
-            // NotificationCompat.Builder.setChronometerCountDown() de la version
-            // d'androidx.core embarquee ecrit dans un Bundle d'extras jamais cree
-            // (NullPointerException sur Bundle.putBoolean) tant qu'aucun extra n'a ete
-            // ajoute. addExtras() cree ce Bundle avant l'appel.
-            // Try/catch en plus : si ca echouait encore, notification sans decompte
-            // plutot qu'un plantage.
-            try
-            {
-                builder.addExtras(new Bundle());
-                builder.setUsesChronometer(true);
-                builder.setChronometerCountDown(true);
-                builder.setWhen(endTimestampMillis);
-            }
-            catch (RuntimeException e)
-            {
-                Log.e("RestTimerReceiver", "Decompte de la notification impossible", e);
-            }
+            builder.addExtras(new Bundle());
+            builder.setUsesChronometer(true);
+            builder.setChronometerCountDown(true);
+            builder.setWhen(endTimestampMillis);
+        }
+        catch (RuntimeException e)
+        {
+            Log.e("RestTimerReceiver", "Decompte de la notification impossible", e);
         }
 
         // Cette notification n'est qu'un affichage : l'alarme (son), deja programmee par
@@ -377,30 +366,14 @@ public class RestTimerReceiver extends BroadcastReceiver
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build();
 
-            AudioTrack audioTrack;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-            {
-                AudioFormat audioFormat = new AudioFormat.Builder()
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setSampleRate(SAMPLE_RATE)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                        .build();
-                audioTrack = new AudioTrack(audioAttributes, audioFormat, bufferSizeBytes,
-                        AudioTrack.MODE_STATIC, AudioManager.AUDIO_SESSION_ID_GENERATE);
-                audioTrack.setVolume(gain);
-            }
-            else
-            {
-                // Constructeur historique (avant AudioAttributes/AudioFormat, API < 21) -
-                // improbable en pratique (minSdkVersion 16 herite du depot d'origine, mais
-                // aucun telephone reel de Romain n'est aussi ancien), garde par prudence.
-                //noinspection deprecation
-                audioTrack = new AudioTrack(AudioManager.STREAM_ALARM, SAMPLE_RATE,
-                        AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
-                        bufferSizeBytes, AudioTrack.MODE_STATIC);
-                //noinspection deprecation
-                audioTrack.setStereoVolume(gain, gain);
-            }
+            AudioFormat audioFormat = new AudioFormat.Builder()
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .setSampleRate(SAMPLE_RATE)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .build();
+            AudioTrack audioTrack = new AudioTrack(audioAttributes, audioFormat, bufferSizeBytes,
+                    AudioTrack.MODE_STATIC, AudioManager.AUDIO_SESSION_ID_GENERATE);
+            audioTrack.setVolume(gain);
 
             audioTrack.write(samples, 0, samples.length);
 
