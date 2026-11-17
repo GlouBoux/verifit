@@ -1,4 +1,7 @@
 apply plugin: 'com.android.application'
+// Lot M2 (16/11/2026) : Python embarque (Chaquopy), toujours APRES le plugin Android. Reglages dans
+// le bloc chaquopy en fin de fichier.
+apply plugin: 'com.chaquo.python'
 
 android {
     compileSdkVersion 31
@@ -28,6 +31,12 @@ android {
         // laquelle CE build a ete produit, pas l'heure d'installation ni l'heure
         // actuelle du telephone.
         buildConfigField "long", "BUILD_TIMESTAMP", "${System.currentTimeMillis()}L"
+
+        // Lot M2 (16/11/2026) : Chaquopy n'embarque Python que pour les ABI listees ici. Python 3.12 et
+        // plus n'existe qu'en 64 bits ; arm64-v8a couvre les telephones (pas d'emulateur dans ce projet).
+        ndk {
+            abiFilters "arm64-v8a"
+        }
     }
 
     // Requis depuis AGP 8.0 (deja recommande en 7.x) pour continuer a generer la
@@ -77,6 +86,41 @@ dependencies {
     // Central - only 1.9.0-rc03+ is there. If either turns out to be needed later,
     // re-add material-calendar-view at 1.9.2 (current Maven Central release) and
     // volley at 1.1.1+ instead of these exact versions.
+}
+
+// Lot M2 (16/11/2026) : Python embarque par Chaquopy pour le moteur Coaching.
+// Le code Python n'est PAS copie dans ce depot : pendant la transition il vit dans le dossier
+// moteur/ du depot Coaching (decision de Romain du 13/11/2026), sur lequel le build pointe
+// directement. Il sera deplace ici a la bascule (lot M6c). Chemin relatif a ce module :
+// 01_Projects/FitNotes_Fork/FitNotes_Fork_Migration/verifit -> 01_Projects/Coaching/moteur.
+def moteurPythonDir = file("../../../Coaching/moteur")
+if (!moteurPythonDir.isDirectory()) {
+    throw new GradleException("Moteur Python introuvable : " + moteurPythonDir
+            + " (dossier moteur/ du depot Coaching, lot M2).")
+}
+// Un __pycache__ ou des .pyc dans moteur/ partiraient dans l'APK comme fichiers de donnees (et un
+// .pyc perime pourrait etre execute a la place du code a jour) : on refuse de builder. Les scripts
+// PC ne les ecrivent jamais la (scripts/chemin_moteur.py du depot Coaching).
+def moteurCompiledFiles = fileTree(moteurPythonDir) {
+    include "**/__pycache__/**"
+    include "**/*.pyc"
+}
+if (!moteurCompiledFiles.isEmpty()) {
+    throw new GradleException("Fichiers compiles dans " + moteurPythonDir
+            + " : supprimer le dossier __pycache__ qui s'y trouve, puis relancer le build.")
+}
+
+chaquopy {
+    defaultConfig {
+        // Doit correspondre au Python du PC (3.13), utilise pendant le build pour compiler le code
+        // en .pyc. Trouve tout seul par le lanceur "py -3.13" de Windows.
+        version = "3.13"
+    }
+    sourceSets {
+        getByName("main") {
+            srcDir(moteurPythonDir)
+        }
+    }
 }
 
 // Contournement (07/09/2026, commentaire corrige le 29/09/2026) : Android Studio

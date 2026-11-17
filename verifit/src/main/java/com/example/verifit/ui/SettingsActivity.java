@@ -11,24 +11,31 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.Preference;
+import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 
 import com.example.verifit.AppNames;
 import com.example.verifit.BackupManager;
 import com.example.verifit.BuildConfig;
+import com.example.verifit.CrashLog;
+import com.example.verifit.EnginePrototype;
+import com.example.verifit.PythonEngine;
 import com.example.verifit.R;
 import com.example.verifit.ThemeHelper;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class SettingsActivity extends AppCompatActivity {
@@ -85,6 +92,17 @@ public class SettingsActivity extends AppCompatActivity {
                         return true;
                     }
                 });
+            }
+
+            // Lot M2 (16/11/2026) : le prototype du moteur Python n'existe que dans la variante de
+            // test "FitEngine Test" (type de build dev), jamais dans l'app de tous les jours.
+            if (!"dev".equals(BuildConfig.BUILD_TYPE))
+            {
+                PreferenceCategory prototypeCategory = findPreference("prototype");
+                if (prototypeCategory != null)
+                {
+                    getPreferenceScreen().removePreference(prototypeCategory);
+                }
             }
         }
 
@@ -196,6 +214,10 @@ public class SettingsActivity extends AppCompatActivity {
                 clipboard.setPrimaryClip(clip);
                 Toast.makeText(getContext(), "Copied: " + buildInfo, Toast.LENGTH_SHORT).show();
             }
+            else if (key.equals("prototypemoteur"))
+            {
+                runEnginePrototype();
+            }
             // Licence GPL v3 heritee du projet d'origine : notice gardee volontairement.
             else if (key.equals("licence"))
             {
@@ -204,6 +226,111 @@ public class SettingsActivity extends AppCompatActivity {
             }
 
             return true;
+        }
+
+
+        // Lot M2 (16/11/2026) : prototype du moteur Python, variante "FitEngine Test" seulement.
+        // Deux essais : demarrer Python (M2.1) ou calculer les 4 seances depuis un fichier de
+        // donnees moteur (M2.3, voir EnginePrototype). Tout tourne HORS du thread principal ;
+        // toute erreur est envoyee au journal de plantage (CrashLog). Supprime au lot M4.
+        private static final int PROTOTYPE_FILES_REQUEST_CODE = 92;
+        private String prototypeDate;
+
+        private void runEnginePrototype()
+        {
+            new AlertDialog.Builder(getContext())
+                    .setTitle("Prototype moteur")
+                    .setItems(new String[] { "Démarrer Python (durées)", "Calculer les 4 séances…" }, (dialog, which) -> {
+                        if (which == 0)
+                        {
+                            final Context appContext = requireContext().getApplicationContext();
+                            runPrototypeInBackground(() -> PythonEngine.hello(appContext));
+                        }
+                        else
+                        {
+                            askPrototypeDate();
+                        }
+                    })
+                    .show();
+        }
+
+        // Date des seances (AAAA-MM-JJ), puis choix des fichiers : donnees_moteur.json et,
+        // facultativement, memoire_echec.json (selection multiple).
+        private void askPrototypeDate()
+        {
+            final EditText dateInput = new EditText(getContext());
+            dateInput.setText(new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date()));
+            new AlertDialog.Builder(getContext())
+                    .setTitle("Date des séances (AAAA-MM-JJ)")
+                    .setView(dateInput)
+                    .setPositiveButton("Choisir les fichiers", (dialog, which) -> {
+                        prototypeDate = dateInput.getText().toString().trim();
+                        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                        intent.setType("*/*");
+                        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                        startActivityForResult(intent, PROTOTYPE_FILES_REQUEST_CODE);
+                    })
+                    .setNegativeButton("Annuler", null)
+                    .show();
+        }
+
+        private void onPrototypeFilesChosen(Intent data)
+        {
+            final List<Uri> files = new ArrayList<>();
+            if (data.getClipData() != null)
+            {
+                for (int i = 0; i < data.getClipData().getItemCount(); i++)
+                {
+                    files.add(data.getClipData().getItemAt(i).getUri());
+                }
+            }
+            else if (data.getData() != null)
+            {
+                files.add(data.getData());
+            }
+            final String date = prototypeDate;
+            final Context appContext = requireContext().getApplicationContext();
+            runPrototypeInBackground(() -> EnginePrototype.run(appContext, files, date));
+        }
+
+        private interface PrototypeTask
+        {
+            String run() throws Exception;
+        }
+
+        private void runPrototypeInBackground(final PrototypeTask task)
+        {
+            Toast.makeText(getContext(), "Prototype moteur : calcul en cours…", Toast.LENGTH_SHORT).show();
+            new Thread(() -> {
+                String message;
+                try
+                {
+                    message = task.run();
+                }
+                catch (Throwable e)
+                {
+                    CrashLog.record("python", e);
+                    message = "Erreur : " + e + "\n\nDétail dans Documents/" + AppNames.EXPORT_FOLDER + "/crash.";
+                }
+                final String shown = message;
+                final Activity activity = getActivity();
+                if (activity == null)
+                {
+                    return;
+                }
+                activity.runOnUiThread(() -> {
+                    if (!isAdded())
+                    {
+                        return;
+                    }
+                    new AlertDialog.Builder(activity)
+                            .setTitle("Prototype moteur")
+                            .setMessage(shown)
+                            .setPositiveButton("OK", null)
+                            .show();
+                });
+            }, AppNames.FILE_PREFIX + "-python").start();
         }
 
 
@@ -280,6 +407,10 @@ public class SettingsActivity extends AppCompatActivity {
                     if (requestCode == FULL_BACKUP_REQUEST_CODE)
                     {
                         onFullBackupFileChosen(uri);
+                    }
+                    else if (requestCode == PROTOTYPE_FILES_REQUEST_CODE)
+                    {
+                        onPrototypeFilesChosen(data);
                     }
                 }
             }
