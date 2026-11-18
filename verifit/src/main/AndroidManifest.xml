@@ -37,6 +37,10 @@
         <activity
             android:name=".ui.ChartsActivity"
             android:label="Charts" />
+        <!-- Lot M3.4 (17/11/2026) : donnees du moteur en lecture seule (Reglages). -->
+        <activity
+            android:name=".ui.EngineDataActivity"
+            android:label="Données du moteur" />
         <activity
             android:name=".ui.CustomExerciseActivity"
             android:label="New Exercise" />

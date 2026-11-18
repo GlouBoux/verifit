@@ -48,6 +48,24 @@
 
     </PreferenceCategory>
 
+    <!-- Lot M3 (17/11/2026) : donnees du moteur Coaching dans l'app. Import depuis le PC
+         (scripts/export_moteur_app.py, 8_Export_moteur_app.bat), consultation en lecture seule. -->
+    <PreferenceCategory app:title="Moteur">
+
+        <Preference
+            app:key="importmoteur"
+            app:summary="Remplace les données du moteur par l'export du PC (FitEngine_moteur_....json, dossier FitEngine_plans)"
+            app:title="Importer les données du moteur"
+            app:useSimpleSummaryProvider="false" />
+
+        <Preference
+            app:key="donneesmoteur"
+            app:summary="Tableaux RM → poids et réglages, en lecture seule"
+            app:title="Données du moteur"
+            app:useSimpleSummaryProvider="false" />
+
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="General">
 
         <!-- Retour Romain 16/09/2026 : bouton Light/Dark/Système comme FitNotes.

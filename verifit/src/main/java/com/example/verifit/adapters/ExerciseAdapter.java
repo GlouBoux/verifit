@@ -390,8 +390,11 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.MyView
                     @Override
                     public void onClick(View view)
                     {
-                        locallyDeleteExercise(position, ct);
                         alertDialog.dismiss();
+                        // Lot M3.5 : les donnees du moteur suivent (confirmation de plus si
+                        // l'exercice en a ; l'exercice n'est supprime qu'une fois le moteur a jour).
+                        com.example.verifit.ui.EngineExerciseSync.confirmDelete(ct, Exercises.get(position).getName(),
+                                () -> locallyDeleteExercise(position, ct));
                     }
                 });
                 alertDialog.show();

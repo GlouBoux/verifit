@@ -26,6 +26,7 @@ import com.example.verifit.AppNames;
 import com.example.verifit.BackupManager;
 import com.example.verifit.BuildConfig;
 import com.example.verifit.CrashLog;
+import com.example.verifit.EngineContent;
 import com.example.verifit.EnginePrototype;
 import com.example.verifit.PythonEngine;
 import com.example.verifit.R;
@@ -196,6 +197,15 @@ public class SettingsActivity extends AppCompatActivity {
             else if (key.equals("deletedata"))
             {
                 deleteData();
+            }
+            // Lot M3 (17/11/2026) : donnees du moteur.
+            else if (key.equals("importmoteur"))
+            {
+                EngineImportFlow.openPicker(this);
+            }
+            else if (key.equals("donneesmoteur"))
+            {
+                startActivity(new Intent(getActivity(), EngineDataActivity.class));
             }
 
             // General
@@ -372,11 +382,17 @@ public class SettingsActivity extends AppCompatActivity {
                     .setTitle("Restaurer ce backup ?")
                     .setMessage("Backup du " + exportedAt + " : " + backup.getWorkoutDays().size() + " jours, "
                             + backup.countSets() + " séries, " + backup.getKnownExercises().size() + " exercices, "
-                            + backup.getGoals().size() + " objectifs.\n\nToutes les données actuelles seront remplacées. "
+                            + backup.getGoals().size() + " objectifs.\n"
+                            + (backup.getEngineContent() == null
+                                    ? "Données du moteur : absentes de ce backup, celles de l'app seront gardées.\n"
+                                    : "Données du moteur : " + backup.getEngineContent().count(EngineContent.DATA) + " exercices, "
+                                            + backup.getEngineContent().prRows() + " lignes de PR, "
+                                            + backup.getEngineContent().count(EngineContent.HISTORY) + " lignes d'historique.\n")
+                            + "\nToutes les données actuelles seront remplacées. "
                             + "Une copie de l'état actuel est d'abord enregistrée dans Documents/" + AppNames.EXPORT_FOLDER + "/" + AppNames.AUTO_SUBFOLDER + ".")
                     .setPositiveButton("Restaurer", (dialog, which) -> {
-                        BackupManager.restore(getContext(), MainActivity.dataStorage, backup);
-                        Toast.makeText(getContext(), "Backup restauré", Toast.LENGTH_LONG).show();
+                        String engineMessage = BackupManager.restore(getContext(), MainActivity.dataStorage, backup);
+                        Toast.makeText(getContext(), "Backup restauré. " + engineMessage, Toast.LENGTH_LONG).show();
                         if (openedForRecovery && getActivity() != null)
                         {
                             getActivity().finish();
@@ -411,6 +427,10 @@ public class SettingsActivity extends AppCompatActivity {
                     else if (requestCode == PROTOTYPE_FILES_REQUEST_CODE)
                     {
                         onPrototypeFilesChosen(data);
+                    }
+                    else if (requestCode == EngineImportFlow.REQUEST_CODE && uri != null)
+                    {
+                        EngineImportFlow.onFileChosen(this, uri);
                     }
                 }
             }

@@ -130,6 +130,12 @@ public final class PendingPlans
             {
                 continue;
             }
+            // Lot M3.3 (17/11/2026) : export des donnees du moteur depose par le PC dans le meme
+            // dossier ; il s'importe par les Reglages, ce n'est ni un plan ni un fichier inconnu.
+            if (entry.name.startsWith(EngineImport.FILE_PREFIX))
+            {
+                continue;
+            }
             Plan<H> plan = parse(entry);
             if (plan == null)
             {

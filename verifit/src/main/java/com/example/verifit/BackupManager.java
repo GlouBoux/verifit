@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 
 /**
  * Backup JSON COMPLET de l'app (FitEngine) et copies automatiques (revue d'architecture du
@@ -54,7 +55,10 @@ public class BackupManager
     // Les backups faits avant le renommage portent l'ancien format (AppNames.LEGACY_BACKUP_FORMAT) :
     // parse() les accepte aussi.
     public static final String FORMAT = AppNames.BACKUP_FORMAT;
-    public static final int SCHEMA_VERSION = 1;
+    // Version 2 (lot M3.2, 17/11/2026) : bloc "moteur" (donnees du moteur, journaux, plans en
+    // attente). Une app plus ancienne refuse ainsi un backup v2 au lieu de perdre le moteur
+    // sans le dire ; un backup v1 (sans moteur) se restaure toujours.
+    public static final int SCHEMA_VERSION = 2;
 
     private static final String AUTO_PREFIX = AppNames.FILE_PREFIX + "_auto_";
 
@@ -92,8 +96,15 @@ public class BackupManager
         ArrayList<WorkoutDay> workoutDays;
         ArrayList<Exercise> knownExercises;
         ArrayList<Goal> goals;
+        // Lot M3.2 : texte exact de chaque fichier du moteur (EngineContent.FILES), ou null si
+        // l'app n'avait pas de donnees moteur lisibles au moment du backup.
+        LinkedHashMap<String, String> moteur;
+        // Contenu du moteur valide par parse() (jamais ecrit dans le fichier).
+        transient EngineContent engineContent;
 
         public String getExportedAt() { return exportedAt; }
+        public EngineContent getEngineContent() { return engineContent; }
+        public int getSchemaVersion() { return schemaVersion; }
         public ArrayList<WorkoutDay> getWorkoutDays() { return workoutDays; }
         public ArrayList<Exercise> getKnownExercises() { return knownExercises; }
         public ArrayList<Goal> getGoals() { return goals; }
@@ -113,6 +124,12 @@ public class BackupManager
 
     public static String toJson(DataStorage dataStorage)
     {
+        return toJson(dataStorage, null);
+    }
+
+    // engine : donnees du moteur a inclure, ou null (pas encore importees, ou illisibles).
+    public static String toJson(DataStorage dataStorage, EngineContent engine)
+    {
         FullBackup backup = new FullBackup();
         backup.format = FORMAT;
         backup.schemaVersion = SCHEMA_VERSION;
@@ -120,7 +137,19 @@ public class BackupManager
         backup.workoutDays = dataStorage.getWorkoutDays();
         backup.knownExercises = dataStorage.getKnownExercises();
         backup.goals = dataStorage.getGoals();
+        if (engine != null)
+        {
+            backup.moteur = new LinkedHashMap<String, String>(engine.texts());
+        }
         return new Gson().toJson(backup);
+    }
+
+    // Donnees du moteur a mettre dans un backup : seulement si elles se chargent
+    // correctement (un contenu bloque n'est jamais recopie, il chasserait une bonne copie).
+    private static EngineContent engineForBackup(Context context)
+    {
+        EngineStorage.Loaded loaded = EngineRepository.get(context);
+        return loaded.status == EngineStorage.Status.OK ? loaded.content : null;
     }
 
     // Lit et VALIDE un backup complet, sans toucher aux donnees de l'app. Leve
@@ -207,6 +236,19 @@ public class BackupManager
         {
             throw new IllegalArgumentException("backup inutilisable : il contient une valeur non numérique (NaN ou infini)");
         }
+
+        // Lot M3.2 : les donnees du moteur sont validees comme a l'import (lecture stricte).
+        if (backup.moteur != null)
+        {
+            try
+            {
+                backup.engineContent = EngineContent.of(backup.moteur);
+            }
+            catch (IllegalArgumentException e)
+            {
+                throw new IllegalArgumentException("données du moteur du backup illisibles (" + e.getMessage() + ")");
+            }
+        }
         return backup;
     }
 
@@ -229,8 +271,12 @@ public class BackupManager
         String fileName = AppNames.FULL_BACKUP_FILE_PREFIX + new SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date()) + ".json";
         try
         {
-            writeDocument(context, backupDir(), fileName, toJson(dataStorage));
-            Toast.makeText(context, "Backup complet enregistré dans " + backupDir() + "/" + fileName, Toast.LENGTH_LONG).show();
+            EngineStorage.Loaded engine = EngineRepository.get(context);
+            writeDocument(context, backupDir(), fileName, toJson(dataStorage, engineForBackup(context)));
+            String engineNote = engine.status == EngineStorage.Status.BLOCKED
+                    ? "\nSans les données du moteur : elles sont illisibles (réimporte-les depuis le PC)."
+                    : "";
+            Toast.makeText(context, "Backup complet enregistré dans " + backupDir() + "/" + fileName + engineNote, Toast.LENGTH_LONG).show();
             return true;
         }
         catch (IOException | RuntimeException e)
@@ -259,11 +305,31 @@ public class BackupManager
     }
 
     // Remplace toutes les donnees par le backup (deja valide par parse()). Une copie
-    // automatique de l'etat actuel est faite juste avant.
-    public static void restore(Context context, DataStorage dataStorage, FullBackup backup)
+    // automatique de l'etat actuel est faite juste avant. Renvoie une phrase sur les
+    // donnees du moteur, a montrer a l'utilisateur (lot M3.2) : un backup sans moteur
+    // (format 1, ou moteur absent ou illisible a l'epoque) laisse celles de l'app en place.
+    public static String restore(Context context, DataStorage dataStorage, FullBackup backup)
     {
         snapshot(context, dataStorage, "avant_restauration");
         dataStorage.restoreFullBackup(backup, context);
+
+        EngineContent engine = backup.getEngineContent();
+        if (engine == null)
+        {
+            return "Données du moteur inchangées (absentes de ce backup).";
+        }
+        try
+        {
+            String source = "restauration du backup du " + (backup.getExportedAt() == null ? "?" : backup.getExportedAt());
+            EngineRepository.replaceAll(context, engine, ImportedPlansStore.now(), source, null);
+            return "Données du moteur restaurées (" + engine.count(EngineContent.DATA) + " exercices, "
+                    + engine.prRows() + " lignes de PR).";
+        }
+        catch (IOException | RuntimeException e)
+        {
+            Log.e(TAG, "Restauration des donnees du moteur impossible", e);
+            return "Données du moteur NON restaurées : " + e.getMessage();
+        }
     }
 
     // ---------------------------------------------------------------- copies automatiques
@@ -301,7 +367,7 @@ public class BackupManager
         }
 
         final Context appContext = context.getApplicationContext();
-        final String json = toJson(dataStorage);
+        final String json = toJson(dataStorage, engineForBackup(context));
         final String fileName = AUTO_PREFIX + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date()) + "_" + reason + ".json";
 
         new Thread(new Runnable()

@@ -135,7 +135,10 @@ public class FullBackupTest
     @Test
     public void refus_versionFuture()
     {
-        String json = BackupManager.toJson(ds).replace("\"schemaVersion\":1", "\"schemaVersion\":2");
+        // Lot M3.2 : le format courant est passe a 2, la "version future" est donc 3.
+        String json = BackupManager.toJson(ds).replace("\"schemaVersion\":" + BackupManager.SCHEMA_VERSION,
+                "\"schemaVersion\":" + (BackupManager.SCHEMA_VERSION + 1));
+        assertTrue(json.contains("\"schemaVersion\":" + (BackupManager.SCHEMA_VERSION + 1)));
         assertRefused(json, "version plus recente");
     }
 

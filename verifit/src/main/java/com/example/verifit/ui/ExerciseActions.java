@@ -91,6 +91,13 @@ public final class ExerciseActions
             String newName = check.name;
             String newCategory = selectedCategory(spinner, exercise.getBodyPart());
 
+            // Lot M3.5 : les donnees du moteur suivent le nouveau nom (ecrites AVANT l'exercice
+            // de l'app ; refus = rien n'est modifie, le dialogue reste ouvert).
+            if (!newName.equals(exerciseName) && !EngineExerciseSync.renameBefore(ct, exerciseName, newName))
+            {
+                return;
+            }
+
             // Les notes sont portees par l'objet Exercise (partage avec
             // DataStorage.getKnownExercises()) : a muter AVANT editExercise(), qui
             // renomme ce meme objet en place, puis persister le tout.
@@ -105,9 +112,10 @@ public final class ExerciseActions
 
             if (!newName.equals(exerciseName))
             {
-                // Le cote Coaching (Excel, CSV de correspondance, journal) ne suit pas
-                // tout seul : rappel du script prevu pour ca (voir CLAUDE.md Coaching).
-                Toast.makeText(ct, "Exercise renamed. Coaching: run rename_exercise.py",
+                // Les donnees du moteur de l'app ont suivi (lot M3.5), mais le cote PC (Excel, CSV
+                // de correspondance, journal) reste la source jusqu'a la bascule : rappel du
+                // script prevu pour ca (voir CLAUDE.md Coaching).
+                Toast.makeText(ct, "Exercice renommé (données du moteur comprises). PC : lancer 5_Renommer_exercice.bat",
                         Toast.LENGTH_LONG).show();
             }
 
