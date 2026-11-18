@@ -11,7 +11,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.verifit.AppNames;
+import com.example.verifit.CrashLog;
 import com.example.verifit.DataStorage;
+import com.example.verifit.EngineContent;
+import com.example.verifit.EngineRepository;
+import com.example.verifit.EngineSession;
+import com.example.verifit.EngineStorage;
 import com.example.verifit.ImportedPlans;
 import com.example.verifit.ImportedPlansStore;
 import com.example.verifit.R;
@@ -63,6 +68,9 @@ public class ImportSessionActivity extends AppCompatActivity
     private String json;
     private String sourceName = "";
     private SessionPreview preview;
+    // Lot M4.2 : plan genere dans l'app (onglet Workout > Generer une seance), null pour un
+    // fichier. Voir GeneratedPlan pour la raison du jeton.
+    private GeneratedPlan generated;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -92,7 +100,19 @@ public class ImportSessionActivity extends AppCompatActivity
 
     private void showPreview(Intent intent)
     {
-        try
+        String token = intent.getStringExtra(GeneratedPlan.EXTRA_TOKEN);
+        if (token != null)
+        {
+            generated = GeneratedPlan.find(token);
+            if (generated == null)
+            {
+                showError("Plan généré introuvable (l'app a été fermée entre-temps). Relance « Générer une séance ».", "");
+                return;
+            }
+            json = generated.result.plan;
+            sourceName = generated.fileName;
+        }
+        else try
         {
             json = readJson(intent);
         }
@@ -120,14 +140,14 @@ public class ImportSessionActivity extends AppCompatActivity
         }
         preview = SessionPreview.of(session, fallbackDate, knownExerciseNames());
 
+        String header = header(session);
         String problem = preview.problem();
         if (problem != null)
         {
-            showError(problem, preview.toText());
+            showError(problem, header + preview.toText());
             return;
         }
 
-        String header = header(session);
         ImportedPlans.Entry previous = ImportedPlansStore.load(this).find(ImportedPlans.hash(json));
         if (previous != null)
         {
@@ -155,10 +175,21 @@ public class ImportSessionActivity extends AppCompatActivity
         {
             text.append("Plan : ").append(label).append('\n');
         }
-        if (!sourceName.isEmpty())
+        if (generated != null)
+        {
+            text.append("Généré dans l'app (calcul ").append(Math.round(generated.result.computeMs)).append(" ms)\n");
+        }
+        else if (!sourceName.isEmpty())
         {
             text.append("Fichier : ").append(sourceName).append('\n');
         }
+        // Lot M4 (validation en double) : la meme empreinte est affichee par generate_workout.py.
+        text.append("Empreinte : ").append(EngineSession.fingerprint(json)).append('\n');
+        if (generated != null)
+        {
+            text.append(EngineSession.previewNotes(generated.result));
+        }
+        text.append('\n');
         return text.toString();
     }
 
@@ -209,6 +240,52 @@ public class ImportSessionActivity extends AppCompatActivity
         confirmButton.setVisibility(View.GONE);
         forceButton.setVisibility(View.GONE);
         openAppButton.setVisibility(View.VISIBLE);
+
+        if (generated != null)
+        {
+            keepPendingPlan(generated, message.toString());
+        }
+    }
+
+    // Lot M4.3 : un plan genere dans l'app et IMPORTE est garde dans plans_en_attente.json
+    // (equivalent de a_comparer/ du PC, servira au lot M5), en remplacant un plan plus ancien du
+    // meme type et du meme cycle. Ecrit hors du thread principal, relu et compare apres
+    // ecriture (EngineRepository.rewrite). Un echec n'annule pas l'import : il est signale.
+    private void keepPendingPlan(final GeneratedPlan plan, final String importMessage)
+    {
+        final android.content.Context appContext = getApplicationContext();
+        GeneratedPlan.clear(plan.token);
+        new Thread(() -> {
+            String note;
+            try
+            {
+                EngineStorage.Loaded loaded = EngineRepository.get(appContext);
+                if (loaded.status != EngineStorage.Status.OK)
+                {
+                    throw new java.io.IOException("données du moteur non lisibles");
+                }
+                EngineSession.PendingUpdate update = EngineSession.withPendingPlan(
+                        loaded.content.text(EngineContent.PLANS), plan.fileName, plan.result.plan);
+                java.util.HashMap<String, String> files = new java.util.HashMap<String, String>(loaded.content.texts());
+                files.put(EngineContent.PLANS, update.text);
+                EngineRepository.rewrite(appContext, EngineContent.of(files), loaded.state);
+                note = "Plan gardé pour la comparaison prévu/réalisé (" + plan.fileName + ")."
+                        + (update.replaced.isEmpty() ? "" : "\nRemplace : " + update.replaced + ".");
+            }
+            catch (Exception e)
+            {
+                CrashLog.record("plan_en_attente", e);
+                note = "La séance est importée, mais le plan n'a pas pu être gardé pour la comparaison : "
+                        + e.getMessage();
+            }
+            final String shown = importMessage + "\n\n" + note;
+            runOnUiThread(() -> {
+                if (!isFinishing())
+                {
+                    previewView.setText(shown);
+                }
+            });
+        }, AppNames.FILE_PREFIX + "-plan-en-attente").start();
     }
 
     // Ramene l'appli au premier plan sans empiler un nouvel ecran Workout (meme intent

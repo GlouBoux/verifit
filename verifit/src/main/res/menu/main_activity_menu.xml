@@ -9,6 +9,18 @@
         app:iconTint="@color/cardview_light_background">
     </item>
 
+    <!-- Lot M4.2 (18/11/2026) : la seance est calculee sur le telephone par le moteur
+         (Python embarque), puis passe par le meme apercu que l'import (voir
+         GenerateSessionFlow). L'import du dossier des plans (icone nuage) reste en place
+         jusqu'a la bascule. -->
+    <item
+        android:id="@+id/generate_session"
+        android:title="Générer une séance"
+        android:icon="@drawable/ic_whatshot_24px"
+        app:showAsAction="always"
+        app:iconTint="@color/cardview_light_background">
+    </item>
+
     <!-- Retour Romain 22/09/2026 : "Import Session" n'existait que sur DayActivity
          (voir day_activity_menu.xml) - jamais porte sur l'onglet Workout (accueil),
          alors que c'est l'ecran ouvert par defaut au lancement de l'app. Meme

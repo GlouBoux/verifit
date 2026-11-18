@@ -596,6 +596,11 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
             Intent in = new Intent(this,SettingsActivity.class);
             startActivity(in);
         }
+        else if(item.getItemId() == R.id.generate_session)
+        {
+            // Lot M4.2 : seance calculee sur le telephone, apercu habituel ensuite.
+            GenerateSessionFlow.start(this);
+        }
         else if(item.getItemId() == R.id.import_session)
         {
             // Icone nuage : seance en attente d'abord, "Autre fichier..." ensuite (fusion

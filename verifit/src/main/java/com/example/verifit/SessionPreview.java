@@ -168,7 +168,7 @@ public final class SessionPreview
 
     // Message d'erreur si la date n'est pas utilisable, sinon null. Partage avec
     // SessionImporter (meme refus a l'apercu et a l'import).
-    static String dateProblem(String date)
+    public static String dateProblem(String date)
     {
         if (isValidIsoDate(date))
         {

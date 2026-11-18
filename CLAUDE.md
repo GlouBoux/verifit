@@ -72,14 +72,31 @@ ni les tests ne sont accessibles. Demander à Romain de connecter ces 3 dossiers
   (code, ressources ET tests, tous à 7 niveaux au plus) ;
 - `C:\Users\Brutus\Desktop\01_Projects\Coaching` (générateur, `SYNC_FITNOTES_APP.md`).
 
+## Deux apps sur le téléphone de Romain : toujours dire laquelle (demande de Romain, 18/11/2026)
+
+Les deux apps se ressemblent presque entièrement, seul le nom change. Toute instruction donnée à Romain qui concerne le téléphone commence par une étiquette, à chaque fois, sans exception :
+
+- 🟢 **TOUS LES JOURS** : « FitEngine », vraies séances, lue par la sync du PC. Build `debug`, applicationId `com.whatever.verifit`, dossier `Documents/FitEngine`.
+- 🧪 **TEST** : « FitEngine Test », essais seulement. Build `dev`, applicationId `com.whatever.verifit.dev`, dossier `Documents/FitEngine_dev`.
+
+Un nouveau lot s'essaie d'abord dans 🧪 TEST ; 🟢 TOUS LES JOURS n'est mis à jour qu'après validation, backup complet fait par Romain et copie de l'APK installé dans `FitNotes_Fork\sauvegarde_apk\` (point de retour).
+
 ## Limite connue
 
-Pas de SDK Android côté Claude : impossible de builder/compiler pour vérifier un changement. Seul Romain peut tester sur émulateur/téléphone réel.
+Une session Claude sans shell sur le PC ne peut ni builder ni tester. Depuis le lot M3 (17/11/2026), une session avec shell sur le PC (Desktop Commander) builde, lance les tests JUnit et installe par adb (voir Build ci-dessous) ; l'essai à l'écran reste à Romain (téléphone verrouillé).
 
 ## Build
 
 ```
 scripts\build_and_log.bat   # build assembleDebug --info, écrit build_log.txt à la racine (stdout+stderr)
 ```
+
+**JDK (constat du 18/11/2026)** : le JDK livré avec Android Studio (`jbr`) est passé en version 25, trop récente pour le plugin Android 7.4.2 : la compilation passe mais D8 plante au dexage (`NullPointerException` sur `AddExerciseWorkoutSetAdapter$1.class`). Le JDK 11 installé (AdoptOpenJDK 11.0.11) ne lit pas la clé de signature debug. Celui qui marche : `C:\Users\Brutus\.jdks\jbr-17.0.14`. En ligne de commande (session Claude avec shell sur le PC) :
+
+```
+$env:JAVA_HOME="C:\Users\Brutus\.jdks\jbr-17.0.14"; .\gradlew.bat --stop; .\gradlew.bat :verifit:testDebugUnitTest :verifit:assembleDev
+```
+
+Dans Android Studio : Settings > Build, Execution, Deployment > Build Tools > Gradle > Gradle JDK = jbr-17.
 
 `./gradlew build` (tâche générique) échoue systématiquement sur `:verifit:processDebugAndroidTestManifest` (espresso-core 3.2.0 trop ancien pour l'API 31) — sans rapport avec les changements du fork, ne bloque ni le bouton Run d'Android Studio ni `assembleDebug`.
