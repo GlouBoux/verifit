@@ -555,20 +555,28 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
     private void scrollToToday()
     {
-        if (viewPager2 == null)
+        scrollToDate(new SimpleDateFormat("yyyy-MM-dd").format(new Date()));
+    }
+
+    // Amene l'onglet Workout sur le jour demande (« yyyy-MM-dd »), sans animation. Faux si
+    // ce jour n'est pas dans le carrousel (hors de sa plage de dates).
+    private boolean scrollToDate(String date)
+    {
+        if (viewPager2 == null || date == null)
         {
-            return;
+            return false;
         }
-        String today = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
         ArrayList<WorkoutDay> days = dataStorage.getInfiniteWorkoutDays();
         for (int i = 0; i < days.size(); i++)
         {
-            if (today.equals(days.get(i).getDate()))
+            if (date.equals(days.get(i).getDate()))
             {
                 viewPager2.setCurrentItem(i, false);
-                return;
+                dateSelected = date;
+                return true;
             }
         }
+        return false;
     }
 
     // Menu Stuff
@@ -643,13 +651,18 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     // Opens a custom month calendar (see CalendarPickerDialog) pre-filled with whatever
     // day is currently showing, marking the days that already have a logged workout -
     // like FitNotes' own calendar navigation, which the plain Android DatePickerDialog
-    // this replaced couldn't do. Picking a day opens it directly via openDay() above.
+    // this replaced couldn't do. Retour Romain 21/11/2026 : choisir un jour amene l'onglet
+    // Workout sur ce jour (menu de l'onglet, chrono, generation, import...) au lieu d'ouvrir
+    // l'ecran separe DayActivity, qui ne sert plus que si le jour est hors du carrousel.
     private void showDatePickerForNavigation()
     {
         CalendarPickerDialog dialog = new CalendarPickerDialog(this, dataStorage, dateSelected, new CalendarPickerDialog.OnDaySelectedListener() {
             @Override
             public void onDaySelected(String dateKey) {
-                openDay(dateKey);
+                if (!scrollToDate(dateKey))
+                {
+                    openDay(dateKey);
+                }
             }
         });
         // Vague 3 du plan de migration, item 10/11 (retour 08/09/2026) : Category Dots
