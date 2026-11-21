@@ -77,6 +77,10 @@ public class SettingsActivity extends AppCompatActivity {
             if (bilanPreference != null) {
                 bilanPreference.setVisible(EndOfSessionFlow.enabled());
             }
+            Preference historyPreference = findPreference("historiquepr");
+            if (historyPreference != null) {
+                historyPreference.setVisible(EndOfSessionFlow.enabled());
+            }
 
             // Retour Romain 16/09/2026 : "le bouton Light/Dark/Système dans les
             // Réglages, comme FitNotes". La ListPreference "theme" (root_preferences.xml)
@@ -200,6 +204,11 @@ public class SettingsActivity extends AppCompatActivity {
             else if (key.equals("bilanmoteur"))
             {
                 EndOfSessionFlow.start(getActivity(), false);
+            }
+            // Lot M5b.3 : historique des PR et annulation.
+            else if (key.equals("historiquepr"))
+            {
+                startActivity(new Intent(getActivity(), PrHistoryActivity.class));
             }
 
             // General

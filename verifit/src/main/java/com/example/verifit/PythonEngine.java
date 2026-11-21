@@ -88,4 +88,18 @@ public final class PythonEngine
                 content.text(EngineContent.PLANS), content.text(EngineContent.HISTORY), timestamp).toString();
         return EngineEndOfSession.parse(raw);
     }
+
+    // Lot M5b.3 : annulation des PR d'un exercice ecrits par un bilan (moteur_app.annuler_pr :
+    // valeurs remises avec le plancher de la cascade, journal corrige, plans remis). N'ecrit
+    // rien. PyException avec un message lisible si l'annulation est refusee (deja annulee, RM
+    // change depuis) ; IllegalArgumentException si le texte rendu est illisible.
+    public static EnginePrHistory.Cancellation cancelPr(Context context, EngineContent content, String exportJson,
+                                                        String bilanId, String exercise, String timestamp)
+    {
+        PyObject app = python(context).getModule("moteur_app");
+        String raw = app.callAttr("annuler_pr", content.text(EngineContent.DATA), content.text(EngineContent.PR_HISTORY),
+                content.text(EngineContent.HISTORY), content.text(EngineContent.PLANS), exportJson,
+                bilanId, exercise, timestamp).toString();
+        return EnginePrHistory.parseCancellation(raw);
+    }
 }

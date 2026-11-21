@@ -17,12 +17,17 @@ import com.example.verifit.BackupManager;
 import com.example.verifit.CrashLog;
 import com.example.verifit.DataStorage;
 import com.example.verifit.EngineContent;
+import com.example.verifit.EngineEndOfSession;
 import com.example.verifit.EngineImport;
+import com.example.verifit.EnginePrHistory;
 import com.example.verifit.EngineRepository;
 import com.example.verifit.EngineStorage;
 import com.example.verifit.ImportedPlansStore;
 import com.example.verifit.TextFiles;
 import com.example.verifit.model.Exercise;
+
+import java.util.Date;
+import java.util.List;
 
 /**
  * Reglages > « Importer les donnees du moteur » (lot M3.3, 17/11/2026).
@@ -137,10 +142,23 @@ public final class EngineImportFlow
             {
                 // Lot M5b.2 : la trace des PR de l'app (historique_pr.jsonl) n'est pas dans
                 // l'export du PC : elle est gardee telle quelle (vide si les donnees actuelles
-                // sont absentes ou illisibles).
+                // sont absentes ou illisibles). Lot M5b.3 : chaque valeur de PR changee par
+                // l'import y est ajoutee (origine « import »).
                 EngineStorage.Loaded current = EngineRepository.get(appContext);
-                String prHistory = current.status == EngineStorage.Status.OK
-                        ? current.content.text(EngineContent.PR_HISTORY) : "";
+                String prHistory = "";
+                int traced = 0;
+                if (current.status == EngineStorage.Status.OK)
+                {
+                    List<String> lines = EnginePrHistory.importLines(current.content.data(), imp.content.data(),
+                            EngineEndOfSession.timestamp(new Date()), sourceName);
+                    StringBuilder s = new StringBuilder(current.content.text(EngineContent.PR_HISTORY));
+                    for (String line : lines)
+                    {
+                        s.append(line);
+                    }
+                    prHistory = s.toString();
+                    traced = lines.size();
+                }
                 EngineStorage.Loaded loaded = EngineRepository.replaceAll(appContext, imp.contentKeeping(prHistory),
                         ImportedPlansStore.now(), sourceName, imp.exportedAt);
                 String gap = imp.verify(loaded.content);
@@ -155,7 +173,8 @@ public final class EngineImportFlow
                     result = "Import fait et vérifié (relu sur le téléphone, totaux identiques à ceux du PC) :\n"
                             + loaded.content.count(EngineContent.DATA) + " exercices, " + loaded.content.prRows() + " lignes de PR, "
                             + loaded.content.count(EngineContent.HISTORY) + " lignes d'historique, "
-                            + loaded.content.count(EngineContent.PLANS) + " plan(s) en attente.";
+                            + loaded.content.count(EngineContent.PLANS) + " plan(s) en attente.\n"
+                            + traced + " valeur(s) de PR changée(s) par l'import, tracée(s) dans l'historique des PR.";
                 }
             }
             catch (Exception e)

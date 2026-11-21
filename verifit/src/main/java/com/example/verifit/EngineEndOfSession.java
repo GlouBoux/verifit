@@ -212,7 +212,27 @@ public final class EngineEndOfSession
             JsonElement dataAfter = o.get("donnees_apres");
             List<String> journal = lines(array(o, "journal"));
             List<String> prHistory = lines(array(o, "historique_pr"));
-            if (prHistory.size() != countChanges(prs))
+            // Une ligne « bilan » par RM modifie, plus au plus une ligne « plans_sortis » (plans
+            // termines, gardes pour une annulation, lot M5b.3).
+            int perRm = 0;
+            int other = 0;
+            for (String line : prHistory)
+            {
+                String origin = EngineJson.stringOrNull(EngineJson.parseStrictObject(line.trim()), "origine");
+                if ("bilan".equals(origin))
+                {
+                    perRm++;
+                }
+                else if ("plans_sortis".equals(origin))
+                {
+                    other++;
+                }
+                else
+                {
+                    throw new IllegalArgumentException("bilan du moteur : ligne de trace d'origine inconnue " + origin);
+                }
+            }
+            if (perRm != countChanges(prs) || other > 1)
             {
                 throw new IllegalArgumentException("bilan du moteur : trace des PR incomplète");
             }

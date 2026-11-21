@@ -65,6 +65,12 @@
             app:useSimpleSummaryProvider="false" />
 
         <Preference
+            app:key="historiquepr"
+            app:summary="Chaque modification d'un PR dans l'app (bilan, annulation, import), avec annulation"
+            app:title="Historique des PR"
+            app:useSimpleSummaryProvider="false" />
+
+        <Preference
             app:key="donneesmoteur"
             app:summary="Tableaux RM → poids et réglages, en lecture seule"
             app:title="Données du moteur"

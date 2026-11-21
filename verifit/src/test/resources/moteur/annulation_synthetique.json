@@ -1,0 +1,27 @@
+{
+ "version": 1,
+ "exercice": "Assisted Pelican",
+ "bilan": "2026-09-30T16:30:39",
+ "changements": [
+  {
+   "rm": 12,
+   "actuel": 53.5,
+   "remis": 49.0
+  }
+ ],
+ "donnees_apres": "{\n \"version\": 1,\n \"exercices\": [\n  {\n   \"nom\": \"Assisted Pelican\",\n   \"nom_app\": \"Assisted Pelican\",\n   \"onglet\": \"Assisted Pelican\",\n   \"onglet_excel\": \"Assisted Pelican\",\n   \"is_hold\": false,\n   \"e1rm_fenetre_reps\": null,\n   \"charge_min_kg\": null,\n   \"groupe_remplacement\": null,\n   \"charge_ref_kg\": null,\n   \"assist_par_cote\": false,\n   \"barre_base_kg\": null,\n   \"pr\": [\n    [1, 60.0],\n    [2, 60.0],\n    [3, 60.0],\n    [4, 60.0],\n    [5, 60.0],\n    [6, 60.0],\n    [7, 60.0],\n    [8, 60.0],\n    [9, 60.0],\n    [10, 56.0],\n    [11, 54.0],\n    [12, 49.0],\n    [13, 49.0],\n    [14, 49.0]\n   ],\n   \"rm_max\": 20\n  }\n ],\n \"cycles\": {\n  \"A\": [\n   \"Assisted Pelican\"\n  ]\n },\n \"disques_par_cote\": [20]\n}\n",
+ "historique_pr": [
+  "{\"timestamp\": \"2026-10-14T10:00:00\", \"bilan\": \"2026-10-14T10:00:00\", \"origine\": \"annulation\", \"annule\": \"2026-09-30T16:30:39\", \"exercice\": \"Assisted Pelican\", \"rm\": 12, \"ancien_kg\": 53.5, \"nouveau_kg\": 49.0}\n"
+ ],
+ "journal": "{\"timestamp\": \"2026-09-30T16:30:39\", \"plan\": \"Seance_Volume_CycleA_2026-09-28_21-43-32\", \"exercice\": \"Assisted Pelican\", \"serie\": \"S1\", \"unite\": \"reps\", \"rm\": 12, \"charge_prevue_kg\": 53.5, \"pr_avant_plan_kg\": 48.5, \"marge_pct\": 10.3, \"charge_theorique_kg\": 55.8, \"filet\": 0, \"tentative_reps\": null, \"tentative_date\": null, \"pr_actuel_kg\": 53.5, \"ecart_vs_prevu_kg\": 0.0, \"ecart_vs_prevu_pct\": 0.0, \"statut\": \"battu\", \"battu_par_filet\": false, \"nouveau_ce_sync\": true, \"methode\": \"S1 Rep max\", \"correction\": \"2026-10-14 : PR annulé dans l'app (RM 12, bilan du 2026-09-30T16:30:39)\"}\n",
+ "lignes_corrigees": 1,
+ "plans_remis": [
+  {
+   "fichier": "Seance_Volume_CycleA_2026-09-28_21-43-32.json",
+   "contenu": "{\"comment\": \"Cycle A - Volume\", \"date\": \"2026-09-29\", \"exercises\": [{\"name\": \"Assisted Pelican\", \"sets\": [{\"weight\": 53.5, \"reps\": 12, \"comment\": \"S1 Rep max — vs 48.5 kg — théorique 55.8 kg — filet 0 reps\"}]}]}"
+  }
+ ],
+ "avertissements": [
+  "Le carnet contient toujours une série qui justifie ce PR : corrige-la avant le prochain bilan, sinon il le reproposera."
+ ]
+}
