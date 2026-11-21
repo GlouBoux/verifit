@@ -81,6 +81,13 @@ Les deux apps se ressemblent presque entièrement, seul le nom change. Toute ins
 
 Un nouveau lot s'essaie d'abord dans 🧪 TEST ; 🟢 TOUS LES JOURS n'est mis à jour qu'après validation, backup complet fait par Romain et copie de l'APK installé dans `FitNotes_Fork\sauvegarde_apk\` (point de retour).
 
+## Moteur dans l'app : fin de séance (lot M5b, depuis le 21/11/2026)
+
+- Le bilan de fin de séance appelle `moteur_app.fin_de_seance` (dépôt Coaching, `moteur/`) par `PythonEngine.endOfSession` ; le texte rendu est lu par `EngineEndOfSession` (classe pure, JUnit). Rien n'est écrit au calcul : PR, journal et plans ne changent qu'au « Valider » du bilan.
+- Les données moteur doivent porter `rm_max` (champ facultatif de la version 1, ajouté par le PC le 21/11/2026) : `EngineContent.hasRmMax()`, sinon le bilan demande de refaire l'import.
+- Fixture JUnit `src/test/resources/moteur/bilan_synthetique.json` : sortie réelle de Python sur un cas synthétique. Un test du dépôt Coaching (`test_fin_de_seance_app.TestContratApp`) vérifie qu'elle est à jour ; régénérer avec `python scripts\test_fin_de_seance_app.py --fixture-app` (dans Coaching) après un changement voulu du format.
+- Développé en parallèle de la validation de M4 : tout s'essaie sur 🧪 TEST seulement tant que M4 n'est pas validé.
+
 ## Limite connue
 
 Une session Claude sans shell sur le PC ne peut ni builder ni tester. Depuis le lot M3 (17/11/2026), une session avec shell sur le PC (Desktop Commander) builde, lance les tests JUnit et installe par adb (voir Build ci-dessous) ; l'essai à l'écran reste à Romain (téléphone verrouillé).

@@ -141,6 +141,20 @@ public final class EngineContent
         return prRows;
     }
 
+    // Lot M5b (21/11/2026) : vrai si chaque exercice porte rm_max (donnees importees depuis un
+    // PC a jour). Sans lui, le bilan de fin de seance est refuse (« refais l'import »).
+    public boolean hasRmMax()
+    {
+        for (JsonElement ex : data().getAsJsonArray("exercices"))
+        {
+            if (!ex.getAsJsonObject().has("rm_max"))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // Copie analysee des donnees moteur (a ne pas modifier pour ecrire : texte source).
     public JsonObject data()
     {
@@ -254,6 +268,13 @@ public final class EngineContent
             {
                 throw new IllegalArgumentException(where + field + " doit être un nombre ou null");
             }
+        }
+        // Lot M5b (21/11/2026) : champ facultatif de la version 1, dernier RM du tableau de PR
+        // (borne de la fin de seance, voir engine_data.py) ; null si pas de tableau.
+        if (ex.has("rm_max") && !EngineJson.isNull(ex.get("rm_max"))
+                && (!EngineJson.isInteger(ex.get("rm_max")) || ex.get("rm_max").getAsDouble() < 0))
+        {
+            throw new IllegalArgumentException(where + "rm_max doit être un entier positif ou null");
         }
         JsonElement pr = ex.get("pr");
         if (!pr.isJsonArray())

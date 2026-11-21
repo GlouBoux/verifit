@@ -24,6 +24,9 @@ import java.util.Map;
  *
  * Lot M4 (18/11/2026) : generate() calcule la seance a partir des donnees du moteur gardees par
  * l'app (EngineRepository, lot M3). Le prototype du lot M2.3 (hello, planSeance) est retire.
+ *
+ * Lot M5b (21/11/2026) : endOfSession() calcule le bilan de fin de seance (fin_de_seance.py du
+ * meme dossier moteur/, par moteur_app.fin_de_seance).
  */
 public final class PythonEngine
 {
@@ -64,5 +67,25 @@ public final class PythonEngine
         PyObject app = python(context).getModule("moteur_app");
         String raw = app.callAttr("generer_seance", data, journal, cycle, type, date).toString();
         return EngineSession.parseResult(raw);
+    }
+
+    // Lot M5b.1 : bilan de fin de seance avec moteur_app.fin_de_seance (regles de la sync du PC),
+    // a partir du contenu du moteur deja charge par l'appelant (garde pour verifier, au
+    // « Valider », que rien n'a change entre-temps), de l'export Coaching construit en memoire
+    // (DataStorage.buildCoachingExportJson) et de l'horodatage des lignes de journal. N'ecrit
+    // rien. IOException (message affichable) si les donnees n'ont pas rm_max ; PyException si
+    // le calcul echoue ; IllegalArgumentException si le texte rendu est illisible.
+    public static EngineEndOfSession.Result endOfSession(Context context, EngineContent content,
+                                                         String exportJson, String timestamp) throws IOException
+    {
+        if (!content.hasRmMax())
+        {
+            throw new IOException("données du moteur importées avant le lot M5b (sans rm_max). Refais l'import : "
+                    + "8_Export_moteur_app.bat sur le PC, puis Réglages > Moteur > Importer les données du moteur.");
+        }
+        PyObject app = python(context).getModule("moteur_app");
+        String raw = app.callAttr("fin_de_seance", content.text(EngineContent.DATA), exportJson,
+                content.text(EngineContent.PLANS), content.text(EngineContent.HISTORY), timestamp).toString();
+        return EngineEndOfSession.parse(raw);
     }
 }

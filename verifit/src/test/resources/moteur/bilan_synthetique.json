@@ -1,0 +1,220 @@
+{
+ "version": 1,
+ "pr": [
+  {
+   "exercice": "Squat",
+   "changements": [
+    {
+     "rm": 15,
+     "ancien": null,
+     "nouveau": 60.0,
+     "justification": {
+      "date": "2026-11-20",
+      "poids": 60.0,
+      "reps": 15,
+      "cascade": false
+     }
+    },
+    {
+     "rm": 14,
+     "ancien": null,
+     "nouveau": 60.0,
+     "justification": {
+      "date": "2026-11-20",
+      "poids": 60.0,
+      "reps": 15,
+      "cascade": true
+     }
+    },
+    {
+     "rm": 13,
+     "ancien": null,
+     "nouveau": 60.0,
+     "justification": {
+      "date": "2026-11-20",
+      "poids": 60.0,
+      "reps": 15,
+      "cascade": true
+     }
+    },
+    {
+     "rm": 12,
+     "ancien": null,
+     "nouveau": 60.0,
+     "justification": {
+      "date": "2026-11-20",
+      "poids": 60.0,
+      "reps": 15,
+      "cascade": true
+     }
+    },
+    {
+     "rm": 11,
+     "ancien": null,
+     "nouveau": 60.0,
+     "justification": {
+      "date": "2026-11-20",
+      "poids": 60.0,
+      "reps": 15,
+      "cascade": true
+     }
+    },
+    {
+     "rm": 9,
+     "ancien": null,
+     "nouveau": 78.0,
+     "justification": null
+    },
+    {
+     "rm": 8,
+     "ancien": 85.0,
+     "nouveau": 90.0,
+     "justification": {
+      "date": "2026-11-20",
+      "poids": 90.0,
+      "reps": 8,
+      "cascade": false
+     }
+    },
+    {
+     "rm": 7,
+     "ancien": null,
+     "nouveau": 90.0,
+     "justification": {
+      "date": "2026-11-20",
+      "poids": 90.0,
+      "reps": 8,
+      "cascade": true
+     }
+    }
+   ]
+  }
+ ],
+ "rapport": {
+  "sans_changement": [],
+  "sans_serie": [
+   "Assisted Pelican"
+  ],
+  "sans_tableau": []
+ },
+ "donnees_apres": "{\n \"version\": 1,\n \"exercices\": [\n  {\n   \"nom\": \"Squat\",\n   \"nom_app\": \"Squat\",\n   \"onglet\": \"Squat\",\n   \"onglet_excel\": \"Squat\",\n   \"is_hold\": false,\n   \"e1rm_fenetre_reps\": null,\n   \"charge_min_kg\": null,\n   \"groupe_remplacement\": null,\n   \"charge_ref_kg\": null,\n   \"assist_par_cote\": false,\n   \"barre_base_kg\": null,\n   \"pr\": [\n    [1, 120.0],\n    [2, 115.0],\n    [3, 110.0],\n    [4, 105.0],\n    [5, 100.0],\n    [6, 90.0],\n    [7, 90.0],\n    [8, 90.0],\n    [9, 78.0],\n    [10, 78.0],\n    [11, 60.0],\n    [12, 60.0],\n    [13, 60.0],\n    [14, 60.0],\n    [15, 60.0]\n   ],\n   \"rm_max\": 20\n  },\n  {\n   \"nom\": \"Assisted Pelican\",\n   \"nom_app\": \"Assisted Pelican\",\n   \"onglet\": \"Assisted Pelican\",\n   \"onglet_excel\": \"Assisted Pelican\",\n   \"is_hold\": false,\n   \"e1rm_fenetre_reps\": null,\n   \"charge_min_kg\": null,\n   \"groupe_remplacement\": null,\n   \"charge_ref_kg\": null,\n   \"assist_par_cote\": false,\n   \"barre_base_kg\": null,\n   \"pr\": [\n    [8, 45.0]\n   ],\n   \"rm_max\": 20\n  }\n ],\n \"cycles\": {\n  \"A\": [\n   \"Squat\",\n   \"Assisted Pelican\"\n  ]\n },\n \"disques_par_cote\": [20]\n}\n",
+ "journal_only": false,
+ "plans": [
+  {
+   "fichier": "Seance_Force_CycleA_2026-11-19_10-00-00.json",
+   "label": "Seance_Force_CycleA_2026-11-19_10-00-00",
+   "lignes": [
+    {
+     "exercice": "Squat",
+     "serie": "S1",
+     "methode": "S1 Ancrage",
+     "unite": "reps",
+     "rm": 8,
+     "charge_prevue": 90.0,
+     "pr_avant_plan": 85.0,
+     "charge_theorique": 92.0,
+     "filet": 2,
+     "tentative_reps": null,
+     "tentative_date": null,
+     "pr_actuel": 90.0,
+     "ecart_kg": 0.0,
+     "ecart_pct": 0.0,
+     "statut": "battu",
+     "battu_par_filet": false,
+     "nouveau_ce_sync": true
+    },
+    {
+     "exercice": "Squat",
+     "serie": "S2",
+     "methode": "S2 Rep max",
+     "unite": "reps",
+     "rm": 10,
+     "charge_prevue": 80.0,
+     "pr_avant_plan": 78.0,
+     "charge_theorique": 81.0,
+     "filet": 1,
+     "tentative_reps": 7,
+     "tentative_date": "2026-11-20",
+     "pr_actuel": 78.0,
+     "ecart_kg": -2.0,
+     "ecart_pct": -2.5,
+     "statut": "attente",
+     "battu_par_filet": false,
+     "nouveau_ce_sync": false
+    }
+   ],
+   "avertissements": [],
+   "hors_plan": [
+    {
+     "exercice": "Squat",
+     "serie": "HP1",
+     "methode": "Hors plan",
+     "unite": "reps",
+     "rm": 15,
+     "charge_prevue": 60.0,
+     "pr_avant_plan": null,
+     "charge_theorique": null,
+     "filet": null,
+     "tentative_reps": 15,
+     "tentative_date": "2026-11-20",
+     "pr_actuel": 60.0,
+     "ecart_kg": 0.0,
+     "ecart_pct": 0.0,
+     "statut": "battu",
+     "battu_par_filet": false,
+     "nouveau_ce_sync": true,
+     "hors_plan": true,
+     "record_avant_reps_kg": null,
+     "commentaire": null,
+     "cle_hors_plan": "2026-11-20|60|15|1"
+    }
+   ],
+   "hors_plan_avertissements": [],
+   "complet": false
+  }
+ ],
+ "remplaces": [],
+ "plans_a_retirer": [],
+ "journal": [
+  "{\"timestamp\": \"2026-11-20T19:30:00\", \"plan\": \"Seance_Force_CycleA_2026-11-19_10-00-00\", \"exercice\": \"Squat\", \"serie\": \"S1\", \"unite\": \"reps\", \"rm\": 8, \"charge_prevue_kg\": 90.0, \"pr_avant_plan_kg\": 85.0, \"marge_pct\": 5.9, \"charge_theorique_kg\": 92.0, \"filet\": 2, \"tentative_reps\": null, \"tentative_date\": null, \"pr_actuel_kg\": 90.0, \"ecart_vs_prevu_kg\": 0.0, \"ecart_vs_prevu_pct\": 0.0, \"statut\": \"battu\", \"battu_par_filet\": false, \"nouveau_ce_sync\": true, \"methode\": \"S1 Ancrage\"}\n",
+  "{\"timestamp\": \"2026-11-20T19:30:00\", \"plan\": \"Seance_Force_CycleA_2026-11-19_10-00-00\", \"exercice\": \"Squat\", \"serie\": \"S2\", \"unite\": \"reps\", \"rm\": 10, \"charge_prevue_kg\": 80.0, \"pr_avant_plan_kg\": 78.0, \"marge_pct\": 2.6, \"charge_theorique_kg\": 81.0, \"filet\": 1, \"tentative_reps\": 7, \"tentative_date\": \"2026-11-20\", \"pr_actuel_kg\": 78.0, \"ecart_vs_prevu_kg\": -2.0, \"ecart_vs_prevu_pct\": -2.5, \"statut\": \"attente\", \"battu_par_filet\": false, \"nouveau_ce_sync\": false, \"methode\": \"S2 Rep max\"}\n",
+  "{\"timestamp\": \"2026-11-20T19:30:00\", \"plan\": \"Seance_Force_CycleA_2026-11-19_10-00-00\", \"exercice\": \"Squat\", \"serie\": \"HP1\", \"unite\": \"reps\", \"rm\": 15, \"charge_prevue_kg\": 60.0, \"pr_avant_plan_kg\": null, \"marge_pct\": null, \"charge_theorique_kg\": null, \"filet\": null, \"tentative_reps\": 15, \"tentative_date\": \"2026-11-20\", \"pr_actuel_kg\": 60.0, \"ecart_vs_prevu_kg\": 0.0, \"ecart_vs_prevu_pct\": 0.0, \"statut\": \"battu\", \"battu_par_filet\": false, \"nouveau_ce_sync\": true, \"methode\": \"Hors plan\", \"hors_plan\": true, \"record_avant_reps_kg\": null, \"commentaire\": null, \"cle_hors_plan\": \"2026-11-20|60|15|1\"}\n"
+ ],
+ "lignes_deja_ecrites": 0,
+ "resume": {
+  "status": "ok",
+  "plan_file": "Seance_Force_CycleA_2026-11-19_10-00-00",
+  "n_targets": 2,
+  "n_battus": 1,
+  "archived": false,
+  "n_history_logged": 3,
+  "n_echecs": 1,
+  "n_filet": 0,
+  "plans": [
+   {
+    "plan_file": "Seance_Force_CycleA_2026-11-19_10-00-00",
+    "n_targets": 2,
+    "n_battus": 1,
+    "archived": false
+   }
+  ],
+  "superseded": [],
+  "warnings": [],
+  "hors_plan": [
+   {
+    "plan": "Seance_Force_CycleA_2026-11-19_10-00-00",
+    "exercice": "Squat",
+    "charge": 60.0,
+    "reps": 15,
+    "rm": 15,
+    "unite": "reps",
+    "statut": "battu",
+    "record_avant": null
+   }
+  ],
+  "n_hors_plan": 1,
+  "n_hors_plan_pr": 1,
+  "n_hors_plan_echecs": 0
+ },
+ "calcul_ms": 12.5
+}

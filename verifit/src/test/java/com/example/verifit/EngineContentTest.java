@@ -137,6 +137,28 @@ public class EngineContentTest
         assertRefused(EngineContent.DATA, EngineTestData.DATA.replaceFirst("\"charge_min_kg\": null", "\"charge_min_kg\": \"30\""), "charge_min_kg");
     }
 
+    // Lot M5b : rm_max, champ facultatif de la version 1 (l'app du lot M4 doit continuer
+    // d'accepter les donnees du PC), controle s'il est la, exige par le bilan de fin de seance.
+    @Test
+    public void rmMax_facultatifMaisControle()
+    {
+        String pr = "   \"pr\": [\n";
+        assertFalse(EngineTestData.content().hasRmMax());
+
+        Map<String, String> files = EngineTestData.files();
+        files.put(EngineContent.DATA, EngineTestData.DATA.replace(pr, "   \"rm_max\": 301,\n" + pr));
+        assertTrue(EngineContent.of(files).hasRmMax());
+        files.put(EngineContent.DATA, EngineTestData.DATA.replace(pr, "   \"rm_max\": null,\n" + pr));
+        assertTrue(EngineContent.of(files).hasRmMax());
+        files.put(EngineContent.DATA, EngineTestData.DATA.replaceFirst("   \"pr\": \\[\n", "   \"rm_max\": 301,\n" + pr));
+        assertFalse("un seul exercice sur trois", EngineContent.of(files).hasRmMax());
+
+        for (String bad : new String[] { "-1", "2.5", "\"301\"", "true" })
+        {
+            assertRefused(EngineContent.DATA, EngineTestData.DATA.replace(pr, "   \"rm_max\": " + bad + ",\n" + pr), "rm_max");
+        }
+    }
+
     @Test
     public void texteEnTrop_refuse()
     {
