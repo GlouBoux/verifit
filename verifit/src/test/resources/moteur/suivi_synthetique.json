@@ -1,0 +1,92 @@
+{
+ "version": 1,
+ "plans": [
+  {
+   "fichier": "Seance_Force_CycleA_2026-11-19_10-00-00.json",
+   "label": "Seance_Force_CycleA_2026-11-19_10-00-00",
+   "lignes": [
+    {
+     "exercice": "Squat",
+     "serie": "S1",
+     "methode": "S1 Ancrage",
+     "unite": "reps",
+     "rm": 8,
+     "charge_prevue": 90.0,
+     "pr_avant_plan": 85.0,
+     "charge_theorique": 92.0,
+     "filet": 2,
+     "tentative_reps": null,
+     "tentative_date": null,
+     "pr_actuel": 85.0,
+     "ecart_kg": -5.0,
+     "ecart_pct": -5.555555555555555,
+     "statut": "attente",
+     "battu_par_filet": false,
+     "statut_apres_bilan": "battu"
+    },
+    {
+     "exercice": "Squat",
+     "serie": "S2",
+     "methode": "S2 Rep max",
+     "unite": "reps",
+     "rm": 10,
+     "charge_prevue": 80.0,
+     "pr_avant_plan": 78.0,
+     "charge_theorique": 81.0,
+     "filet": 1,
+     "tentative_reps": 7,
+     "tentative_date": "2026-11-20",
+     "pr_actuel": 78.0,
+     "ecart_kg": -2.0,
+     "ecart_pct": -2.5,
+     "statut": "attente",
+     "battu_par_filet": false,
+     "statut_apres_bilan": "attente"
+    }
+   ],
+   "avertissements": [],
+   "complet": false
+  }
+ ],
+ "remplaces": [],
+ "pr_non_valides": [
+  {
+   "exercice": "Squat",
+   "rms": [
+    15,
+    14,
+    13,
+    12,
+    11,
+    9,
+    8,
+    7
+   ]
+  }
+ ],
+ "resume": {
+  "status": "ok",
+  "plan_file": "Seance_Force_CycleA_2026-11-19_10-00-00",
+  "n_targets": 2,
+  "n_battus": 0,
+  "archived": false,
+  "n_history_logged": 0,
+  "n_echecs": 1,
+  "n_filet": 0,
+  "plans": [
+   {
+    "plan_file": "Seance_Force_CycleA_2026-11-19_10-00-00",
+    "n_targets": 2,
+    "n_battus": 0,
+    "archived": false
+   }
+  ],
+  "superseded": [],
+  "warnings": [],
+  "hors_plan": [],
+  "n_hors_plan": 0,
+  "n_hors_plan_pr": 0,
+  "n_hors_plan_echecs": 0
+ },
+ "calcul_ms": 3.5
+}

@@ -81,6 +81,10 @@ public class SettingsActivity extends AppCompatActivity {
             if (historyPreference != null) {
                 historyPreference.setVisible(EndOfSessionFlow.enabled());
             }
+            Preference trackingPreference = findPreference("suiviplans");
+            if (trackingPreference != null) {
+                trackingPreference.setVisible(EndOfSessionFlow.enabled());
+            }
 
             // Retour Romain 16/09/2026 : "le bouton Light/Dark/Système dans les
             // Réglages, comme FitNotes". La ListPreference "theme" (root_preferences.xml)
@@ -209,6 +213,11 @@ public class SettingsActivity extends AppCompatActivity {
             else if (key.equals("historiquepr"))
             {
                 startActivity(new Intent(getActivity(), PrHistoryActivity.class));
+            }
+            // Lot M5b.4 : suivi des plans en attente (onglet Suivi_PR du PC).
+            else if (key.equals("suiviplans"))
+            {
+                startActivity(new Intent(getActivity(), PlanTrackingActivity.class));
             }
 
             // General

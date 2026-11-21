@@ -71,6 +71,12 @@
             app:useSimpleSummaryProvider="false" />
 
         <Preference
+            app:key="suiviplans"
+            app:summary="Plans en attente : prévu contre réalisé, comme l'onglet Suivi_PR. N'écrit rien"
+            app:title="Suivi des plans"
+            app:useSimpleSummaryProvider="false" />
+
+        <Preference
             app:key="donneesmoteur"
             app:summary="Tableaux RM → poids et réglages, en lecture seule"
             app:title="Données du moteur"

@@ -42,6 +42,9 @@
             android:name=".ui.PrHistoryActivity"
             android:label="Historique des PR" />
         <activity
+            android:name=".ui.PlanTrackingActivity"
+            android:label="Suivi des plans" />
+        <activity
             android:name=".ui.EngineDataActivity"
             android:label="Données du moteur" />
         <activity

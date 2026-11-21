@@ -102,4 +102,22 @@ public final class PythonEngine
                 bilanId, exercise, timestamp).toString();
         return EnginePrHistory.parseCancellation(raw);
     }
+
+    // Lot M5b.4 : suivi des plans en attente (moteur_app.suivi, equivalent de l'onglet Suivi_PR)
+    // avec les PR enregistres de l'app. N'ecrit rien. IOException (message affichable) si les
+    // donnees n'ont pas rm_max ; PyException si le calcul echoue ; IllegalArgumentException si
+    // le texte rendu est illisible.
+    public static EnginePlanTracking.Result planTracking(Context context, EngineContent content, String exportJson)
+            throws IOException
+    {
+        if (!content.hasRmMax())
+        {
+            throw new IOException("données du moteur importées avant le lot M5b (sans rm_max). Refais l'import : "
+                    + "8_Export_moteur_app.bat sur le PC, puis Réglages > Moteur > Importer les données du moteur.");
+        }
+        PyObject app = python(context).getModule("moteur_app");
+        String raw = app.callAttr("suivi", content.text(EngineContent.DATA), exportJson,
+                content.text(EngineContent.PLANS)).toString();
+        return EnginePlanTracking.parse(raw);
+    }
 }
