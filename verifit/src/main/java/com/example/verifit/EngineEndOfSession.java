@@ -1,5 +1,7 @@
 package com.example.verifit;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -8,8 +10,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Bilan de fin de seance (lot M5b, 21/11/2026, voir claude/fitengine-moteur-lot-M5.md) : tout
@@ -116,13 +121,16 @@ public final class EngineEndOfSession
         public final List<String> plansToRemove;
         public final List<String> journal;    // lignes a ajouter, saut de ligne compris
         public final int alreadyWritten;      // series prevues deja journalisees a l'identique
+        public final List<String> prHistory;  // lignes de historique_pr.jsonl (une par RM modifie)
         public final JsonObject summary;      // resume du suivi (forme de update_pr_tracking)
         public final double computeMs;
 
         Result(List<ExercisePr> prs, List<String> noSet, String dataAfter, boolean journalOnly,
                List<PlanReport> plans, List<String> superseded, List<String> plansToRemove,
-               List<String> journal, int alreadyWritten, JsonObject summary, double computeMs)
+               List<String> journal, int alreadyWritten, List<String> prHistory, JsonObject summary,
+               double computeMs)
         {
+            this.prHistory = prHistory;
             this.prs = prs;
             this.noSet = noSet;
             this.dataAfter = dataAfter;
@@ -202,20 +210,22 @@ public final class EngineEndOfSession
                         p.get("complet").getAsBoolean()));
             }
             JsonElement dataAfter = o.get("donnees_apres");
-            List<String> journal = strings(array(o, "journal"));
-            for (String line : journal)
+            List<String> journal = lines(array(o, "journal"));
+            List<String> prHistory = lines(array(o, "historique_pr"));
+            if (prHistory.size() != countChanges(prs))
             {
-                if (!line.endsWith("\n"))
-                {
-                    throw new IllegalArgumentException("ligne de journal sans saut de ligne");
-                }
+                throw new IllegalArgumentException("bilan du moteur : trace des PR incomplète");
+            }
+            if ((dataAfter == null || EngineJson.isNull(dataAfter)) != prs.isEmpty())
+            {
+                throw new IllegalArgumentException("bilan du moteur : données après bilan incohérentes avec les PR");
             }
             return new Result(Collections.unmodifiableList(prs),
                     strings(array(o.getAsJsonObject("rapport"), "sans_serie")),
                     EngineJson.isNull(dataAfter) ? null : dataAfter.getAsString(),
                     o.get("journal_only").getAsBoolean(), Collections.unmodifiableList(plans),
                     strings(array(o, "remplaces")), strings(array(o, "plans_a_retirer")), journal,
-                    o.get("lignes_deja_ecrites").getAsInt(), o.getAsJsonObject("resume"),
+                    o.get("lignes_deja_ecrites").getAsInt(), prHistory, o.getAsJsonObject("resume"),
                     o.get("calcul_ms").getAsDouble());
         }
         catch (NullPointerException | IllegalStateException | ClassCastException | UnsupportedOperationException e)
@@ -233,6 +243,88 @@ public final class EngineEndOfSession
         JsonObject j = e.getAsJsonObject();
         return new Justification(j.get("date").getAsString(), j.get("poids").getAsDouble(),
                 j.get("reps").getAsInt(), j.get("cascade").getAsBoolean());
+    }
+
+    private static int countChanges(List<ExercisePr> prs)
+    {
+        int n = 0;
+        for (ExercisePr p : prs)
+        {
+            n += p.changes.size();
+        }
+        return n;
+    }
+
+    // Lignes de journal : chacune un objet JSON termine par un saut de ligne.
+    private static List<String> lines(JsonArray array)
+    {
+        List<String> list = strings(array);
+        for (String line : list)
+        {
+            if (!line.endsWith("\n") || line.indexOf('\n') != line.length() - 1)
+            {
+                throw new IllegalArgumentException("ligne de journal mal terminée");
+            }
+            EngineJson.parseStrictObject(line.trim());
+        }
+        return list;
+    }
+
+    // ---------------------------------------------------------------- « Valider » (M5b.2)
+
+    private static final Gson GSON_PRETTY = new GsonBuilder().serializeNulls().disableHtmlEscaping()
+            .setPrettyPrinting().create();
+
+    // Contenu du moteur apres validation du bilan : donnees avec les PR (texte rendu par le
+    // moteur), journal et trace des PR completes, plans remplaces ou termines retires. Rien
+    // d'autre ne change. Leve IllegalArgumentException si le resultat n'est pas valide ou si un
+    // plan a retirer n'est plus en attente (contenu modifie depuis le calcul) : rien n'est
+    // ecrit dans ce cas.
+    public static EngineContent apply(EngineContent before, Result r)
+    {
+        LinkedHashMap<String, String> files = new LinkedHashMap<String, String>(before.texts());
+        if (r.dataAfter != null)
+        {
+            files.put(EngineContent.DATA, r.dataAfter);
+        }
+        files.put(EngineContent.HISTORY, before.text(EngineContent.HISTORY) + join(r.journal));
+        files.put(EngineContent.PR_HISTORY, before.text(EngineContent.PR_HISTORY) + join(r.prHistory));
+        if (!r.plansToRemove.isEmpty())
+        {
+            files.put(EngineContent.PLANS, withoutPlans(before.text(EngineContent.PLANS), r.plansToRemove));
+        }
+        return EngineContent.of(files);
+    }
+
+    static String withoutPlans(String plansText, List<String> names)
+    {
+        JsonObject plans = EngineJson.parseStrictObject(plansText);
+        JsonArray kept = new JsonArray();
+        Set<String> missing = new HashSet<String>(names);
+        for (JsonElement element : plans.getAsJsonArray("plans"))
+        {
+            String name = element.getAsJsonObject().get("fichier").getAsString();
+            if (!missing.remove(name))
+            {
+                kept.add(element);
+            }
+        }
+        if (!missing.isEmpty())
+        {
+            throw new IllegalArgumentException("plan(s) plus en attente : " + missing);
+        }
+        plans.add("plans", kept);
+        return GSON_PRETTY.toJson(plans) + "\n";
+    }
+
+    private static String join(List<String> lines)
+    {
+        StringBuilder s = new StringBuilder();
+        for (String line : lines)
+        {
+            s.append(line);
+        }
+        return s.toString();
     }
 
     private static JsonArray array(JsonObject o, String key)

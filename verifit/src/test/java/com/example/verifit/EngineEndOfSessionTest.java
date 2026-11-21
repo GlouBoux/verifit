@@ -96,7 +96,8 @@ public class EngineEndOfSessionTest
     {
         String raw = "{\"version\": 1, \"pr\": [], \"rapport\": {\"sans_changement\": [], \"sans_serie\": [], \"sans_tableau\": []},"
                 + " \"donnees_apres\": null, \"journal_only\": true, \"plans\": [], \"remplaces\": [], \"plans_a_retirer\": [],"
-                + " \"journal\": [], \"lignes_deja_ecrites\": 4, \"resume\": {\"status\": \"no_plan\"}, \"calcul_ms\": 3.0}";
+                + " \"journal\": [], \"lignes_deja_ecrites\": 4, \"historique_pr\": [], \"resume\": {\"status\": \"no_plan\"},"
+                + " \"calcul_ms\": 3.0}";
         EngineEndOfSession.Result r = EngineEndOfSession.parse(raw);
         assertFalse(r.hasChanges());
         assertNull(r.dataAfter);
@@ -113,6 +114,8 @@ public class EngineEndOfSessionTest
                 ok.replaceFirst("\"plans_a_retirer\": \\[\\]", "\"plans_a_retirer\": null"),
                 ok.replaceFirst("\"journal_only\": false,", ""),
                 ok.replaceFirst("\\\\n\",\n  \"\\{", "\",\n  \"{"),
+                ok.replaceFirst("\"historique_pr\": \\[\n  \"[^\n]*\n", "\"historique_pr\": [\n"),
+                ok.replaceFirst("\"donnees_apres\": \"[^\n]*\",\n", "\"donnees_apres\": null,\n"),
                 "[]" })
         {
             try

@@ -40,6 +40,7 @@ public final class EngineRename
     {
         LinkedHashMap<String, List<String>> m = new LinkedHashMap<String, List<String>>();
         m.put(EngineContent.HISTORY, Collections.singletonList("exercice"));
+        m.put(EngineContent.PR_HISTORY, Collections.singletonList("exercice")); // lot M5b.2
         m.put(EngineContent.NEXT_PR, Collections.singletonList("exercise"));
         m.put(EngineContent.SUBSTITUTIONS, Arrays.asList("original_exercise", "substitute_exercise"));
         JOURNAL_FIELDS = Collections.unmodifiableMap(m);

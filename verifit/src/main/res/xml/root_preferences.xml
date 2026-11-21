@@ -59,6 +59,12 @@
             app:useSimpleSummaryProvider="false" />
 
         <Preference
+            app:key="bilanmoteur"
+            app:summary="PR, objectifs du plan et journal, d'après le carnet. Rien n'est écrit sans « Valider »"
+            app:title="Bilan de fin de séance"
+            app:useSimpleSummaryProvider="false" />
+
+        <Preference
             app:key="donneesmoteur"
             app:summary="Tableaux RM → poids et réglages, en lecture seule"
             app:title="Données du moteur"

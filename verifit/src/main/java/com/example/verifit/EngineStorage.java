@@ -209,7 +209,7 @@ public final class EngineStorage
 
     private void writeAll(EngineContent content, EngineState state) throws IOException
     {
-        for (String name : EngineContent.FILES)
+        for (String name : EngineContent.WRITE_ORDER)
         {
             files.write(name, content.text(name));
         }

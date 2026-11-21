@@ -87,6 +87,9 @@ Un nouveau lot s'essaie d'abord dans 🧪 TEST ; 🟢 TOUS LES JOURS n'est mis �
 - Les données moteur doivent porter `rm_max` (champ facultatif de la version 1, ajouté par le PC le 21/11/2026) : `EngineContent.hasRmMax()`, sinon le bilan demande de refaire l'import.
 - Fixture JUnit `src/test/resources/moteur/bilan_synthetique.json` : sortie réelle de Python sur un cas synthétique. Un test du dépôt Coaching (`test_fin_de_seance_app.TestContratApp`) vérifie qu'elle est à jour ; régénérer avec `python scripts\test_fin_de_seance_app.py --fixture-app` (dans Coaching) après un changement voulu du format.
 - Développé en parallèle de la validation de M4 : tout s'essaie sur 🧪 TEST seulement tant que M4 n'est pas validé.
+- **Indicateur `BuildConfig.ENGINE_END_OF_SESSION`** (`build.gradle`) : vrai pour la variante `dev` seulement. Le bilan (arrêt du chrono, Réglages > Moteur > « Bilan de fin de séance ») n'existe que là où il est vrai ; une recompilation de 🟢 TOUS LES JOURS pour M4 ne le fait pas apparaître. À passer à vrai pour `debug` au début de la validation en double de M5b.
+- Écran : `ui/EndOfSessionFlow` (calcul hors du fil principal, « Valider » / « Fermer »), texte : `EngineEndOfSessionView` (pur). Au « Valider » : export reconstruit et comparé (séance modifiée : bilan recalculé), copie automatique `avant_bilan` (arrêt si impossible), données du moteur relues et comparées, `EngineEndOfSession.apply`, puis `EngineRepository.rewrite`.
+- **`historique_pr.jsonl`** (trace des PR de l'app, `EngineContent.PR_HISTORY`) : journal propre à l'app, jamais fourni par le PC (`EngineContent.IMPORTED_FILES`) ; l'import le garde (`EngineImport.contentKeeping`) ; suivi par le renommage ; écrit en premier (`EngineContent.WRITE_ORDER` : trace, journal, données, plans).
 
 ## Limite connue
 

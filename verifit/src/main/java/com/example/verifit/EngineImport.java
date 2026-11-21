@@ -20,7 +20,8 @@ import java.util.Set;
  *
  * Format (version 1) :
  * {"format": "fitengine-moteur-import", "version": 1, "exporte_le": ..., "source": ...,
- *  "fichiers": {nom de fichier: texte exact} (EngineContent.FILES),
+ *  "fichiers": {nom de fichier: texte exact} (EngineContent.IMPORTED_FILES : tous les fichiers
+ *  du moteur sauf historique_pr.jsonl, trace des PR propre a l'app, gardee a l'import),
  *  "assistance": [{"nom", "charge_ref_kg", "assist_par_cote"}],
  *  "exclus": [{"nom", "raison"}], "avertissements": [texte], "totaux": {fichier ou "lignes_pr": n}}
  *
@@ -109,7 +110,7 @@ public final class EngineImport
         LinkedHashMap<String, String> files = new LinkedHashMap<String, String>();
         for (Map.Entry<String, JsonElement> e : filesElement.getAsJsonObject().entrySet())
         {
-            if (!EngineContent.FILES.contains(e.getKey()))
+            if (!EngineContent.IMPORTED_FILES.contains(e.getKey()))
             {
                 throw new IllegalArgumentException("export : fichier inattendu « " + e.getKey() + " »");
             }
@@ -119,7 +120,7 @@ public final class EngineImport
             }
             files.put(e.getKey(), e.getValue().getAsString());
         }
-        for (String name : EngineContent.FILES)
+        for (String name : EngineContent.IMPORTED_FILES)
         {
             if (!files.containsKey(name))
             {
@@ -130,7 +131,7 @@ public final class EngineImport
         checkAppNames(content.data());
 
         LinkedHashMap<String, Integer> totals = readTotals(root);
-        for (String name : EngineContent.FILES)
+        for (String name : EngineContent.IMPORTED_FILES)
         {
             checkTotal(totals, name, content.count(name));
         }
@@ -258,7 +259,7 @@ public final class EngineImport
     public String verify(EngineContent reloaded)
     {
         StringBuilder s = new StringBuilder();
-        for (String name : EngineContent.FILES)
+        for (String name : EngineContent.IMPORTED_FILES)
         {
             Integer expected = totals.get(name);
             if (expected == null || expected != reloaded.count(name))
@@ -271,11 +272,25 @@ public final class EngineImport
         {
             s.append("lignes de PR : ").append(reloaded.prRows()).append(" au lieu de ").append(rows).append('\n');
         }
-        if (!content.sameTexts(reloaded))
+        for (String name : EngineContent.IMPORTED_FILES)
         {
-            s.append("contenu relu différent du fichier importé\n");
+            if (!content.text(name).equals(reloaded.text(name)))
+            {
+                s.append("contenu relu différent du fichier importé (").append(name).append(")\n");
+                break;
+            }
         }
         return s.length() == 0 ? null : s.toString();
+    }
+
+    // Lot M5b.2 : contenu a ecrire. Tout vient du PC, sauf la trace des PR de l'app
+    // (historique_pr.jsonl), qui n'existe que dans l'app et est gardee telle quelle (texte
+    // actuel, ou vide s'il n'y en a pas encore).
+    public EngineContent contentKeeping(String appPrHistory)
+    {
+        LinkedHashMap<String, String> files = new LinkedHashMap<String, String>(content.texts());
+        files.put(EngineContent.PR_HISTORY, appPrHistory == null ? "" : appPrHistory);
+        return EngineContent.of(files);
     }
 
     // ---------------------------------------------------------------- apercu

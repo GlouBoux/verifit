@@ -135,7 +135,13 @@ public final class EngineImportFlow
             boolean ok = false;
             try
             {
-                EngineStorage.Loaded loaded = EngineRepository.replaceAll(appContext, imp.content,
+                // Lot M5b.2 : la trace des PR de l'app (historique_pr.jsonl) n'est pas dans
+                // l'export du PC : elle est gardee telle quelle (vide si les donnees actuelles
+                // sont absentes ou illisibles).
+                EngineStorage.Loaded current = EngineRepository.get(appContext);
+                String prHistory = current.status == EngineStorage.Status.OK
+                        ? current.content.text(EngineContent.PR_HISTORY) : "";
+                EngineStorage.Loaded loaded = EngineRepository.replaceAll(appContext, imp.contentKeeping(prHistory),
                         ImportedPlansStore.now(), sourceName, imp.exportedAt);
                 String gap = imp.verify(loaded.content);
                 if (gap != null)

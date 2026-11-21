@@ -151,6 +151,9 @@ public final class SessionTimerController
             if (stopped)
             {
                 MainActivity.dataStorage.exportLatestCoachingAndNotify(activity.getApplicationContext());
+                // Lot M5b.2 : bilan de fin de seance (PR, suivi, journal), sans effet hors de la
+                // variante ou il est actif (BuildConfig.ENGINE_END_OF_SESSION).
+                EndOfSessionFlow.start(activity, true);
             }
         });
 

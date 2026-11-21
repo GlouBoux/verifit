@@ -71,6 +71,13 @@ public class SettingsActivity extends AppCompatActivity {
                 versionPreference.setSummary(getBuildInfo());
             }
 
+            // Lot M5b.2 : bilan de fin de seance, visible seulement la ou il est actif
+            // (variante de test pendant le developpement, voir build.gradle).
+            Preference bilanPreference = findPreference("bilanmoteur");
+            if (bilanPreference != null) {
+                bilanPreference.setVisible(EndOfSessionFlow.enabled());
+            }
+
             // Retour Romain 16/09/2026 : "le bouton Light/Dark/Système dans les
             // Réglages, comme FitNotes". La ListPreference "theme" (root_preferences.xml)
             // persiste deja sa valeur toute seule (comportement par defaut d'une
@@ -188,6 +195,11 @@ public class SettingsActivity extends AppCompatActivity {
             else if (key.equals("donneesmoteur"))
             {
                 startActivity(new Intent(getActivity(), EngineDataActivity.class));
+            }
+            // Lot M5b.2 (21/11/2026) : bilan de fin de seance relance a la main.
+            else if (key.equals("bilanmoteur"))
+            {
+                EndOfSessionFlow.start(getActivity(), false);
             }
 
             // General

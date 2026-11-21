@@ -21,6 +21,12 @@ android {
         // debug et release (l'app de tous les jours), "_dev" pour le type de build dev (voir plus bas).
         buildConfigField "String", "DATA_FOLDER_SUFFIX", '""'
 
+        // Lot M5b (21/11/2026) : bilan de fin de seance (PR, suivi, journal) developpe pendant la
+        // validation en double du lot M4. Actif seulement dans la variante dev (« FitEngine Test »)
+        // tant que Romain n'a pas lance la validation en double de M5b : une recompilation de l'app
+        // de tous les jours pour M4 ne l'y fait pas apparaitre.
+        buildConfigField "boolean", "ENGINE_END_OF_SESSION", "false"
+
         // Retour Romain 28/09/2026 : "un numero de build [...] pour verifier qu'on
         // parle bien de la meme version" (voir SettingsActivity, preference "version").
         // Horodatage genere automatiquement a CHAQUE build (aucun geste manuel, donc
@@ -58,6 +64,7 @@ android {
             signingConfig signingConfigs.debug
             applicationIdSuffix ".dev"
             buildConfigField "String", "DATA_FOLDER_SUFFIX", '"_dev"'
+            buildConfigField "boolean", "ENGINE_END_OF_SESSION", "true"
         }
         release {
             minifyEnabled false

@@ -38,12 +38,24 @@ public final class EngineContent
     public static final String NEXT_PR = "next_pr_rejections.jsonl";
     public static final String SUBSTITUTIONS = "exercise_substitutions.jsonl";
     public static final String CANCELLED = "seances_annulees.jsonl";
+    // Lot M5b.2 (21/11/2026) : trace de chaque modification d'un PR faite dans l'app (bilan de
+    // fin de seance, annulation). Ne vient jamais du PC : l'import le garde tel quel.
+    public static final String PR_HISTORY = "historique_pr.jsonl";
 
-    // Ordre d'ecriture et d'affichage.
+    // Ordre d'affichage (et du bloc moteur des backups).
     public static final List<String> FILES = Collections.unmodifiableList(Arrays.asList(
-            DATA, HISTORY, NEXT_PR, SUBSTITUTIONS, CANCELLED, PLANS));
+            DATA, HISTORY, PR_HISTORY, NEXT_PR, SUBSTITUTIONS, CANCELLED, PLANS));
     public static final List<String> JOURNALS = Collections.unmodifiableList(Arrays.asList(
-            HISTORY, NEXT_PR, SUBSTITUTIONS, CANCELLED));
+            HISTORY, PR_HISTORY, NEXT_PR, SUBSTITUTIONS, CANCELLED));
+    // Fichiers apportes par l'export du PC (import M3) : tous sauf la trace des PR de l'app.
+    public static final List<String> IMPORTED_FILES = Collections.unmodifiableList(Arrays.asList(
+            DATA, HISTORY, NEXT_PR, SUBSTITUTIONS, CANCELLED, PLANS));
+    // Ordre d'ecriture (EngineStorage) : la trace des PR d'abord, puis le journal, les donnees
+    // et les plans. Un arret au milieu d'un « Valider » laisse au pire une trace sans le PR
+    // qu'elle annonce, jamais un PR ecrit sans trace (la copie automatique d'avant permet de
+    // revenir en arriere).
+    public static final List<String> WRITE_ORDER = Collections.unmodifiableList(Arrays.asList(
+            PR_HISTORY, HISTORY, NEXT_PR, SUBSTITUTIONS, CANCELLED, DATA, PLANS));
 
     public static final int DATA_VERSION = 1;
     public static final int PLANS_VERSION = 1;
